@@ -1,4 +1,4 @@
 requests>=2.32
 opencc-python-reimplemented>=0.1.7
 beautifulsoup4>=4.12
-lxml>=5.2
+lxml>=6.1.3
