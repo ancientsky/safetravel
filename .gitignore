@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 .playwright/
 data/raw/flights/*.tmp
+tests/shots/
