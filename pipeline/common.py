@@ -1,6 +1,7 @@
 """Shared paths, constants and small helpers."""
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import logging
@@ -35,6 +36,17 @@ WINDOW_YEARS = 2
 DEFAULT_MODEL = "gemini-3.5-flash"
 
 log = logging.getLogger("safetravel")
+
+# Generous but bounded: a runaway field in a (possibly tampered) CSV raises csv.Error instead of eating memory.
+csv.field_size_limit(10_000_000)
+
+_CDC_URL = re.compile(r"^https://([a-z0-9-]+\.)*cdc\.gov\.tw/")
+
+
+def safe_cdc_url(url: str) -> str:
+    """The URL if it is https on cdc.gov.tw (or a subdomain), else ''. Used for every link the site renders."""
+    url = (url or "").strip()
+    return url if _CDC_URL.match(url.lower()) and "\\" not in url else ""
 
 
 def raw_dir() -> Path:

@@ -35,8 +35,13 @@ If both `translations` and `overviews` are 0: stop, nothing to do.
    git -c user.name=ancientsky -c user.email=7279958+ancientsky@users.noreply.github.com \
        commit -am "data: translate N digests, refresh M overviews" && git push origin main
    ```
-   On a non-fast-forward rejection: `git pull --rebase -X theirs origin main` and push again (up to 3 times).
-   Pushing `web/**` triggers the Pages deploy automatically.
+   On a non-fast-forward rejection (`data/safetravel.db` is binary and also written by the Actions workflow, so a rebase
+   never merges it meaningfully): `git pull --rebase -X theirs origin main`, then **redo the whole import**: re-run
+   `import_translations.py` for both kinds (translations and overviews), `python -m pipeline export`,
+   `python -m pipeline validate`, commit the result, and only then push again. Never push an export that was not
+   validated after the rebase. Up to 3 attempts.
+   Pushing `web/**` triggers the Pages deploy automatically; that workflow runs `python -m pipeline validate` first and
+   refuses to publish invalid `web/data`.
 
 ## Translation rules
 

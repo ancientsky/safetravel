@@ -194,7 +194,7 @@ def build_epidemics(conn, generated_at: str, names: Names, start: date | None = 
             "summary_zh": (t and t["summary_zh"]) or fb, "summary_en": (t and t["summary_en"]) or (t and t["summary_zh"]) or fb,
             "description_zh": desc, "description_en": (t and t["description_en"]) or desc,
             "countries": isos, "area_zh": r["area_zh"], "area_en": r["area_en"] or r["area_zh"],
-            "url": r["url"], "ai": bool(t),
+            "url": C.safe_cdc_url(r["url"]), "ai": bool(t),
         }
         if r["is_global"]:
             it["global"] = True

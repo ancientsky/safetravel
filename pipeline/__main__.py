@@ -47,7 +47,13 @@ def do_fetch(conn, only: str | None = None) -> dict:
     from . import fetch
     out = {}
     if only in (None, "cdc"):
-        out["cdc"] = fetch.fetch_cdc()
+        try:
+            out["cdc"] = fetch.fetch_cdc()
+        except Exception as e:  # network/parser bug must never break the data update
+            C.log.exception("CDC fetch crashed")
+            reason = f"crash: {type(e).__name__}: {e}"
+            out["cdc"] = {n: {"name": n, "url": u, "ok": False, "changed": False, "rows": None, "reason": reason, "fetched_at": None}
+                          for n, u in (("alerts", C.ALERTS_URL), ("epidemics", C.EPID_URL))}
         for name, st in out["cdc"].items():
             if st["ok"]:
                 db.set_source_state(conn, name, url=st["url"], fetched_at=st["fetched_at"], ok=1, reason=None)

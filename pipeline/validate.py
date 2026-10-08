@@ -8,6 +8,7 @@ from pathlib import Path
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TS = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$")
 ISO2 = re.compile(r"^[A-Z]{2}$")
+CDC_URL = re.compile(r"^https://([a-z0-9-]+\.)*cdc\.gov\.tw/")
 IATA = re.compile(r"^[A-Z]{3}$")
 
 
@@ -184,6 +185,8 @@ def check_epidemics(v: V, e, alerts):
                 continue
             v.typ(iw, it[k], str, k)
         v.typ(iw, it["ai"], bool, "ai")
+        if isinstance(it["url"], str) and it["url"] and not CDC_URL.match(it["url"]):
+            v.err(iw, f"url must be https on cdc.gov.tw: {it['url'][:60]!r}")
         v.pat(iw, it["date"], DATE, "date")
         if not it["id"] or it["id"] in ids:
             v.err(iw, f"id {it['id']!r} empty or duplicated")

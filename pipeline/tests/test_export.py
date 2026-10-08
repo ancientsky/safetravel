@@ -95,3 +95,22 @@ def test_overview_and_translation_used_when_present(loaded):
     assert it["ai"] and it["headline_en"] == "H" and it["summary_en"] == "Sum"
     assert out["epidemics"]["overviews"][iso]["en"] == "Overview" and out["epidemics"]["overviews"][iso]["ai"]
     assert out["meta"]["counts"]["ai_translated"] == 1
+
+
+def test_epidemic_urls_are_cdc_https_only(loaded):
+    assert C.safe_cdc_url("https://www.cdc.gov.tw/TravelEpidemic/Detail?epidemicId=abc") != ""
+    assert C.safe_cdc_url("https://cdc.gov.tw/x") != ""
+    for bad in ("http://www.cdc.gov.tw/x", "javascript:alert(1)", "https://cdc.gov.tw.evil.com/x", "https://evil.com/?https://cdc.gov.tw/",
+                "https://evilcdc.gov.tw/x", "https://user@evil.com\\@www.cdc.gov.tw/x", ""):
+        assert C.safe_cdc_url(bad) == "", bad
+    loaded.execute("UPDATE epidemics SET url='javascript:alert(1)'")
+    items = _export(loaded)["epidemics"]["items"]
+    assert items and all(it["url"] == "" for it in items)
+    from pipeline.__main__ import apply_static_fallback
+    apply_static_fallback(loaded)
+    export.export_all(loaded)
+    p = C.web_data() / "epidemics.json"
+    d = json.loads(p.read_text(encoding="utf-8"))
+    d["items"][0]["url"] = "https://evil.example.com/x"
+    p.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+    assert any("cdc.gov.tw" in e for e in validate.validate_dir(C.web_data()))

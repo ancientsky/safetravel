@@ -16,7 +16,7 @@ Read `docs/ARCHITECTURE.md` and `docs/DATA_CONTRACT.md` before changing anything
 ## Commands
 
 ```bash
-pip install -r pipeline/requirements.txt
+python -m pip install -r pipeline/requirements.txt    # Actions install the hash-locked pipeline/requirements.lock
 python -m pipeline run --offline          # fixtures only, no network, no Gemini
 python -m pipeline run                    # full run (Actions)
 python -m pipeline export                 # re-export JSON from sqlite

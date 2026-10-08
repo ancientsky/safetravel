@@ -119,7 +119,7 @@ class Client:
             self.budget.calls += 1
             delay = min(60.0, 2.0 ** attempt) + random.uniform(0, 1)
             try:
-                r = self.session.post(self.url, params={"key": self.api_key}, json=body, timeout=self.timeout)
+                r = self.session.post(self.url, headers={"x-goog-api-key": self.api_key}, json=body, timeout=self.timeout)
             except (requests.Timeout, requests.ConnectionError) as e:
                 last = self._redact(f"{type(e).__name__}: {e}")
             else:

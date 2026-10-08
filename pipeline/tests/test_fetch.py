@@ -159,3 +159,63 @@ def test_old_flight_folders_are_pruned(root):
     sv.finish()
     left = sorted(p.name for p in base.iterdir() if p.is_dir())
     assert "latest" in left and len([n for n in left if n.startswith("2026")]) == fetch.KEEP_DAYS
+
+
+def test_oversized_csv_field_is_rejected_not_crashing():
+    big = ('"' + "x" * 11_000_000 + '"')
+    body = (HDR + "\n" + ",".join([big] + ["v"] * (len(C.ALERT_COLUMNS) - 1)) + "\n").encode("utf-8")
+    rows, problem = fetch.validate_csv(body, C.ALERT_COLUMNS, None)
+    assert rows == 0 and problem.startswith("malformed CSV:")
+
+
+@responses.activate
+def test_oversized_csv_keeps_previous_file(tmp_path):
+    dest = tmp_path / "a.csv"
+    dest.write_bytes(csv_body(5))
+    body = (HDR + "\n" + ",".join(['"' + "x" * 11_000_000 + '"'] + ["v"] * (len(C.ALERT_COLUMNS) - 1)) + "\n").encode("utf-8")
+    responses.add(responses.GET, C.ALERTS_URL, body=body)
+    st = fetch.fetch_csv("alerts", C.ALERTS_URL, dest, C.ALERT_COLUMNS)
+    assert not st["ok"] and "malformed CSV" in st["reason"]
+    assert dest.read_bytes() == csv_body(5)
+
+
+def test_datagov_urls_are_https_and_allowlisted():
+    body = json.dumps({"result": {"distribution": [
+        {"resourceDownloadUrl": "https://odp.taoyuan-airport.com/a_flight_v4.txt"},
+        {"resourceDownloadUrl": "http://odp.taoyuan-airport.com/plain.txt"},
+        {"resourceDownloadUrl": "https://evil.example.com/a_flight_v4.txt"},
+        {"downloadUrl": "https://data.gov.tw.evil.example.com/x.csv"},
+        {"accessUrl": "https://user@evil.example.com/x"},
+        {"downloadUrl": "https://data.gov.tw/files/x.csv"},
+    ]}, "note": "see http://www.taoyuan-airport.com/a_flight_v4.txt"}).encode()
+    assert fetch._datagov_urls(body) == ["https://odp.taoyuan-airport.com/a_flight_v4.txt", "https://data.gov.tw/files/x.csv"]
+
+
+def test_flight_file_url_requires_https(monkeypatch):
+    for url, expected in (("https://example.com/a.txt", ["https://example.com/a.txt"]), ("http://example.com/a.txt", []),
+                          ("file:///tmp/a.txt", ["file:///tmp/a.txt"]), ("ftp://x/a", []), ("", [])):
+        monkeypatch.setenv("FLIGHT_FILE_URL", url)
+        assert fetch._flight_file_override() == expected
+
+
+@responses.activate
+def test_http_get_caps_response_size():
+    from pipeline import http
+    responses.add(responses.GET, "https://example.com/big", body=b"x" * 5000)
+    assert len(http.get("https://example.com/big", max_bytes=10_000).content) == 5000
+    try:
+        http.get("https://example.com/big", max_bytes=1000)
+        raise AssertionError("expected HttpError")
+    except http.HttpError as e:
+        assert "response too large" in str(e)
+
+
+def test_do_fetch_survives_cdc_crash(conn, monkeypatch):
+    from pipeline.__main__ import do_fetch
+
+    def boom(session=None):
+        raise RuntimeError("kaboom")
+    monkeypatch.setattr(fetch, "fetch_cdc", boom)
+    out = do_fetch(conn, "cdc")
+    assert not out["cdc"]["alerts"]["ok"] and "kaboom" in out["cdc"]["alerts"]["reason"]
+    assert db.get_source_state(conn, "alerts")["ok"] == 0

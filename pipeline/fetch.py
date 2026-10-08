@@ -27,6 +27,13 @@ def validate_csv(raw: bytes, expected_cols: list[str], prev_rows: int | None) ->
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError:
         return 0, "not valid UTF-8"
+    try:
+        return _validate_rows(text, expected_cols, prev_rows)
+    except csv.Error as e:  # e.g. "field larger than field limit"
+        return 0, f"malformed CSV: {e}"
+
+
+def _validate_rows(text: str, expected_cols: list[str], prev_rows: int | None) -> tuple[int, str | None]:
     rd = csv.reader(io.StringIO(text, newline=""))
     try:
         header = next(rd)
@@ -117,8 +124,20 @@ def _ext(content_type: str, url: str, body: bytes) -> str:
     return m.group(1) if m else "txt"
 
 
+ALLOWED_HOSTS = frozenset({"data.gov.tw", "www.taoyuan-airport.com", "odp.taoyuan-airport.com"})
+
+
+def _allowed_url(url: str) -> bool:
+    """https only, hostname on the allowlist (no userinfo tricks: hostname is parsed, not substring-matched)."""
+    try:
+        u = urlparse(url)
+        return u.scheme == "https" and (u.hostname or "") in ALLOWED_HOSTS
+    except ValueError:
+        return False
+
+
 def _datagov_urls(body: bytes) -> list[str]:
-    """resourceDownloadUrl (and any a_flight URL) from a data.gov.tw dataset API response."""
+    """resourceDownloadUrl (and any a_flight URL) from a data.gov.tw dataset API response; https + allowlisted hosts only."""
     urls: list[str] = []
     text = F.decode_bytes(body)
     try:
@@ -139,7 +158,21 @@ def _datagov_urls(body: bytes) -> list[str]:
     if obj is not None:
         walk(obj)
     urls += re.findall(r"https?://[^\s\"'<>\\]*a_flight[^\s\"'<>\\]*", text)
-    return list(dict.fromkeys(urls))
+    kept = [u for u in dict.fromkeys(urls) if _allowed_url(u)]
+    if len(kept) != len(set(urls)):
+        C.log.warning("flights: dropped %d discovered URL(s) that are not https on an allowed host", len(set(urls)) - len(kept))
+    return kept
+
+
+def _flight_file_override() -> list[str]:
+    """FLIGHT_FILE_URL must be https (a local file: path is allowed for tests)."""
+    u = os.environ.get("FLIGHT_FILE_URL", "").strip()
+    if not u:
+        return []
+    if u.startswith("https://") or u.startswith("file:"):
+        return [u]
+    C.log.warning("flights: ignoring FLIGHT_FILE_URL (must be https or file:)")
+    return []
 
 
 class RawSaver:
@@ -243,7 +276,7 @@ def fetch_flights(session=None, cached_names: dict | None = None) -> dict:
                     parsed.append((url, kind, recs))
             return r
 
-        file_urls = [os.environ["FLIGHT_FILE_URL"]] if os.environ.get("FLIGHT_FILE_URL") else []
+        file_urls = _flight_file_override()
         for api in DATAGOV:
             r = attempt(f"datagov_{api.rsplit('/', 1)[-1]}", api, parse=False)
             if r is not None:

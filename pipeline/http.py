@@ -47,16 +47,41 @@ def _sleep(seconds: float) -> None:  # patched in tests
     time.sleep(seconds)
 
 
+MAX_BYTES = 50 * 1024 * 1024
+
+
+def _read_capped(r: requests.Response, max_bytes: int) -> requests.Response:
+    """Read a streamed body in chunks and refuse anything above max_bytes (Content-Length or actual size)."""
+    try:
+        declared = int(r.headers.get("Content-Length") or 0)
+    except ValueError:
+        declared = 0
+    if declared > max_bytes:
+        r.close()
+        raise HttpError("response too large")
+    buf = bytearray()
+    for chunk in r.iter_content(65536):
+        buf += chunk
+        if len(buf) > max_bytes:
+            r.close()
+            raise HttpError("response too large")
+    r._content = bytes(buf)
+    r._content_consumed = True
+    return r
+
+
 def get(url: str, *, session: requests.Session | None = None, tries: int = 3, timeout=(10, 60),
-        headers: dict | None = None) -> requests.Response:
-    """GET with retries on network errors / 408 / 429 / 5xx. Raises HttpError otherwise (also for other non-200s)."""
+        headers: dict | None = None, max_bytes: int = MAX_BYTES) -> requests.Response:
+    """GET with retries on network errors / 408 / 429 / 5xx. Raises HttpError otherwise (also for other non-200s).
+    The body is streamed and rejected with HttpError("response too large") above max_bytes."""
     s = session or new_session()
     last = None
     for attempt in range(1, tries + 1):
         try:
-            r = s.get(url, timeout=timeout, headers=headers)
+            r = s.get(url, timeout=timeout, headers=headers, stream=True)
             if r.status_code == 200:
-                return r
+                return _read_capped(r, max_bytes)
+            r.close()
             last = HttpError(f"HTTP {r.status_code} for {url}", r.status_code)
             if not (r.status_code in (408, 429) or r.status_code >= 500):
                 raise last

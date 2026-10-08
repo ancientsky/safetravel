@@ -117,7 +117,34 @@ After a rebuild, commit the three JSON files, open `web/` locally (`python -m ht
 - Hard-refresh the browser; GitHub Pages caches for a few minutes.
 - Roll back a bad data export by reverting the data commit on `main` and re-running the workflow later — do not edit JSON by hand.
 
-## 8. Quick reference
+## 8. Dependencies, hash lock and workflow hardening
+
+- `pipeline/requirements.txt` is the human-edited source (loose lower bounds). `pipeline/requirements.lock` is generated from it
+  with hashes and is what Actions installs (`pip install --require-hashes -r pipeline/requirements.lock`). CI additionally installs
+  `requirements-dev.txt` normally. Regenerate after editing `requirements.txt` (use Python 3.12 to match the workflows) and commit both:
+
+  ```bash
+  pip install pip-tools
+  pip-compile --generate-hashes --output-file pipeline/requirements.lock pipeline/requirements.txt
+  ```
+
+  Dependabot (`.github/dependabot.yml`) opens weekly PRs for `github-actions` and for `pip` in `/pipeline`; for pip, regenerate the lock
+  on the PR branch before merging.
+- All actions are pinned to a commit SHA with the version in a trailing comment; Dependabot bumps both.
+- Token scope: `update-data.yml` has `permissions: {}` at workflow level; the `update` job gets only `contents: write`, the `deploy` job
+  `contents: read, pages: write, id-token: write`. The checkout uses `persist-credentials: false`; the token is wired into the git remote
+  only inside the "Commit and push" step.
+- The push step retries up to 3 times. After each `git pull --rebase -X theirs` it re-runs `python -m pipeline export` and
+  `python -m pipeline validate` and commits any difference before pushing again (the SQLite file has two writers and cannot be merged).
+- `deploy-pages.yml` runs `python -m pipeline validate` before uploading `web/`, so hand edits or routine pushes with invalid
+  `web/data` are not deployed.
+- Fetch safeguards: HTTP bodies are capped at 50 MB (`http.get(max_bytes=...)`); a CSV with a malformed/oversized field is rejected like any
+  other bad download (previous file kept); URLs discovered in data.gov.tw responses must be https on `data.gov.tw`,
+  `www.taoyuan-airport.com` or `odp.taoyuan-airport.com`; `FLIGHT_FILE_URL` must be https (or a `file:` path for tests). The Gemini key is sent in the
+  `x-goog-api-key` header, never in the URL. Epidemic `url` values are exported only if https on `cdc.gov.tw` (or a subdomain), otherwise
+  `""`; `validate` fails on any other non-empty URL.
+
+## 9. Quick reference
 
 | Task | Command / location |
 |------|--------------------|
@@ -129,3 +156,4 @@ After a rebuild, commit the three JSON files, open `web/` locally (`python -m ht
 | Model override | repo variable `GEMINI_MODEL` |
 | Geodata rebuild | `python pipeline/build_geo.py` (after `npm install`) |
 | Offline test | `python -m pipeline run --offline` |
+| Regenerate dependency lock | `pip-compile --generate-hashes --output-file pipeline/requirements.lock pipeline/requirements.txt` |

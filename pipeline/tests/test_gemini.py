@@ -26,7 +26,8 @@ def test_request_shape_and_json_parsing():
     out = client().generate_json("sys", "user", gemini.SCHEMA_NAMES)
     assert out == [{"id": "a", "x": "中文"}]
     req = responses.calls[0].request
-    assert "key=SECRETKEY" in req.url
+    assert req.headers["x-goog-api-key"] == "SECRETKEY"
+    assert "SECRETKEY" not in req.url
     body = json.loads(req.body)
     gc = body["generationConfig"]
     assert gc["responseMimeType"] == "application/json" and gc["temperature"] == 0.2 and "responseSchema" in gc
