@@ -1,0 +1,20 @@
+{
+  "_comment": "areaDesc_EN (or areaDesc) of alert rows with empty/unknown ISO3166 → ISO alpha-2 used for map colouring. null = keep in `unmapped`.",
+  "Tahiti": "PF",
+  "Bonaire": "BQ",
+  "Curaçao": "CW",
+  "Cura?ao": "CW",
+  "Saba": "BQ",
+  "St.Maarten": "SX",
+  "Sint Eustatius": "BQ",
+  "Canary Islands": null,
+  "Madeira Islands": null,
+  "Sovereign Military Order of Malta": null,
+  "Wake Island": "UM",
+  "Azores": null,
+  "Republic of Somaliland": null,
+  "Jamhuuriyadda Somaliland": null,
+  "Western Sahara": "EH",
+  "Easter Island": null,
+  "巴勒斯坦地區": "PS"
+}

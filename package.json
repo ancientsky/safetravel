@@ -1,0 +1,16 @@
+{
+  "name": "safetravel-tw",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Taiwan CDC travel-health advisory map with animated TPE flights (GitHub Pages)",
+  "scripts": {
+    "vendor": "node scripts/vendor.mjs",
+    "preview": "python3 -m http.server -d web 8080"
+  },
+  "devDependencies": {
+    "d3": "7.9.0",
+    "topojson-client": "3.1.0",
+    "world-atlas": "2.0.2",
+    "world-countries": "5.1.0"
+  }
+}
