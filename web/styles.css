@@ -189,6 +189,9 @@ a { color: var(--cyan); }
   background: var(--glass-strong); font-family: var(--mono);
 }
 
+/* gradient stop colours live here (no inline style attributes: CSP style-src 'self') */
+#ocean-grad stop:first-child { stop-color: var(--ocean-1); }
+#ocean-grad stop:last-child { stop-color: var(--ocean-2); }
 .sphere { fill: url(#ocean-grad); stroke: var(--sphere-stroke); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .graticule { fill: none; stroke: var(--graticule); stroke-width: .6; vector-effect: non-scaling-stroke; pointer-events: none; }
 

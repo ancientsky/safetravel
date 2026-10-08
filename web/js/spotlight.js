@@ -4,7 +4,7 @@ import {
   t, countryName, countryAltName, diseaseName, levelShort, badge, fmtDay, pick, isEn,
 } from './i18n.js';
 import {
-  esc, clean, truncate, weightedPick, reducedMotion, storageGet, storageSet, clamp, $,
+  esc, clean, truncate, weightedPick, reducedMotion, storageGet, storageSet, clamp, levelNum, $,
 } from './util.js';
 
 const INTERVAL = 15000;
@@ -161,7 +161,7 @@ export function createSpotlight({ root, map, panel }) {
         ${badge(lvl)}
         <div><h3>${esc(countryName(iso))}</h3><p class="spot-alt">${esc(countryAltName(iso))} · <span class="mono">${esc(iso)}</span></p></div>
       </div>
-      <ul class="spot-advs">${top.map((g) => `<li><span class="dot lvl-${g.level}" aria-hidden="true"></span><span class="spot-lv mono">L${g.level}</span>${esc(diseaseName(g.disease))}${g.areas.length > 1 ? `<span class="spot-n mono">×${g.areas.length}</span>` : ''}</li>`).join('')}${groups.length > top.length ? `<li class="more mono">+${groups.length - top.length}</li>` : ''}</ul>
+      <ul class="spot-advs">${top.map((g) => `<li><span class="dot lvl-${levelNum(g.level)}" aria-hidden="true"></span><span class="spot-lv mono">L${levelNum(g.level)}</span>${esc(diseaseName(g.disease))}${g.areas.length > 1 ? `<span class="spot-n mono">×${g.areas.length}</span>` : ''}</li>`).join('')}${groups.length > top.length ? `<li class="more mono">+${groups.length - top.length}</li>` : ''}</ul>
       ${ai}${recent}
       <span class="spot-open">${esc(t('spot_open'))} →</span>`;
     card.setAttribute('aria-label', `${countryName(iso)} — ${levelShort(lvl)} — ${t('spot_open')}`);

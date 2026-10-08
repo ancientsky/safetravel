@@ -23,8 +23,8 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   svg.attr('aria-label', t('map_label'));
   svg.append('defs').html(`
     <radialGradient id="ocean-grad" cx="50%" cy="42%" r="70%">
-      <stop offset="0%" style="stop-color: var(--ocean-1)"/>
-      <stop offset="100%" style="stop-color: var(--ocean-2)"/>
+      <stop offset="0%"/>
+      <stop offset="100%"/>
     </radialGradient>`);
 
   const gZoom = svg.append('g').attr('class', 'zoom-layer');

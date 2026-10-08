@@ -1,7 +1,9 @@
 // i18n: dictionary lookup, locale-aware formatting, and data-driven name helpers.
 import zh from '../i18n/zh-Hant.js';
 import en from '../i18n/en.js';
-import { esc, parseDay, elapsed, clean } from './util.js';
+import {
+  esc, parseDay, elapsed, clean, levelNum,
+} from './util.js';
 
 const DICTS = { 'zh-Hant': zh, en };
 export const LANGS = ['zh-Hant', 'en'];
@@ -121,7 +123,7 @@ export function levelInstruction(level) {
 }
 
 export function badge(level, text = levelShort(level), extra = '') {
-  return `<span class="badge lvl-${level || 0} ${extra}"><i aria-hidden="true"></i>${esc(text)}</span>`;
+  return `<span class="badge lvl-${levelNum(level)} ${esc(extra)}"><i aria-hidden="true"></i>${esc(text)}</span>`;
 }
 
 /** Pick zh/en field of an epidemic item; returns {text, fallback} where fallback marks untranslated zh. */

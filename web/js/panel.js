@@ -4,7 +4,9 @@ import {
   t, isEn, countryName, countryAltName, diseaseName, levelFull, levelShort, levelInstruction,
   badge, fmtDay, fmtAge, fmtNum, pick,
 } from './i18n.js';
-import { esc, clean, reducedMotion, $ } from './util.js';
+import {
+  esc, clean, reducedMotion, safeUrl, levelNum, $,
+} from './util.js';
 
 const PAGE = 20;
 const GROUPS_SHOWN = 5; // advisory groups visible before "show all"
@@ -55,7 +57,7 @@ export function createPanel({ root, map }) {
   }
 
   function renderHead() {
-    const lvl = levelOf(iso);
+    const lvl = levelNum(levelOf(iso));
     const flights = routesTo(iso);
     const dep = flights.reduce((s, r) => s + (r.departures || 0), 0);
     const items = state.byCountry.get(iso);
@@ -102,7 +104,7 @@ export function createPanel({ root, map }) {
       chips = `<ul class="area-chips${open ? ' is-open' : ''}">${list.join('')}</ul>`;
     }
     return `
-        <li class="adv lvl-${g.level}${gi >= GROUPS_SHOWN && !showAllGroups ? ' is-extra' : ''}">
+        <li class="adv lvl-${levelNum(g.level)}${gi >= GROUPS_SHOWN && !showAllGroups ? ' is-extra' : ''}">
           <div class="adv-top">${badge(g.level)}<span class="adv-age mono">${esc(fmtAge(g.effective))}</span></div>
           <div class="adv-disease">${esc(diseaseName(g.disease))}${lone ? `<span class="adv-area">${esc(areaLabel(lone))}${lone.iso_sub ? ` <span class="mono">${esc(lone.iso_sub)}</span>` : ''}</span>` : ''}${showChips ? `<span class="adv-count mono">${esc(t('panel_areas', { n: g.areas.length }))}</span>` : ''}</div>
           <div class="adv-foot"><span class="adv-instr">${esc(levelInstruction(g.level))}</span><span class="adv-meta">${esc(t('panel_effective'))} <time class="mono" datetime="${esc(g.effective)}">${esc(fmtDay(g.effective))}</time></span></div>
@@ -167,6 +169,7 @@ export function createPanel({ root, map }) {
       const desc = pick(it, 'description');
       const dis = isEn() ? clean(it.disease_en || it.disease_zh) : clean(it.disease_zh);
       const showDesc = desc.text && desc.text !== sum.text;
+      const href = safeUrl(it.url); // only https *.cdc.gov.tw; anything else renders no link
       const zhOnly = isEn() && (head.fallback || sum.fallback);
       return `
         <li class="tl-item">
@@ -176,7 +179,7 @@ export function createPanel({ root, map }) {
             <h4${isEn() && head.fallback ? ' lang="zh-Hant"' : ''}>${esc(head.text)}</h4>
             ${sum.text ? `<p class="tl-sum">${esc(sum.text)}</p>` : ''}
             ${showDesc ? `<details><summary>${esc(t('panel_full_text'))}</summary><p>${esc(desc.text)}</p></details>` : ''}
-            ${it.url ? `<a class="tl-link" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">${esc(t('panel_source'))} ↗</a>` : ''}
+            ${href ? `<a class="tl-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(t('panel_source'))} ↗</a>` : ''}
           </div>
         </li>`;
     }).join('');

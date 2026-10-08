@@ -1,4 +1,5 @@
 // Shared application state and a tiny event bus.
+import { levelNum } from './util.js';
 
 export const state = {
   lang: 'zh-Hant',
@@ -28,7 +29,7 @@ export function emit(type, detail) {
 }
 
 export function levelOf(iso) {
-  return state.data.alerts?.countries?.[iso]?.max_level || 0;
+  return levelNum(state.data.alerts?.countries?.[iso]?.max_level); // always 0..3
 }
 export function alertsOf(iso) {
   return state.data.alerts?.countries?.[iso]?.alerts || [];
@@ -41,8 +42,9 @@ export function alertsOf(iso) {
 export function groupAlerts(iso) {
   const byKey = new Map();
   for (const a of alertsOf(iso)) {
-    const k = `${a.level}|${a.disease}`;
-    if (!byKey.has(k)) byKey.set(k, { disease: a.disease, level: a.level, effective: a.effective || '', rows: [] });
+    const level = levelNum(a.level); // always 0..3, safe to interpolate into class names
+    const k = `${level}|${a.disease}`;
+    if (!byKey.has(k)) byKey.set(k, { disease: a.disease, level, effective: a.effective || '', rows: [] });
     const g = byKey.get(k);
     g.rows.push(a);
     if ((a.effective || '') > g.effective) g.effective = a.effective;

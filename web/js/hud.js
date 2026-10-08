@@ -1,7 +1,9 @@
 // Header HUD (clock, stat tiles, freshness), legend, and flight HUD.
 import { state, levelOf } from './state.js';
 import { t, fmtNum, fmtDateTime, fmtRelative, fmtDay, levelShort, getLang } from './i18n.js';
-import { esc, reducedMotion, todayTaipei, parseDay, $ } from './util.js';
+import {
+  esc, reducedMotion, todayTaipei, parseDay, finiteNum, $,
+} from './util.js';
 
 let clockTimer = 0;
 
@@ -50,7 +52,7 @@ export function renderTiles(node, { animate = false } = {}) {
   node.innerHTML = tiles.map((x) => `
     <li class="tile ${x.cls}">
       <span class="tile-label">${x.lvl ? `<i class="dot lvl-${x.lvl}" aria-hidden="true"></i>` : ''}${esc(t(x.key))}</span>
-      <b class="tile-val mono" data-v="${x.v ?? ''}">${x.v == null ? '—' : fmtNum(animate ? 0 : x.v)}</b>
+      <b class="tile-val mono" data-v="${x.v == null ? '' : finiteNum(x.v)}">${x.v == null ? '—' : fmtNum(animate ? 0 : finiteNum(x.v))}</b>
     </li>`).join('') + `
     <li class="tile tile-updated">
       <span class="tile-label">${esc(t('tile_updated'))}</span>

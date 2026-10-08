@@ -83,3 +83,24 @@ export function truncate(text, n) {
   const s = String(text ?? '');
   return s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s;
 }
+
+/** Data-sourced links: only https Taiwan CDC pages may become an href; anything else → ''. */
+export function safeUrl(u) {
+  try {
+    const x = new URL(String(u));
+    const host = x.hostname.toLowerCase();
+    if (x.protocol === 'https:' && (host === 'cdc.gov.tw' || host.endsWith('.cdc.gov.tw'))) return x.href;
+  } catch { /* not a URL */ }
+  return '';
+}
+
+/** Advisory level coerced to 0..3 before it is interpolated into markup. */
+export function levelNum(level) {
+  const lv = +level;
+  return [1, 2, 3].includes(lv) ? lv : 0;
+}
+
+/** Finite number or a fallback, before it is interpolated into markup. */
+export function finiteNum(v, fallback = 0) {
+  return Number.isFinite(+v) ? +v : fallback;
+}
