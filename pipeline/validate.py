@@ -77,7 +77,7 @@ def _alert_items(v, where, alerts, diseases):
     last = None
     for i, a in enumerate(alerts):
         w = f"{where}.alerts[{i}]"
-        if not v.keys(w, a, ["disease", "level", "effective", "area_zh", "area_en", "iso_sub"]):
+        if not v.keys(w, a, ["disease", "level", "effective", "area_zh", "area_en", "iso_sub"], ["global"]):
             continue
         v.typ(w, a["level"], int, "level")
         if a["level"] not in (1, 2, 3):
@@ -87,6 +87,8 @@ def _alert_items(v, where, alerts, diseases):
             v.typ(w, a[k], str, k)
         if a["disease"] not in diseases:
             v.err(w, f"disease {a['disease']!r} missing from diseases")
+        if "global" in a and a["global"] is not True:
+            v.err(w, "global, when present, must be true")
         key = (-a["level"], "".join(chr(0x10FFFF - ord(c)) for c in a["effective"])) if isinstance(a["level"], int) and isinstance(a["effective"], str) else None
         if key and last and key < last:
             v.err(w, "alerts not sorted by level desc, effective desc")
@@ -118,7 +120,7 @@ def check_alerts(v: V, a):
     gkeys = set()
     if isinstance(gl, list):
         for i, g in enumerate(gl):
-            if v.keys(f"{w}.global[{i}]", g, ["disease", "level", "effective", "countries"]):
+            if v.keys(f"{w}.global[{i}]", g, ["disease", "level", "effective", "countries"], ["applied_to_all"]):
                 v.typ(w, g["level"], int, "global.level")
                 v.pat(w, g["effective"], DATE, "global.effective")
                 v.typ(w, g["countries"], int, "global.countries")
@@ -149,8 +151,8 @@ def check_alerts(v: V, a):
         if lv and c["max_level"] != max(lv):
             v.err(cw, f"max_level {c['max_level']} != max of alerts {max(lv)}")
         for x in c["alerts"]:
-            if isinstance(x, dict) and (x.get("disease"), x.get("level")) in gkeys:
-                v.err(cw, f"global-background advisory {x.get('disease')!r} must not be listed per country")
+            if isinstance(x, dict) and (x.get("disease"), x.get("level")) in gkeys and not x.get("global"):
+                v.err(cw, f"global advisory {x.get('disease')!r} must carry global: true")
     um = a["unmapped"]
     if isinstance(um, list):
         for i, c in enumerate(um):

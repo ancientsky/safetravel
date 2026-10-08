@@ -105,8 +105,9 @@ def build_alerts(conn, generated_at: str, names: Names) -> dict:
         groups.setdefault((a["disease"], a["level"]), []).append(a)
     global_keys = {k for k, g in groups.items() if len({a["k"] for a in g}) >= C.GLOBAL_MIN_COUNTRIES}
     glob = [{"disease": d, "level": lv, "effective": max(a["ts"] for a in groups[(d, lv)]).date().isoformat(),
-             "countries": len({a["k"] for a in groups[(d, lv)]})} for d, lv in sorted(global_keys)]
-    act = [a for a in act if (a["disease"], a["level"]) not in global_keys]
+             "countries": len({a["k"] for a in groups[(d, lv)]}), "applied_to_all": True} for d, lv in sorted(global_keys)]
+    # Global advisories (e.g. 新冠併發重症 L1) stay in every country's list, flagged "global": true, and are
+    # applied to every country on the map that CDC did not list individually (see apply_global below).
 
     cnames_geo = C.load_json(C.web_data() / "countries.json", {}) or {}
     cnames_manual = _manual("country_names.json")
@@ -122,9 +123,12 @@ def build_alerts(conn, generated_at: str, names: Names) -> dict:
 
     def item(a):
         r = a["row"]
-        return {"disease": a["disease"], "level": a["level"], "effective": a["ts"].date().isoformat(),
-                "area_zh": r["areaDetail"], "area_en": names.area_en(r["areaDetail"]) if r["areaDetail"] else "",
-                "iso_sub": r["ISO3166_2"]}
+        it = {"disease": a["disease"], "level": a["level"], "effective": a["ts"].date().isoformat(),
+              "area_zh": r["areaDetail"], "area_en": names.area_en(r["areaDetail"]) if r["areaDetail"] else "",
+              "iso_sub": r["ISO3166_2"]}
+        if (a["disease"], a["level"]) in global_keys:
+            it["global"] = True
+        return it
 
     def sort_key(it):
         return (-it["level"], _neg(it["effective"]), it["disease"], it["area_zh"])
@@ -152,6 +156,20 @@ def build_alerts(conn, generated_at: str, names: Names) -> dict:
                                     "max_level": 0, "alerts": []}
         c["alerts"].append(it)
         c["max_level"] = max(c["max_level"], it["level"])
+    # apply each global advisory to every country on the map (home country and Antarctica excepted)
+    for g in glob:
+        for iso in cnames_geo:
+            if iso in C.GLOBAL_EXEMPT:
+                continue
+            c = countries.get(iso)
+            if c is None:
+                c = countries[iso] = {"name_zh": cnames_manual.get(iso, {}).get("zh") or cnames_geo[iso].get("zh") or iso,
+                                      "name_en": cnames_manual.get(iso, {}).get("en") or cnames_geo[iso].get("en") or iso,
+                                      "max_level": 0, "alerts": []}
+            if not any(a["disease"] == g["disease"] and a["level"] == g["level"] and not a["area_zh"] for a in c["alerts"]):
+                c["alerts"].append({"disease": g["disease"], "level": g["level"], "effective": g["effective"],
+                                    "area_zh": "", "area_en": "", "iso_sub": "", "global": True})
+            c["max_level"] = max(c["max_level"], g["level"])
     for c in list(countries.values()) + list(unmapped.values()):
         c["alerts"].sort(key=sort_key)
     countries = dict(sorted(countries.items()))

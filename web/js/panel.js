@@ -115,7 +115,8 @@ export function createPanel({ root, map }) {
   function renderAdvisories() {
     const list = alertsOf(iso);
     const groups = groupAlerts(iso);
-    const globals = state.data.alerts?.global || [];
+    // global advisories applied to every country are already listed in section A; only unapplied ones need a note
+    const globals = (state.data.alerts?.global || []).filter((g) => !g.applied_to_all);
     const items = groups.map(renderGroup).join('');
     const hidden = showAllGroups ? 0 : Math.max(0, groups.length - GROUPS_SHOWN);
     const globalNote = globals.length

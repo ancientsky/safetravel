@@ -56,7 +56,7 @@ Country keys are **ISO 3166-1 alpha-2, upper case**.
 ```
 
 Rules:
-- `alerts` sorted by level desc, then effective desc. Only **active** advisories (see ARCHITECTURE.md). Global-background diseases are excluded from `countries[*].alerts` and `max_level`, listed once in `global`.
+- `alerts` sorted by level desc, then effective desc. Only **active** advisories (see ARCHITECTURE.md). Global advisories (same disease+level in ≥ 150 countries, e.g. 新冠併發重症 L1) are listed once in `global` with `applied_to_all: true` **and** applied to every country on the map except TW/AQ: each such row carries `"global": true` and counts toward `max_level`.
 - `name_en` is the CSV `areaDesc_EN` cleaned (e.g. `Congo,Democratic Republic of the` → `Democratic Republic of the Congo` via `data/manual/country_names.json` override when present).
 - `area_en` for sub-national rows comes from Gemini or `data/manual/areas.json`; fall back to `area_zh`.
 - `diseases` contains every disease name appearing in `alerts.json` **and** `epidemics.json`.

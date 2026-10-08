@@ -46,8 +46,10 @@ export function createSpotlight({ root, map, panel }) {
   let history = [];
   let timer = 0;
 
-  const candidates = () => Object.keys(state.data.alerts?.countries || {})
-    .filter((c) => map.has(c) && levelOf(c) > 0);
+  // only countries with a targeted advisory (not just the global background one) are worth a spotlight
+  const candidates = () => Object.entries(state.data.alerts?.countries || {})
+    .filter(([c, v]) => map.has(c) && levelOf(c) > 0 && (v.alerts || []).some((a) => !a.global))
+    .map(([c]) => c);
 
   function choose() {
     const list = candidates().filter((c) => !history.includes(c));

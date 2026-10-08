@@ -31,11 +31,14 @@ def test_business_rules(loaded):
     cn = al["CN"]
     assert cn["max_level"] == 2 and any(a["iso_sub"].startswith("CN-") for a in cn["alerts"])
     assert [k for k, v in al.items() if v["max_level"] == 3] == ["CD"]
-    # COVID: the old name never appears, the new one only as the global background footnote
+    # COVID: the old name never appears; the new one is a global advisory applied to every mapped country
     everything = json.dumps(out["alerts"], ensure_ascii=False)
     assert "嚴重特殊傳染性肺炎" not in everything
-    assert not any(a["disease"] == "新冠併發重症" for c in al.values() for a in c["alerts"])
     assert [g["disease"] for g in out["alerts"]["global"]] == ["新冠併發重症"]
+    assert out["alerts"]["global"][0]["applied_to_all"] is True
+    assert all(any(a["disease"] == "新冠併發重症" and a.get("global") for a in c["alerts"]) for c in al.values())
+    assert "TW" not in al and "AQ" not in al
+    assert al["JP"]["max_level"] >= 1
     # sub-national English names come from the built-in dictionary
     assert next(a for a in cn["alerts"] if a["iso_sub"] == "CN-11")["area_en"] == "Beijing"
     # ties on the same timestamp resolve to the higher level (DE mpox 2025-03-05 L2/L1)

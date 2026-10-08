@@ -32,6 +32,7 @@ EPID_COLUMNS = [
 LEVEL_OF = {"第一級:注意(Watch)": 1, "第二級:警示(Alert)": 2, "第三級:警告(Warning)": 3, "解除": 0}
 COVID_OLD = "嚴重特殊傳染性肺炎"
 GLOBAL_MIN_COUNTRIES = 150
+GLOBAL_EXEMPT = {"TW", "AQ"}  # home country and Antarctica never receive the global advisory
 WINDOW_YEARS = 2
 DEFAULT_MODEL = "gemini-3.5-flash"
 

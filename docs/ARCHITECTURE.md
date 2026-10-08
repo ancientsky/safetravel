@@ -41,7 +41,7 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
    - One row = one announcement. **Current state = latest row per key (alert_disease, ISO3166, areaDetail)**; if that latest row is `解除` the advisory is lifted → drop it.
    - `嚴重特殊傳染性肺炎` (COVID-19, 248 rows of level 3 from 2020-03-21, never individually lifted) was superseded when CDC renamed it `新冠併發重症` and reset everything to level 1 on 2023-11-01 (some 2020 rows, e.g. 巴勒斯坦地區, have no 2023 counterpart). **Drop every `嚴重特殊傳染性肺炎` row entirely**; only `新冠併發重症` rows count.
    - Key for "latest row wins" = (disease, resolved ISO alpha-2 — or `areaDesc` when there is none —, `areaDetail`).
-   - Diseases that apply to ≥ 150 countries at the same level (currently only `新冠併發重症` L1) are **global background** advisories: shown as a footnote, **not used for map colouring or max_level**.
+   - Diseases that apply to ≥ 150 countries at the same level (currently only `新冠併發重症` L1) are **global** advisories: applied to every country on the map (except TW and AQ), flagged `global: true` in each country's list, and they do count toward map colouring / `max_level`.
    - `ISO3166` can be `NA` (Namibia) → **never let a CSV reader turn it into null** (`keep_default_na=False`). Empty `ISO3166` = territory without code → map via `data/manual/territories.json`, else list under `unmapped`. `SMLL` = Somaliland → unmapped.
    - `areaDetail`/`ISO3166_2` give sub-national scope (e.g. 中國大陸 / 北京市 / CN-11). A country's level = max over its rows, including sub-national ones.
 
