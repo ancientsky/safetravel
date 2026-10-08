@@ -8,34 +8,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch candidate sources
+      - name: Fetch ODP sources
         shell: bash
         run: |
           set +e
           UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36'
-          D=data/raw/flights/probe; mkdir -p $D
-          f() { name=$1; url=$2; code=$(curl -sS -L -A "$UA" -m 60 -o "$D/$name" -w '%{http_code} %{content_type} %{size_download}' "$url"); echo "$name <- $url :: $code" | tee -a $D/NOTES.txt; }
-          f timetable_en.html 'https://www.taoyuan-airport.com/flight_timetable?lang=en'
-          f timetable_zh.html 'https://www.taoyuan-airport.com/flight_timetable?lang=zh'
-          f depart_en.html 'https://www.taoyuan-airport.com/flight_depart?lang=en'
-          f arrival_en.html 'https://www.taoyuan-airport.com/flight_arrival?lang=en'
-          f a_flight_v4_uploads.txt 'https://www.taoyuan-airport.com/uploads/flight/a_flight_v4.txt'
-          f a_flight_v4_root.txt 'https://www.taoyuan-airport.com/a_flight_v4.txt'
-          f datagov_26194.json 'https://data.gov.tw/api/v2/rest/dataset/26194'
-          f datagov_177644.json 'https://data.gov.tw/api/v2/rest/dataset/177644'
-          f datagov_7869.json 'https://data.gov.tw/api/v2/rest/dataset/7869'
-          f cdc_alert.csv 'https://www.cdc.gov.tw/CountryEpidLevel/ExportCSV?type=0&fileName=TCDCTravelAlertAll.csv'
-          f cdc_epid.csv 'https://www.cdc.gov.tw/TravelEpidemic/ExportCSV?type=1&fileName=TCDCIntlEpid.csv'
-          for u in $(grep -ho 'https\?://[^" ]*' $D/datagov_*.json | sort -u | grep -iv 'data.gov.tw' | head -20); do n=$(echo "$u" | md5sum | cut -c1-8); f "datagov_res_$n.bin" "$u"; done
-          echo '--- script/xhr candidates in timetable_en.html ---' | tee -a $D/NOTES.txt
-          grep -oE '(src|href|url|fetch|axios|ajax)[^\n]{0,120}' $D/timetable_en.html | grep -iE 'flight|api|json|txt' | sort -u | head -60 | tee -a $D/NOTES.txt
-          grep -oE 'https?://[^"'"'"' <>]+' $D/timetable_en.html | sort -u | grep -iE 'flight|api|json|txt|upload' | head -40 | tee -a $D/NOTES.txt
+          D=data/raw/flights/probe2; rm -rf $D; mkdir -p $D
+          f() { name=$1; url=$2; code=$(curl -sS -L -A "$UA" -m 90 -o "$D/$name" -w '%{http_code} %{content_type} %{size_download}' "$url"); echo "$name <- $url :: $code" | tee -a $D/NOTES.txt; }
+          f rt_v2.csv 'https://odp.taoyuan-airport.com/dataset/2025102001?format=csv'
+          f rt_v2.json 'https://odp.taoyuan-airport.com/dataset/2025102001?format=json'
+          f rt_v1.csv 'https://odp.taoyuan-airport.com/dataset/2023081816?format=csv'
+          f sched.csv 'https://odp.taoyuan-airport.com/dataset/2022110903?format=csv'
+          f sched.json 'https://odp.taoyuan-airport.com/dataset/2022110903?format=json'
+          f odp_home.html 'https://odp.taoyuan-airport.com/'
+          f odp_ds_page.html 'https://odp.taoyuan-airport.com/dataset/2025102001'
+          for x in rt_v2.csv rt_v1.csv sched.csv rt_v2.json; do echo "=== $x ===" | tee -a $D/NOTES.txt; head -c 1500 $D/$x | tee -a $D/NOTES.txt; echo; wc -l $D/$x | tee -a $D/NOTES.txt; done
           ls -la $D | tee -a $D/NOTES.txt
-          head -c 600 $D/a_flight_v4_uploads.txt | tee -a $D/NOTES.txt; echo
       - name: Commit probe output
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A data/raw/flights/probe
-          git commit -m 'probe: raw Taoyuan flight sources' || echo nothing
+          git add -A data/raw/flights/probe2
+          git commit -m 'probe: Taoyuan ODP raw responses' || echo nothing
           git push
