@@ -10,9 +10,10 @@ import {
 const INTERVAL = 15000;
 const SCROLL_DELAY = 2500; // let the header/advisories be read first
 const SCROLL_LEAD = 1000; // reach the bottom this long before the next country
-// Glide duration for an auto-scrolled panel. Twice the plain cycle's scroll window, i.e. half the
-// scroll speed; the cycle stretches to fit (see cycleLength) so long countries are not cut off.
-const SCROLL_GLIDE = 2 * (INTERVAL - SCROLL_LEAD - SCROLL_DELAY);
+// Auto-scroll glides at a constant, readable pace regardless of how long the panel is; the cycle
+// stretches to fit (see cycleLength), bounded by MAX_GLIDE so one country never monopolises the tour.
+const SCROLL_SPEED = 60; // px per second
+const MAX_GLIDE = 75000; // ms
 const TICK = 100;
 const USER_COOLDOWN = 15000;
 const WEIGHT = { 1: 1, 2: 4, 3: 10 };
@@ -93,11 +94,16 @@ export function createSpotlight({ root, map, panel }) {
   }
 
   /** Length of the current cycle: 15 s, or longer while an auto-scroll glide is running. */
+  function glideMs(max) {
+    return Math.min(MAX_GLIDE, (max / SCROLL_SPEED) * 1000);
+  }
+
   function cycleLength() {
     if (!scrollActive()) return INTERVAL;
     const el = panel.scroller();
-    if (!el || el.scrollHeight - el.clientHeight <= 2) return INTERVAL;
-    return SCROLL_DELAY + SCROLL_GLIDE + SCROLL_LEAD;
+    const max = el ? el.scrollHeight - el.clientHeight : 0;
+    if (max <= 2) return INTERVAL;
+    return Math.max(INTERVAL, SCROLL_DELAY + glideMs(max) + SCROLL_LEAD);
   }
 
   function ensureScroll() {
@@ -112,7 +118,7 @@ export function createSpotlight({ root, map, panel }) {
     if (max > 2) { // content that fits needs no scrolling
       // interpolate between 100 ms ticks for a smooth, linear glide
       const e = elapsed + (paused() ? 0 : Math.min(TICK, performance.now() - lastTickAt));
-      let p = clamp((e - SCROLL_DELAY) / SCROLL_GLIDE, 0, 1);
+      let p = clamp((e - SCROLL_DELAY) / glideMs(max), 0, 1);
       if (reducedMotion()) p = Math.floor(p * 3 + 1e-6) / 3; // three discrete jumps, no glide
       const target = Math.round(p * max);
       if (Math.abs(el.scrollTop - target) >= 1) el.scrollTop = target;
