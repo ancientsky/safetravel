@@ -153,6 +153,11 @@ def cmd_flights(args) -> int:
     return 0 if routes else 2
 
 
+def cmd_pending(args) -> int:
+    from . import pending
+    return pending.main(["--out", args.out, "--chunk", str(args.chunk), "--overview-batch", str(args.overview_batch)])
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m pipeline")
     ap.add_argument("-v", "--verbose", action="store_true")
@@ -182,6 +187,11 @@ def main(argv=None) -> int:
     p.add_argument("--date", help="YYYY-MM-DD to count (default: today, Asia/Taipei)")
     p.add_argument("--save", action="store_true", help="store the parsed day in the database")
     p.set_defaults(fn=cmd_flights)
+    p = sub.add_parser("pending", help="export untranslated digests / stale overviews for an external translator")
+    p.add_argument("--out", required=True)
+    p.add_argument("--chunk", type=int, default=25)
+    p.add_argument("--overview-batch", type=int, default=30)
+    p.set_defaults(fn=cmd_pending)
 
     args = ap.parse_args(argv)
     C.setup_logging(args.verbose)

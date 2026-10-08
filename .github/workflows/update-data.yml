@@ -4,7 +4,9 @@ name: Update data
 # redeploys GitHub Pages (commits made with GITHUB_TOKEN do not trigger other workflows, hence the deploy job here).
 #
 # Repository configuration:
-#   secrets.GEMINI_API_KEY      optional; without it the site is exported untranslated (ai:false)
+#   vars.AI_PROVIDER            'gemini' to translate with the Gemini API inside this workflow. Anything else (default)
+#                               skips AI here; a scheduled Claude routine translates pending items (docs/TRANSLATION_GUIDE.md).
+#   secrets.GEMINI_API_KEY      required only when AI_PROVIDER=gemini
 #   vars.GEMINI_MODEL           optional; defaults to gemini-3.5-flash
 #   secrets.TDX_CLIENT_ID       optional; TDX (tdx.transportdata.tw) OAuth2 client credentials for the TPE flight feed.
 #   secrets.TDX_CLIENT_SECRET   Without them the pipeline calls TDX anonymously (small daily quota per IP).
@@ -36,11 +38,11 @@ jobs:
       group: update-data
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: pip
@@ -57,9 +59,10 @@ jobs:
           TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
           INPUT_MAX_CALLS: ${{ inputs.max_calls }}
           INPUT_SKIP_GEMINI: ${{ inputs.skip_gemini }}
+          AI_PROVIDER: ${{ vars.AI_PROVIDER || 'claude-routine' }}
         run: |
           args=(--max-calls "${INPUT_MAX_CALLS:-400}")
-          if [ "${INPUT_SKIP_GEMINI}" = "true" ]; then args+=(--skip-gemini); fi
+          if [ "${INPUT_SKIP_GEMINI}" = "true" ] || [ "${AI_PROVIDER}" != "gemini" ]; then args+=(--skip-gemini); fi
           python -m pipeline run "${args[@]}"
 
       - name: Validate exported data
@@ -97,7 +100,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main
           fetch-depth: 1

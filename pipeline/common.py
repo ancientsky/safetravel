@@ -46,7 +46,8 @@ def manual_dir() -> Path:
 
 
 def db_path() -> Path:
-    return ROOT / "data" / "safetravel.db"
+    override = os.environ.get("SAFETRAVEL_DB")
+    return Path(override) if override else ROOT / "data" / "safetravel.db"
 
 
 def web_data() -> Path:
