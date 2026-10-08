@@ -3,6 +3,7 @@ import { state, on, emit } from './js/state.js';
 import { setLang, t, applyStatic, bindData, getLang } from './js/i18n.js';
 import { $, debounce, storageGet, storageSet, parseDay, todayTaipei } from './js/util.js';
 import { toast } from './js/toast.js';
+import { startRefresh } from './js/refresh.js';
 import { initTooltip } from './js/tooltip.js';
 import { createMap } from './js/map.js';
 import { createFlights } from './js/flights.js';
@@ -203,6 +204,9 @@ async function main() {
   fromHash();
 
   setInterval(() => renderFreshness($('#freshness')), 60000);
+
+  // Unattended kiosk use: pick up newly published data (reloads at a quiet moment).
+  window.__safetravel.refresh = startRefresh({ generatedAt: state.data.meta?.generated_at });
 
   // ---- lazy: epidemics digest (~5 MB) ----
   state.epidemicsStatus = 'loading';

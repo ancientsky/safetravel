@@ -1,5 +1,7 @@
 // Spotlight carousel: periodically flies the map to a (weighted) random advisory country.
-import { state, on, levelOf, alertsOf, groupAlerts } from './state.js';
+import {
+  state, on, emit, levelOf, alertsOf, groupAlerts,
+} from './state.js';
 import {
   t, countryName, countryAltName, diseaseName, levelShort, badge, fmtDay, pick, isEn,
 } from './i18n.js';
@@ -206,7 +208,10 @@ export function createSpotlight({ root, map, panel }) {
     root.classList.toggle('is-paused', p);
     if (!p) {
       elapsed += TICK;
-      if (elapsed >= cycleLength()) next();
+      if (elapsed >= cycleLength()) {
+        emit('spotlight:cycle'); // quiet moment: the auto-refresh may reload here
+        next();
+      }
     }
     const progress = `scaleX(${Math.min(1, elapsed / cycleLength())})`;
     bar.style.transform = progress;

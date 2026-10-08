@@ -750,6 +750,7 @@ body.panel-open .zoom-ctrl { right: calc(var(--panel-w) + var(--gutter) * 2); }
 }
 .toast-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lvl3); flex: none; box-shadow: 0 0 8px var(--lvl3); }
 .toast-info { border-color: var(--cyan); }
+.toast-info .toast-dot { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: blink 1.2s steps(2) infinite; }
 .toast-x { margin-left: auto; background: none; border: 0; cursor: pointer; font-size: 18px; line-height: 1; color: var(--fg-dim); }
 
 .foot {

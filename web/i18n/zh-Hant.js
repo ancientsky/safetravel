@@ -128,6 +128,7 @@ export default {
   spot_paused: '已暫停',
 
   loading: '載入中…',
+  refresh_new_data: '資料已更新，即將重新載入',
   loading_digests: '正在載入 AI 疫情摘要…',
   error_load: ({ file }) => `無法載入 ${file}，部分功能暫時無法使用。`,
   error_map: '地圖資料載入失敗，請稍後重新整理。',

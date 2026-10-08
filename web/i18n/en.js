@@ -130,6 +130,7 @@ export default {
   spot_paused: 'Paused',
 
   loading: 'Loading…',
+  refresh_new_data: 'New data published, reloading…',
   loading_digests: 'Loading AI digests…',
   error_load: ({ file }) => `Could not load ${file}; some features are unavailable.`,
   error_map: 'Map data failed to load. Please refresh later.',
