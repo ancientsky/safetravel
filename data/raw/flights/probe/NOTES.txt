@@ -1,0 +1,40 @@
+timetable_en.html <- https://www.taoyuan-airport.com/flight_timetable?lang=en :: 403 text/html; charset=UTF-8 5736
+timetable_zh.html <- https://www.taoyuan-airport.com/flight_timetable?lang=zh :: 403 text/html; charset=UTF-8 5736
+depart_en.html <- https://www.taoyuan-airport.com/flight_depart?lang=en :: 403 text/html; charset=UTF-8 5727
+arrival_en.html <- https://www.taoyuan-airport.com/flight_arrival?lang=en :: 403 text/html; charset=UTF-8 5730
+a_flight_v4_uploads.txt <- https://www.taoyuan-airport.com/uploads/flight/a_flight_v4.txt :: 404 text/html 555
+a_flight_v4_root.txt <- https://www.taoyuan-airport.com/a_flight_v4.txt :: 200 text/html 18265
+datagov_26194.json <- https://data.gov.tw/api/v2/rest/dataset/26194 :: 200 application/json 3242
+datagov_177644.json <- https://data.gov.tw/api/v2/rest/dataset/177644 :: 200 application/json 3477
+datagov_7869.json <- https://data.gov.tw/api/v2/rest/dataset/7869 :: 200 application/json 3660
+cdc_alert.csv <- https://www.cdc.gov.tw/CountryEpidLevel/ExportCSV?type=0&fileName=TCDCTravelAlertAll.csv :: 200 application/octet-stream 750770
+cdc_epid.csv <- https://www.cdc.gov.tw/TravelEpidemic/ExportCSV?type=1&fileName=TCDCIntlEpid.csv :: 200 application/octet-stream 2256253
+--- script/xhr candidates in timetable_en.html ---
+total 3020
+drwxr-xr-x 2 runner runner    4096 Oct  8 05:32 .
+drwxr-xr-x 3 runner runner    4096 Oct  8 05:32 ..
+-rw-r--r-- 1 runner runner    1280 Oct  8 05:32 NOTES.txt
+-rw-r--r-- 1 runner runner   18265 Oct  8 05:32 a_flight_v4_root.txt
+-rw-r--r-- 1 runner runner     555 Oct  8 05:32 a_flight_v4_uploads.txt
+-rw-r--r-- 1 runner runner    5730 Oct  8 05:32 arrival_en.html
+-rw-r--r-- 1 runner runner  750770 Oct  8 05:32 cdc_alert.csv
+-rw-r--r-- 1 runner runner 2256253 Oct  8 05:32 cdc_epid.csv
+-rw-r--r-- 1 runner runner    3477 Oct  8 05:32 datagov_177644.json
+-rw-r--r-- 1 runner runner    3242 Oct  8 05:32 datagov_26194.json
+-rw-r--r-- 1 runner runner    3660 Oct  8 05:32 datagov_7869.json
+-rw-r--r-- 1 runner runner    5727 Oct  8 05:32 depart_en.html
+-rw-r--r-- 1 runner runner    5736 Oct  8 05:32 timetable_en.html
+-rw-r--r-- 1 runner runner    5736 Oct  8 05:32 timetable_zh.html
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr><center>nginx/1.20.2</center>
+</body>
+</html>
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
