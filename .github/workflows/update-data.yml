@@ -1,0 +1,111 @@
+name: Update data
+
+# Refreshes data/ and web/data/ twice a day (09:17 and 21:17 Asia/Taipei), commits the result to main and
+# redeploys GitHub Pages (commits made with GITHUB_TOKEN do not trigger other workflows, hence the deploy job here).
+#
+# Repository configuration:
+#   secrets.GEMINI_API_KEY      optional; without it the site is exported untranslated (ai:false)
+#   vars.GEMINI_MODEL           optional; defaults to gemini-3.5-flash
+#   secrets.TDX_CLIENT_ID       optional; TDX (tdx.transportdata.tw) OAuth2 client credentials for the TPE flight feed.
+#   secrets.TDX_CLIENT_SECRET   Without them the pipeline calls TDX anonymously (small daily quota per IP).
+on:
+  schedule:
+    - cron: '17 1,13 * * *'
+  workflow_dispatch:
+    inputs:
+      max_calls:
+        description: 'Maximum Gemini API calls for this run'
+        required: false
+        default: '400'
+      skip_gemini:
+        description: 'Skip Gemini enrichment'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    concurrency:
+      group: update-data
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pipeline/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Run pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+          INPUT_MAX_CALLS: ${{ inputs.max_calls }}
+          INPUT_SKIP_GEMINI: ${{ inputs.skip_gemini }}
+        run: |
+          args=(--max-calls "${INPUT_MAX_CALLS:-400}")
+          if [ "${INPUT_SKIP_GEMINI}" = "true" ]; then args+=(--skip-gemini); fi
+          python -m pipeline run "${args[@]}"
+
+      - name: Validate exported data
+        run: python -m pipeline validate
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data web/data
+          if git diff --cached --quiet; then
+            echo "No data changes."
+            exit 0
+          fi
+          git commit -m "data: refresh $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M') Asia/Taipei"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "push failed (attempt $attempt); rebasing onto origin/main"
+            sleep $((attempt * 5))
+            git pull --rebase -X theirs origin main
+          done
+          echo "could not push after 5 attempts" >&2
+          exit 1
+
+  deploy:
+    needs: update
+    if: ${{ needs.update.result == 'success' }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deployment
+        uses: actions/deploy-pages@v4
