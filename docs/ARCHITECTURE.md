@@ -54,10 +54,16 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
    - Stable id = `epidemicId` query param of `web` URL.
 
 3. **Taoyuan Airport (TPE) daily flights**
-   Primary: timetable page `https://www.taoyuan-airport.com/flight_timetable?lang=en` (and `lang=zh`) — HTML, scrape departures + arrivals.
-   Fallback: raw flight file `a_flight_v4.txt` (20 comma-separated fields: terminal, A/D, airline IATA, airline zh, flight no, gate, sched date, sched time, est date, est time, dest/origin IATA, dest EN, dest ZH, status, aircraft, via IATA, via EN, via ZH, belt, counter). URL discovered at runtime via data.gov.tw dataset API (26194 / 177644) or `FLIGHT_FILE_URL` env.
-   Output = per day, distinct destination/origin airports with counts. Coordinates from `web/data/airports.json` (OpenFlights).
-   The fetcher must **save raw responses** to `data/raw/flights/` so parsing can be fixed from Actions logs without network access locally.
+   Primary: **TDX** (Ministry of Transportation open data) `GET https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE?$format=JSON`
+   → `[{AirportID, FIDSDeparture[], FIDSArrival[], UpdateTime}]`, covering yesterday/today/tomorrow (~700 rows each way per day, codeshares included).
+   Row keys: FlightDate, FlightNumber, AirlineID, DepartureAirportID, ArrivalAirportID, ScheduleDepartureTime/ScheduleArrivalTime,
+   DepartureRemark/ArrivalRemark (`準時ON TIME`, `出發DEPARTED`, `已到ARRIVED`, `時間更改SCHEDULE CHANGE`, `取消CANCELLED`, `延遲DELAY`), Terminal, Gate, IsCargo, AcType (only on the operating carrier's row).
+   Works from GitHub runners **without credentials** (small daily anonymous quota); optional `TDX_CLIENT_ID`/`TDX_CLIENT_SECRET` secrets enable OAuth2 client-credentials for a higher quota.
+   Rules: today's rows only (Asia/Taipei), drop cargo and cancelled, de-duplicate codeshares by (schedule time, other airport) → physical flights; airlines = operating carriers.
+   City names: `GET .../v2/Air/Airport?$format=JSON` gives `AirportName.Zh_tw / En`; fallback `web/data/airports.json` (OpenFlights).
+   Fallback when TDX fails: static route list from OpenFlights `data/raw/routes.dat` (103 TPE destinations), flagged `source: openflights-static`, `meta.sources.flights.ok=false`.
+   Not usable from Actions: `www.taoyuan-airport.com` (Cloudflare JS challenge) and `odp.taoyuan-airport.com` (TCP timeout, geo-blocked) — verified by `data/raw/flights/probe*/NOTES.txt`.
+   Raw responses are saved to `data/raw/flights/<date>/` and `latest/` for offline debugging.
 
 4. **Gemini** — `GEMINI_API_KEY` secret, model `GEMINI_MODEL` (default `gemini-3.5-flash`), REST
    `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` with `response_mime_type: application/json` and a JSON schema.
