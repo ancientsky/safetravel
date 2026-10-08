@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>全球旅遊疫情情報板 · SafeTravel TW</title>
+  <meta name="description" content="Taiwan CDC international travel health advisories on a live world map, with AI epidemic digests and animated Taoyuan Airport (TPE) routes.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#050a07">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23050a07'/%3E%3Ccircle cx='16' cy='16' r='9.5' fill='none' stroke='%2319ff8a' stroke-width='2'/%3E%3Cpath d='M16 16 L24 10' stroke='%2319ff8a' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='2.4' fill='%2329e7ff'/%3E%3C/svg%3E">
+  <script>
+    // Apply stored theme / language before first paint (no flash).
+    (function () {
+      var d = document.documentElement, th = null, lg = null;
+      try { th = localStorage.getItem('safetravel.theme'); lg = localStorage.getItem('safetravel.lang'); } catch (e) {}
+      if (th !== 'light' && th !== 'dark') th = 'dark'; // dark is the product default
+      d.setAttribute('data-theme', th);
+      if (lg === 'en') d.lang = 'en';
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="vendor/d3.min.js" defer></script>
+  <script src="vendor/topojson-client.min.js" defer></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#search-input" data-i18n="skip_to_search">跳至搜尋</a>
+
+  <main id="map" class="map" data-testid="map">
+    <svg id="map-svg" class="map-svg" role="group" aria-label="世界地圖"></svg>
+    <canvas id="flights-canvas" class="flights-canvas" data-testid="flights-layer" aria-hidden="true"></canvas>
+    <p id="map-error" class="map-error-msg" role="alert" hidden></p>
+    <div class="map-loading" aria-hidden="true"><span></span></div>
+  </main>
+  <div class="fx-scanlines" aria-hidden="true"></div>
+  <div class="fx-vignette" aria-hidden="true"></div>
+  <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+
+  <header class="hud">
+    <div class="hud-top">
+      <div class="brand">
+        <svg class="brand-logo" viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="17" class="bl-ring"/>
+          <circle cx="20" cy="20" r="10.5" class="bl-ring bl-ring-2"/>
+          <path d="M20 20 L33 11" class="bl-sweep"/>
+          <circle cx="20" cy="20" r="2.6" class="bl-core"/>
+          <circle cx="28" cy="25" r="1.6" class="bl-blip"/>
+        </svg>
+        <div class="brand-text">
+          <p class="brand-kicker mono" data-i18n="brand_kicker">TW-CDC // GLOBAL HEALTH RADAR</p>
+          <h1 data-i18n="title">全球旅遊疫情情報板</h1>
+          <p class="brand-sub" data-i18n="subtitle"></p>
+        </div>
+      </div>
+      <div class="hud-right">
+        <div id="clock" class="clock" role="timer" aria-live="off">
+          <span class="clock-label mono" data-i18n="clock_label">台北時間</span>
+          <span class="clock-time mono">--:--:--</span>
+          <span class="clock-date"></span>
+        </div>
+        <div id="freshness" class="freshness" role="status"></div>
+        <div class="toggles">
+          <button type="button" class="btn-icon lang-toggle" data-testid="lang-toggle" data-i18n-attr="aria-label:lang_toggle_label;title:lang_toggle_label">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg>
+            <span data-i18n="lang_toggle">EN</span>
+          </button>
+          <button type="button" class="btn-icon theme-toggle" data-testid="theme-toggle">
+            <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <ul id="stat-tiles" class="tiles" aria-live="polite"></ul>
+  </header>
+
+  <section class="toolbar" data-i18n-attr="aria-label:search_label">
+    <div id="search" class="search">
+      <label class="sr-only" for="search-input" data-i18n="search_label">搜尋國家</label>
+      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <input id="search-input" type="search" autocomplete="off" spellcheck="false" data-testid="search"
+             role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-list"
+             data-i18n-attr="placeholder:search_placeholder">
+      <kbd class="search-kbd" aria-hidden="true">/</kbd>
+      <ul id="search-list" class="search-list" role="listbox" hidden></ul>
+    </div>
+    <div id="level-chips" class="chips" role="group"></div>
+  </section>
+
+  <aside id="legend" class="legend glass" data-i18n-attr="aria-label:legend_title"></aside>
+
+  <div id="flight-hud" class="flight-hud glass" role="region" data-i18n-attr="aria-label:flights_title">
+    <div class="fh-head">
+      <span class="fh-title mono" data-i18n="flights_title">TPE 航線雷達</span>
+      <button type="button" class="fh-toggle" aria-pressed="true"><i aria-hidden="true"></i><span class="fh-toggle-text">ON</span></button>
+    </div>
+    <div class="fh-stats"></div>
+  </div>
+
+  <div class="zoom-ctrl glass" role="group" data-i18n-attr="aria-label:map_hint">
+    <button type="button" id="zoom-in" class="btn-icon" data-i18n-attr="aria-label:zoom_in;title:zoom_in"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button type="button" id="zoom-out" class="btn-icon" data-i18n-attr="aria-label:zoom_out;title:zoom_out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+    <button type="button" id="zoom-reset" class="btn-icon" data-i18n-attr="aria-label:zoom_reset;title:zoom_reset"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><circle cx="12" cy="12" r="2.5"/></svg></button>
+  </div>
+
+  <section id="spotlight" class="spotlight glass" data-testid="spotlight" aria-live="polite">
+    <div class="spot-head">
+      <span class="spot-kicker mono"><i class="rec" aria-hidden="true"></i><span data-i18n="spot_kicker">焦點掃描</span></span>
+      <span class="spot-paused mono" data-i18n="spot_paused">已暫停</span>
+      <div class="spot-ctrl">
+        <button type="button" class="btn-icon spot-play" aria-pressed="false">
+          <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+          <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>
+        </button>
+        <button type="button" class="btn-icon spot-next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5l8 7-8 7M17 5v14"/></svg></button>
+      </div>
+    </div>
+    <div class="spot-progress" aria-hidden="true"><i></i></div>
+    <button type="button" class="spot-card"></button>
+  </section>
+
+  <aside id="panel" class="panel glass" data-testid="country-panel" role="dialog" aria-modal="false" aria-labelledby="panel-title" hidden>
+    <div class="panel-grip" aria-hidden="true"></div>
+    <button type="button" class="btn-icon panel-close" data-i18n-attr="aria-label:panel_close;title:panel_close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="panel-head"></div>
+    <div class="panel-body"></div>
+  </aside>
+
+  <div id="digest-status" class="digest-status mono" role="status" hidden>
+    <i class="spinner" aria-hidden="true"></i><span data-i18n="loading_digests">正在載入 AI 疫情摘要…</span>
+  </div>
+
+  <footer class="foot">
+    <p>
+      <span data-i18n="footer_sources"></span>
+      <a href="https://www.cdc.gov.tw/" target="_blank" rel="noopener noreferrer" data-i18n="footer_cdc">疾管署</a> ·
+      <a href="https://www.taoyuan-airport.com/" target="_blank" rel="noopener noreferrer" data-i18n="footer_airport">桃園機場</a>
+    </p>
+    <p class="foot-disclaimer" data-i18n="footer_disclaimer"></p>
+  </footer>
+
+  <div id="toasts" class="toasts" aria-live="assertive"></div>
+  <noscript><p class="noscript">This dashboard needs JavaScript. 本網站需要啟用 JavaScript。</p></noscript>
+</body>
+</html>
