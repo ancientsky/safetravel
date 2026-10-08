@@ -1,5 +1,5 @@
 // Country detail panel: advisories, AI overview (typewriter), epidemic timeline.
-import { state, emit, levelOf, alertsOf, routesTo } from './state.js';
+import { state, emit, levelOf, alertsOf, routesTo, groupAlerts } from './state.js';
 import {
   t, isEn, countryName, countryAltName, diseaseName, levelFull, levelShort, levelInstruction,
   badge, fmtDay, fmtAge, fmtNum, pick,
@@ -7,6 +7,8 @@ import {
 import { esc, clean, reducedMotion, $ } from './util.js';
 
 const PAGE = 20;
+const GROUPS_SHOWN = 5; // advisory groups visible before "show all"
+const AREA_CHIPS = 6; // area chips visible per group before "+N"
 
 export function createPanel({ root, map }) {
   const body = $('.panel-body', root);
@@ -16,8 +18,32 @@ export function createPanel({ root, map }) {
   let typer = null;
   let lastFocus = null;
   let hideTimer = 0;
+  let showAllGroups = false;
+  const expandedAreas = new Set();
+
+  // Delegated handlers survive re-renders (language switch, digests arriving).
+  body.addEventListener('click', (ev) => {
+    const more = ev.target.closest('.area-more');
+    if (more) {
+      expandedAreas.add(+more.dataset.group);
+      const ul = more.closest('.area-chips');
+      ul.classList.add('is-open');
+      more.parentElement.remove();
+      return;
+    }
+    const all = ev.target.closest('.show-all-groups');
+    if (all) {
+      showAllGroups = true;
+      body.querySelectorAll('.adv.is-extra').forEach((li) => li.classList.remove('is-extra'));
+      all.remove();
+    }
+  });
 
   $('.panel-close', root).addEventListener('click', () => close());
+  // Any hands-on use of the panel holds the spotlight auto-tour for a while.
+  const touched = () => emit('user:interact');
+  ['pointerdown', 'keydown'].forEach((type) => root.addEventListener(type, touched));
+  ['wheel', 'touchstart'].forEach((type) => root.addEventListener(type, touched, { passive: true }));
 
   function aiChip(ov) {
     if (!ov) return '';
@@ -51,18 +77,45 @@ export function createPanel({ root, map }) {
       </dl>`;
   }
 
+  function areaLabel(r) {
+    return clean(isEn() ? r.area_en || r.area_zh : r.area_zh || r.area_en);
+  }
+
+  function areaChip(r, extra = false) {
+    return `<li class="area-chip${extra ? ' is-extra' : ''}">${esc(areaLabel(r))}${r.iso_sub ? `<span class="mono">${esc(r.iso_sub)}</span>` : ''}</li>`;
+  }
+
+  function renderGroup(g, gi) {
+    const single = g.rows.length === 1;
+    const lone = single && g.areas.length === 1 ? g.areas[0] : null; // one sub-national row: inline, as before
+    const showChips = !single && g.areas.length > 0;
+    let chips = '';
+    if (showChips) {
+      const open = expandedAreas.has(gi);
+      const list = [];
+      if (g.national) list.push(`<li class="area-chip area-whole">${esc(t('panel_area_whole'))}</li>`);
+      g.areas.forEach((r, i) => list.push(areaChip(r, i >= AREA_CHIPS)));
+      const rest = g.areas.length - AREA_CHIPS;
+      if (rest > 0 && !open) {
+        list.push(`<li class="area-more-li"><button type="button" class="area-more" data-group="${gi}" aria-label="${esc(t('panel_areas_more_label', { n: rest }))}">${esc(t('panel_areas_more', { n: rest }))}</button></li>`);
+      }
+      chips = `<ul class="area-chips${open ? ' is-open' : ''}">${list.join('')}</ul>`;
+    }
+    return `
+        <li class="adv lvl-${g.level}${gi >= GROUPS_SHOWN && !showAllGroups ? ' is-extra' : ''}">
+          <div class="adv-top">${badge(g.level)}<span class="adv-age mono">${esc(fmtAge(g.effective))}</span></div>
+          <div class="adv-disease">${esc(diseaseName(g.disease))}${lone ? `<span class="adv-area">${esc(areaLabel(lone))}${lone.iso_sub ? ` <span class="mono">${esc(lone.iso_sub)}</span>` : ''}</span>` : ''}${showChips ? `<span class="adv-count mono">${esc(t('panel_areas', { n: g.areas.length }))}</span>` : ''}</div>
+          <div class="adv-foot"><span class="adv-instr">${esc(levelInstruction(g.level))}</span><span class="adv-meta">${esc(t('panel_effective'))} <time class="mono" datetime="${esc(g.effective)}">${esc(fmtDay(g.effective))}</time></span></div>
+          ${chips}
+        </li>`;
+  }
+
   function renderAdvisories() {
     const list = alertsOf(iso);
+    const groups = groupAlerts(iso);
     const globals = state.data.alerts?.global || [];
-    const items = list.map((a) => {
-      const area = isEn() ? a.area_en || a.area_zh : a.area_zh;
-      return `
-        <li class="adv lvl-${a.level}">
-          <div class="adv-top">${badge(a.level)}<span class="adv-age mono">${esc(fmtAge(a.effective))}</span></div>
-          <div class="adv-disease">${esc(diseaseName(a.disease))}${area ? `<span class="adv-area">${esc(clean(area))}${a.iso_sub ? ` <span class="mono">${esc(a.iso_sub)}</span>` : ''}</span>` : ''}</div>
-          <div class="adv-foot"><span class="adv-instr">${esc(levelInstruction(a.level))}</span><span class="adv-meta">${esc(t('panel_effective'))} <time class="mono" datetime="${esc(a.effective)}">${esc(fmtDay(a.effective))}</time></span></div>
-        </li>`;
-    }).join('');
+    const items = groups.map(renderGroup).join('');
+    const hidden = showAllGroups ? 0 : Math.max(0, groups.length - GROUPS_SHOWN);
     const globalNote = globals.length
       ? `<p class="global-note"><i aria-hidden="true">ⓘ</i>${esc(t('panel_global_note', {
         items: globals.map((g) => t('panel_global_item', {
@@ -72,8 +125,9 @@ export function createPanel({ root, map }) {
       : '';
     return `
       <section class="psec" aria-labelledby="psec-a">
-        <h3 id="psec-a"><span class="psec-idx mono">A</span>${esc(t('panel_sec_advisories'))}<span class="count mono">${fmtNum(list.length)}</span></h3>
+        <h3 id="psec-a"><span class="psec-idx mono">A</span>${esc(t('panel_sec_advisories'))}<span class="count mono">${fmtNum(groups.length)}</span></h3>
         ${list.length ? `<ol class="adv-list">${items}</ol>` : `<p class="empty">${esc(t('panel_no_advisory'))}</p>`}
+        ${hidden ? `<button type="button" class="btn show-all-groups">${esc(t('panel_show_all', { n: groups.length }))}</button>` : ''}
         ${globalNote}
       </section>`;
   }
@@ -200,7 +254,11 @@ export function createPanel({ root, map }) {
     const changed = up !== iso;
     iso = up;
     state.selected = up;
-    if (changed) shown = PAGE;
+    if (changed) {
+      shown = PAGE;
+      showAllGroups = false;
+      expandedAreas.clear();
+    }
     clearTimeout(hideTimer);
     if (!document.activeElement || !root.contains(document.activeElement)) lastFocus = document.activeElement;
     root.hidden = false;

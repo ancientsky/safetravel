@@ -108,6 +108,10 @@
       <span class="spot-kicker mono"><i class="rec" aria-hidden="true"></i><span data-i18n="spot_kicker">焦點掃描</span></span>
       <span class="spot-paused mono" data-i18n="spot_paused">已暫停</span>
       <div class="spot-ctrl">
+        <span class="spot-auto">
+          <button type="button" id="spot-autoopen" class="switch" role="switch" aria-checked="false" data-testid="spotlight-autoopen" aria-labelledby="spot-autoopen-label"><i aria-hidden="true"></i></button>
+          <label id="spot-autoopen-label" for="spot-autoopen" data-i18n="spot_autoopen">自動開啟國家資訊</label>
+        </span>
         <button type="button" class="btn-icon spot-play" aria-pressed="false">
           <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
           <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>
@@ -124,6 +128,14 @@
     <button type="button" class="btn-icon panel-close" data-i18n-attr="aria-label:panel_close;title:panel_close">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
+    <div class="panel-autobar" hidden>
+      <span class="pa-label mono"><i class="rec" aria-hidden="true"></i><span data-i18n="panel_auto_running">自動輪播中</span></span>
+      <button type="button" class="pa-toggle btn-icon">
+        <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+        <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>
+      </button>
+      <span class="pa-progress" aria-hidden="true"><b></b></span>
+    </div>
     <div class="panel-head"></div>
     <div class="panel-body"></div>
   </aside>

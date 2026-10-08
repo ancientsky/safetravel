@@ -1,20 +1,28 @@
 // Spotlight carousel: periodically flies the map to a (weighted) random advisory country.
-import { state, on, levelOf, alertsOf } from './state.js';
+import { state, on, levelOf, alertsOf, groupAlerts } from './state.js';
 import {
   t, countryName, countryAltName, diseaseName, levelShort, badge, fmtDay, pick, isEn,
 } from './i18n.js';
-import { esc, clean, truncate, weightedPick, reducedMotion, $ } from './util.js';
+import {
+  esc, clean, truncate, weightedPick, reducedMotion, storageGet, storageSet, $,
+} from './util.js';
 
 const INTERVAL = 9000;
 const TICK = 100;
 const USER_COOLDOWN = 15000;
 const WEIGHT = { 1: 1, 2: 4, 3: 10 };
+const AUTO_KEY = 'safetravel.spotlightAutoOpen';
 
 export function createSpotlight({ root, map, panel }) {
   const card = $('.spot-card', root);
   const bar = $('.spot-progress i', root);
   const playBtn = $('.spot-play', root);
   const nextBtn = $('.spot-next', root);
+  const autoBtn = $('[data-testid="spotlight-autoopen"]', root);
+  const autobar = document.querySelector('.panel-autobar');
+  const autobarFill = autobar?.querySelector('.pa-progress b');
+  const autobarBtn = autobar?.querySelector('.pa-toggle');
+  state.spotlight.autoOpen = storageGet(AUTO_KEY) === 'on';
   let iso = null;
   let elapsed = 0;
   let hovering = false;
@@ -50,8 +58,21 @@ export function createSpotlight({ root, map, panel }) {
   }
 
   function next() {
-    // Under reduced motion the carousel only swaps the card + outline, never moves the map.
-    show(choose(), { fly: !reducedMotion() });
+    const code = choose();
+    if (!code) return;
+    if (state.spotlight.autoOpen) {
+      // Auto-open: the panel does the fly-to (padded for the panel) and keeps focus where it is.
+      show(code, { fly: false });
+      panel.open(code, { focus: false, fly: !reducedMotion() });
+    } else {
+      // Under reduced motion the carousel only swaps the card + outline, never moves the map.
+      show(code, { fly: !reducedMotion() });
+    }
+  }
+
+  /** User touched the map / panel: hold the carousel for a while, then resume. */
+  function cooldown() {
+    userUntil = Date.now() + USER_COOLDOWN;
   }
 
   function render() {
@@ -60,16 +81,8 @@ export function createSpotlight({ root, map, panel }) {
       return;
     }
     const lvl = levelOf(iso);
-    const advs = alertsOf(iso);
-    // de-duplicate diseases (sub-national rows repeat the same disease)
-    const seen = new Set();
-    const top = [];
-    for (const a of advs) {
-      if (seen.has(a.disease)) continue;
-      seen.add(a.disease);
-      top.push(a);
-      if (top.length === 3) break;
-    }
+    const groups = groupAlerts(iso); // sub-national rows of one disease/level collapse into one chip
+    const top = groups.slice(0, 3);
     let recent = '';
     let ai = '';
     if (state.epidemicsStatus === 'ready') {
@@ -92,14 +105,21 @@ export function createSpotlight({ root, map, panel }) {
         ${badge(lvl)}
         <div><h3>${esc(countryName(iso))}</h3><p class="spot-alt">${esc(countryAltName(iso))} · <span class="mono">${esc(iso)}</span></p></div>
       </div>
-      <ul class="spot-advs">${top.map((a) => `<li><span class="dot lvl-${a.level}" aria-hidden="true"></span><span class="spot-lv mono">L${a.level}</span>${esc(diseaseName(a.disease))}</li>`).join('')}${advs.length > top.length ? `<li class="more mono">+${advs.length - top.length}</li>` : ''}</ul>
+      <ul class="spot-advs">${top.map((g) => `<li><span class="dot lvl-${g.level}" aria-hidden="true"></span><span class="spot-lv mono">L${g.level}</span>${esc(diseaseName(g.disease))}${g.areas.length > 1 ? `<span class="spot-n mono">×${g.areas.length}</span>` : ''}</li>`).join('')}${groups.length > top.length ? `<li class="more mono">+${groups.length - top.length}</li>` : ''}</ul>
       ${ai}${recent}
       <span class="spot-open">${esc(t('spot_open'))} →</span>`;
     card.setAttribute('aria-label', `${countryName(iso)} — ${levelShort(lvl)} — ${t('spot_open')}`);
   }
 
   function paused() {
-    return !state.spotlight.playing || hovering || panel.isOpen() || Date.now() < userUntil || document.hidden;
+    const auto = state.spotlight.autoOpen;
+    const open = panel.isOpen();
+    // With auto-open the panel being open is the normal state, so it must not pause the tour.
+    return !state.spotlight.playing
+      || (hovering && !open)
+      || (open && !auto)
+      || Date.now() < userUntil
+      || document.hidden;
   }
 
   function syncButtons() {
@@ -108,6 +128,13 @@ export function createSpotlight({ root, map, panel }) {
     playBtn.setAttribute('aria-label', playing ? t('spot_pause') : t('spot_play'));
     playBtn.title = playBtn.getAttribute('aria-label');
     playBtn.dataset.state = playing ? 'playing' : 'paused';
+    autoBtn.setAttribute('aria-checked', String(state.spotlight.autoOpen));
+    autoBtn.title = t('spot_autoopen');
+    if (autobarBtn) {
+      autobarBtn.dataset.state = playing ? 'playing' : 'paused';
+      autobarBtn.setAttribute('aria-label', playing ? t('panel_auto_pause') : t('panel_auto_play'));
+      autobarBtn.title = autobarBtn.getAttribute('aria-label');
+    }
     nextBtn.setAttribute('aria-label', t('spot_next'));
     nextBtn.title = t('spot_next');
     root.setAttribute('aria-label', t('spot_label'));
@@ -120,10 +147,31 @@ export function createSpotlight({ root, map, panel }) {
       elapsed += TICK;
       if (elapsed >= INTERVAL) next();
     }
-    bar.style.transform = `scaleX(${Math.min(1, elapsed / INTERVAL)})`;
+    const progress = `scaleX(${Math.min(1, elapsed / INTERVAL)})`;
+    bar.style.transform = progress;
+    if (autobar) {
+      const showBar = state.spotlight.autoOpen && panel.isOpen();
+      if (autobar.hidden === showBar) autobar.hidden = !showBar;
+      autobar.classList.toggle('is-paused', p);
+      if (showBar) autobarFill.style.transform = progress;
+    }
   }
 
-  card.addEventListener('click', () => { if (iso) panel.open(iso); });
+  card.addEventListener('click', () => {
+    if (!iso) return;
+    if (state.spotlight.autoOpen) cooldown();
+    panel.open(iso);
+  });
+  autoBtn.addEventListener('click', () => {
+    state.spotlight.autoOpen = !state.spotlight.autoOpen;
+    storageSet(AUTO_KEY, state.spotlight.autoOpen ? 'on' : 'off');
+    syncButtons();
+  });
+  autobarBtn?.addEventListener('click', () => {
+    state.spotlight.playing = !state.spotlight.playing;
+    userUntil = 0;
+    syncButtons();
+  });
   playBtn.addEventListener('click', () => {
     state.spotlight.playing = !state.spotlight.playing;
     userUntil = 0;
@@ -134,8 +182,12 @@ export function createSpotlight({ root, map, panel }) {
   root.addEventListener('pointerleave', () => { hovering = false; });
   root.addEventListener('focusin', () => { hovering = true; });
   root.addEventListener('focusout', () => { hovering = false; });
-  on('map:user', () => { userUntil = Date.now() + USER_COOLDOWN; });
-  on('panel:close', () => { if (iso) map.setSpotlight(iso); });
+  on('map:user', cooldown);
+  on('user:interact', cooldown); // panel scroll/click, manual country open (search, map click, deep link)
+  on('panel:close', () => {
+    cooldown(); // closing the panel by hand holds the tour ~15 s, then it resumes
+    if (iso) map.setSpotlight(iso);
+  });
 
   function start() {
     syncButtons();

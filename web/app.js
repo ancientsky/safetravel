@@ -1,5 +1,5 @@
 // SafeTravel TW — entry point. Loads data, wires the map, flights, panel, spotlight and HUD.
-import { state, on } from './js/state.js';
+import { state, on, emit } from './js/state.js';
 import { setLang, t, applyStatic, bindData, getLang } from './js/i18n.js';
 import { $, debounce, storageGet, storageSet, parseDay, todayTaipei } from './js/util.js';
 import { toast } from './js/toast.js';
@@ -97,7 +97,9 @@ async function main() {
   let flights = null;
   let spotlight = null;
 
+  // Manual opens (map click, search, deep link, test API) count as user interaction for the spotlight.
   function openCountry(iso, opts) {
+    emit('user:interact');
     return panel.open(iso, opts);
   }
 

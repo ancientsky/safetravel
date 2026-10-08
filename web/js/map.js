@@ -1,5 +1,5 @@
 // SVG world map: advisory-level choropleth, hover/selection effects, zoom & fly-to.
-import { state, emit, levelOf, alertsOf, routesTo } from './state.js';
+import { state, emit, levelOf, alertsOf, routesTo, groupAlerts } from './state.js';
 import { t, countryName, countryAltName, levelShort, badge, fmtNum } from './i18n.js';
 import { showTip, moveTip, hideTip } from './tooltip.js';
 import { esc, clamp, reducedMotion } from './util.js';
@@ -89,8 +89,9 @@ export function createMap({ svgEl, onOpen, getInsets }) {
 
   function labelFor(d) {
     const lvl = levelOf(d.id);
-    const n = alertsOf(d.id).length;
-    return `${countryName(d.id)} — ${levelShort(lvl)}${n ? ` — ${t('tooltip_advisories', { n })}` : ''}`;
+    const rows = alertsOf(d.id).length;
+    const n = rows ? groupAlerts(d.id).length : 0;
+    return `${countryName(d.id)} — ${levelShort(lvl)}${n ? ` — ${t('tooltip_advisories', { n, rows })}` : ''}`;
   }
 
   function classFor(d) {
@@ -174,7 +175,8 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   function hover(d, ev) {
     const lvl = levelOf(d.id);
     hoverOutline.attr('d', d._d).attr('class', `outline hover-outline lvl-${lvl}${d.id === 'TW' ? ' home' : ''}`).classed('on', true);
-    const n = alertsOf(d.id).length;
+    const rows = alertsOf(d.id).length;
+    const n = rows ? groupAlerts(d.id).length : 0;
     const flights = routesTo(d.id);
     const dep = d3.sum(flights, (r) => r.departures);
     const arr = d3.sum(flights, (r) => r.arrivals);
@@ -183,7 +185,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
       <div class="tip-head">${badge(lvl)}<span class="tip-iso">${esc(d.id.length === 2 ? d.id : '')}</span></div>
       <div class="tip-name">${esc(countryName(d.id))}</div>
       <div class="tip-alt">${esc(countryAltName(d.id))}</div>
-      <div class="tip-row">${home ? esc(t('tooltip_home')) : esc(t('tooltip_advisories', { n }))}</div>
+      <div class="tip-row">${home ? esc(t('tooltip_home')) : esc(t('tooltip_advisories', { n, rows }))}</div>
       ${flights.length ? `<div class="tip-row tip-flights">✈ ${esc(t('tooltip_flights', { d: dep, a: arr }))}</div>` : ''}
       ${!home ? `<div class="tip-hint">${esc(t('tooltip_click'))}</div>` : ''}`, ev.clientX, ev.clientY);
     emit('map:hover', d.id);
