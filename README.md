@@ -2,7 +2,11 @@
 
 **Live site / 線上網站:** https://ancientsky.github.io/safetravel/  <!-- placeholder: replace after first Pages deploy -->
 
-![SafeTravel TW preview](web/assets/og.png)
+![Dark theme, Traditional Chinese](docs/screenshots/dark-zh.png)
+
+| 國家面板 / Country panel | 淺色主題 / Light theme |
+|---|---|
+| ![Country panel](docs/screenshots/panel-cd-zh.png) | ![Light theme](docs/screenshots/light-en.png) |
 
 ---
 
