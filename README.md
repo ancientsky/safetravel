@@ -20,7 +20,7 @@ SafeTravel TW 是一個靜態網站（GitHub Pages），把臺灣疾病管制署
 - **近兩年疫情摘要**：疾管署的國際疫情資訊經 Google Gemini 翻譯為英文，並產生單則摘要與各國兩年總覽（中英對照）。
 - **桃園機場每日航線動畫**：以桃園國際機場（TPE）當日出發與抵達的目的地，在地圖上以動態弧線呈現。
 
-網站每日自動更新兩次（臺北時間 09:17 與 21:17），採用深色（黑綠）與淺色主題，介面支援繁體中文與英文。
+網站每日自動更新兩次（臺北時間 11:17 與 21:17），採用深色（黑綠）與淺色主題，介面支援繁體中文與英文。
 
 ### 架構
 
@@ -31,7 +31,7 @@ flowchart LR
     B[疾管署 國際疫情資訊 CSV]
     C[桃園機場 班表 HTML]
   end
-  subgraph Actions[GitHub Actions · 09:17 / 21:17 臺北時間 + 手動]
+  subgraph Actions[GitHub Actions · 11:17 / 21:17 臺北時間 + 手動]
     F[pipeline/fetch.py] --> L[pipeline/load.py\nSQLite]
     L --> E[pipeline/enrich.py\nGemini 翻譯與摘要\n內容雜湊快取]
     E --> X[pipeline/export.py]
@@ -102,7 +102,7 @@ node tests/smoke.mjs http://localhost:8080/
 - [ ] **Pages**：Settings → Pages → Build and deployment → Source 選 **GitHub Actions**。
 - [ ] **Workflow 權限**：Settings → Actions → General → Workflow permissions 需允許讀寫（`update-data.yml` 會 commit 更新後的資料）。
 - [ ] **手動執行**：Actions → `update-data` → Run workflow，可立即更新資料。
-- [ ] **排程**：`update-data.yml` 每日 09:17 與 21:17（Asia/Taipei）執行（cron 為 UTC `17 1,13 * * *`）。
+- [ ] **排程**：`update-data.yml` 每日 11:17 與 21:17（Asia/Taipei）執行（cron 為 UTC `17 3,13 * * *`）。
 
 ### 免責聲明
 
@@ -126,7 +126,7 @@ SafeTravel TW is a static GitHub Pages site that turns the Taiwan CDC (TCDC) int
 - **Two-year epidemic digest**: TCDC's international epidemic notices, translated to English and summarised by Google Gemini, plus a per-country two-year overview (zh and en).
 - **Daily Taoyuan Airport routes**: animated arcs from Taiwan Taoyuan International Airport (TPE) to the destinations served that day.
 
-The data refreshes automatically twice a day (09:17 and 21:17, Asia/Taipei). The interface is bilingual (zh-Hant default, English) with dark (default) and light themes.
+The data refreshes automatically twice a day (11:17 and 21:17, Asia/Taipei). The interface is bilingual (zh-Hant default, English) with dark (default) and light themes.
 
 ### Architecture
 
@@ -181,7 +181,7 @@ node tests/smoke.mjs http://localhost:8080/
 - [ ] **Pages**: Settings → Pages → Build and deployment → Source: **GitHub Actions**.
 - [ ] **Workflow permissions**: Settings → Actions → General → Workflow permissions must allow read and write (the update workflow commits refreshed data).
 - [ ] **Manual run**: Actions → `update-data` → Run workflow.
-- [ ] **Schedule**: `update-data.yml` runs at 09:17 and 21:17 Asia/Taipei (cron `17 1,13 * * *` in UTC).
+- [ ] **Schedule**: `update-data.yml` runs at 11:17 and 21:17 Asia/Taipei (cron `17 3,13 * * *` in UTC).
 
 ### Disclaimer
 

@@ -1,6 +1,6 @@
 name: Update data
 
-# Refreshes data/ and web/data/ twice a day (09:17 and 21:17 Asia/Taipei), commits the result to main and
+# Refreshes data/ and web/data/ twice a day (11:17 and 21:17 Asia/Taipei), commits the result to main and
 # redeploys GitHub Pages (commits made with GITHUB_TOKEN do not trigger other workflows, hence the deploy job here).
 #
 # Repository configuration:
@@ -12,7 +12,7 @@ name: Update data
 #   secrets.TDX_CLIENT_SECRET   Without them the pipeline calls TDX anonymously (small daily quota per IP).
 on:
   schedule:
-    - cron: '17 1,13 * * *'
+    - cron: '17 3,13 * * *'
   workflow_dispatch:
     inputs:
       max_calls:

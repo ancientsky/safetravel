@@ -3,7 +3,7 @@
 Who reads this: the maintainer. Everything here is done from the GitHub web UI or `gh` CLI; no server exists.
 Workflow file: `.github/workflows/update-data.yml` (refresh + commit + deploy) · `deploy-pages.yml` (deploy on `web/**` pushes).
 
-Schedule: `cron 17 1,13 * * *` (UTC) = 09:17 and 21:17 Asia/Taipei. Manual runs are always available.
+Schedule: `cron 17 3,13 * * *` (UTC) = 11:17 and 21:17 Asia/Taipei. Manual runs are always available.
 
 ---
 
