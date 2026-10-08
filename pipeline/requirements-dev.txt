@@ -1,2 +1,2 @@
 pytest>=8
-responses>=0.25
+responses>=0.26.3
