@@ -300,6 +300,7 @@ export function createPanel({ root, map }) {
     close,
     isOpen: () => !!iso,
     current: () => iso,
+    scroller: () => body,
     refresh: () => { if (iso) render(); },
   };
 }

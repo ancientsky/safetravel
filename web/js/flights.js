@@ -3,8 +3,9 @@ import { state } from './state.js';
 import { reducedMotion, clamp } from './util.js';
 
 const d3 = window.d3;
-const MAX_GLYPHS = 120;
-const TARGET_ALIVE = 96;
+const MAX_GLYPHS = 150;
+const TARGET_ALIVE = 120;
+const SPEED = 0.5; // along-arc speed factor (1 = original pace)
 const SAMPLES = 64;
 const TRAIL = 7;
 
@@ -120,7 +121,7 @@ export function createFlights({ canvas, map }) {
       const total = (r.departures || 0) + (r.arrivals || 0);
       return {
         r, pts, breaks, len,
-        dur: clamp(1.8 + len / 210, 1.8, 7.5),
+        dur: clamp(1.8 + len / 210, 1.8, 7.5) / SPEED,
         width: 0.5 + Math.sqrt(total) * 0.32,
         phase: i * 1.7,
         accOut: Math.random(),
@@ -224,7 +225,7 @@ export function createFlights({ canvas, map }) {
     if (animate) {
       // flowing data-stream dashes (outbound direction)
       ctx.setLineDash([2.5 / k, 13 / k]);
-      ctx.lineDashOffset = (-time * 26) / k;
+      ctx.lineDashOffset = (-time * 26 * SPEED) / k;
       ctx.globalAlpha = colors.light ? 0.55 : 0.5;
       ctx.strokeStyle = colors.out;
       ctx.lineWidth = 1.1 / k;

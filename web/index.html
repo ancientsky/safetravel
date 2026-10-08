@@ -108,16 +108,22 @@
       <span class="spot-kicker mono"><i class="rec" aria-hidden="true"></i><span data-i18n="spot_kicker">焦點掃描</span></span>
       <span class="spot-paused mono" data-i18n="spot_paused">已暫停</span>
       <div class="spot-ctrl">
-        <span class="spot-auto">
-          <button type="button" id="spot-autoopen" class="switch" role="switch" aria-checked="false" data-testid="spotlight-autoopen" aria-labelledby="spot-autoopen-label"><i aria-hidden="true"></i></button>
-          <label id="spot-autoopen-label" for="spot-autoopen" data-i18n="spot_autoopen">自動開啟國家資訊</label>
-        </span>
         <button type="button" class="btn-icon spot-play" aria-pressed="false">
           <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
           <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>
         </button>
         <button type="button" class="btn-icon spot-next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5l8 7-8 7M17 5v14"/></svg></button>
       </div>
+    </div>
+    <div class="spot-switches">
+      <span class="spot-auto">
+        <button type="button" id="spot-autoopen" class="switch" role="switch" aria-checked="false" data-testid="spotlight-autoopen" aria-labelledby="spot-autoopen-label"><i aria-hidden="true"></i></button>
+        <label id="spot-autoopen-label" for="spot-autoopen" data-i18n="spot_autoopen">查看完整資訊</label>
+      </span>
+      <span class="spot-auto spot-autoscroll-wrap" hidden>
+        <button type="button" id="spot-autoscroll" class="switch" role="switch" aria-checked="true" data-testid="spotlight-autoscroll" aria-labelledby="spot-autoscroll-label"><i aria-hidden="true"></i></button>
+        <label id="spot-autoscroll-label" for="spot-autoscroll" data-i18n="spot_autoscroll">自動捲動</label>
+      </span>
     </div>
     <div class="spot-progress" aria-hidden="true"><i></i></div>
     <button type="button" class="spot-card"></button>

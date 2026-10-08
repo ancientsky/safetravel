@@ -137,6 +137,7 @@ async function main() {
     map.setDotsVisible(state.flightsOn);
     spotlight = createSpotlight({ root: $('#spotlight'), map, panel });
     spotlight.start();
+    window.__safetravel.spotlight = { next: (iso) => spotlight.next(iso), current: () => spotlight.current() };
   }
 
   // ---- controls ----

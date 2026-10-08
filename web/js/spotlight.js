@@ -4,14 +4,17 @@ import {
   t, countryName, countryAltName, diseaseName, levelShort, badge, fmtDay, pick, isEn,
 } from './i18n.js';
 import {
-  esc, clean, truncate, weightedPick, reducedMotion, storageGet, storageSet, $,
+  esc, clean, truncate, weightedPick, reducedMotion, storageGet, storageSet, clamp, $,
 } from './util.js';
 
-const INTERVAL = 9000;
+const INTERVAL = 15000;
+const SCROLL_DELAY = 2500; // let the header/advisories be read first
+const SCROLL_LEAD = 1000; // reach the bottom this long before the next country
 const TICK = 100;
 const USER_COOLDOWN = 15000;
 const WEIGHT = { 1: 1, 2: 4, 3: 10 };
 const AUTO_KEY = 'safetravel.spotlightAutoOpen';
+const SCROLL_KEY = 'safetravel.spotlightAutoScroll';
 
 export function createSpotlight({ root, map, panel }) {
   const card = $('.spot-card', root);
@@ -22,7 +25,14 @@ export function createSpotlight({ root, map, panel }) {
   const autobar = document.querySelector('.panel-autobar');
   const autobarFill = autobar?.querySelector('.pa-progress b');
   const autobarBtn = autobar?.querySelector('.pa-toggle');
+  const scrollBtn = $('[data-testid="spotlight-autoscroll"]', root);
+  const scrollWrap = scrollBtn.closest('.spot-auto');
   state.spotlight.autoOpen = storageGet(AUTO_KEY) === 'on';
+  state.spotlight.autoScroll = storageGet(SCROLL_KEY) !== 'off';
+  let autoIso = null; // country whose panel the carousel itself opened
+  let scrollCancelled = false;
+  let lastTickAt = 0;
+  let scrollRaf = 0;
   let iso = null;
   let elapsed = 0;
   let hovering = false;
@@ -57,17 +67,46 @@ export function createSpotlight({ root, map, panel }) {
     if (fly && !panel.isOpen()) map.flyTo(code, { pad: pad(), maxScale: 4, ms: 2000 });
   }
 
-  function next() {
-    const code = choose();
+  function next(forced) {
+    const code = forced || choose();
     if (!code) return;
     if (state.spotlight.autoOpen) {
       // Auto-open: the panel does the fly-to (padded for the panel) and keeps focus where it is.
       show(code, { fly: false });
+      autoIso = code;
+      scrollCancelled = false;
       panel.open(code, { focus: false, fly: !reducedMotion() });
+      ensureScroll();
     } else {
       // Under reduced motion the carousel only swaps the card + outline, never moves the map.
       show(code, { fly: !reducedMotion() });
     }
+  }
+
+  // ---- auto-scroll of an auto-opened panel across the cycle ----
+  function scrollActive() {
+    return state.spotlight.autoOpen && state.spotlight.autoScroll && !scrollCancelled
+      && autoIso && panel.isOpen() && panel.current() === autoIso;
+  }
+
+  function ensureScroll() {
+    if (!scrollRaf && scrollActive()) scrollRaf = requestAnimationFrame(stepScroll);
+  }
+
+  function stepScroll() {
+    scrollRaf = 0;
+    if (!scrollActive()) return;
+    const el = panel.scroller(); // the panel's own scroll container (desktop and bottom sheet)
+    const max = el.scrollHeight - el.clientHeight;
+    if (max > 2) { // content that fits needs no scrolling
+      // interpolate between 100 ms ticks for a smooth, linear glide
+      const e = elapsed + (paused() ? 0 : Math.min(TICK, performance.now() - lastTickAt));
+      let p = clamp((e - SCROLL_DELAY) / (INTERVAL - SCROLL_LEAD - SCROLL_DELAY), 0, 1);
+      if (reducedMotion()) p = Math.floor(p * 3 + 1e-6) / 3; // three discrete jumps, no glide
+      const target = Math.round(p * max);
+      if (Math.abs(el.scrollTop - target) >= 1) el.scrollTop = target;
+    }
+    scrollRaf = requestAnimationFrame(stepScroll);
   }
 
   /** User touched the map / panel: hold the carousel for a while, then resume. */
@@ -130,6 +169,10 @@ export function createSpotlight({ root, map, panel }) {
     playBtn.dataset.state = playing ? 'playing' : 'paused';
     autoBtn.setAttribute('aria-checked', String(state.spotlight.autoOpen));
     autoBtn.title = t('spot_autoopen');
+    scrollBtn.setAttribute('aria-checked', String(state.spotlight.autoScroll));
+    scrollBtn.title = t('spot_autoscroll');
+    scrollWrap.hidden = !state.spotlight.autoOpen; // only meaningful with full details on
+    scrollBtn.disabled = !state.spotlight.autoOpen;
     if (autobarBtn) {
       autobarBtn.dataset.state = playing ? 'playing' : 'paused';
       autobarBtn.setAttribute('aria-label', playing ? t('panel_auto_pause') : t('panel_auto_play'));
@@ -141,6 +184,7 @@ export function createSpotlight({ root, map, panel }) {
   }
 
   function tick() {
+    lastTickAt = performance.now();
     const p = paused();
     root.classList.toggle('is-paused', p);
     if (!p) {
@@ -155,6 +199,7 @@ export function createSpotlight({ root, map, panel }) {
       autobar.classList.toggle('is-paused', p);
       if (showBar) autobarFill.style.transform = progress;
     }
+    ensureScroll();
   }
 
   card.addEventListener('click', () => {
@@ -165,6 +210,11 @@ export function createSpotlight({ root, map, panel }) {
   autoBtn.addEventListener('click', () => {
     state.spotlight.autoOpen = !state.spotlight.autoOpen;
     storageSet(AUTO_KEY, state.spotlight.autoOpen ? 'on' : 'off');
+    syncButtons();
+  });
+  scrollBtn.addEventListener('click', () => {
+    state.spotlight.autoScroll = !state.spotlight.autoScroll;
+    storageSet(SCROLL_KEY, state.spotlight.autoScroll ? 'on' : 'off');
     syncButtons();
   });
   autobarBtn?.addEventListener('click', () => {
@@ -183,7 +233,12 @@ export function createSpotlight({ root, map, panel }) {
   root.addEventListener('focusin', () => { hovering = true; });
   root.addEventListener('focusout', () => { hovering = false; });
   on('map:user', cooldown);
-  on('user:interact', cooldown); // panel scroll/click, manual country open (search, map click, deep link)
+  // Panel wheel/touch/click/keys, manual country open (search, map click, deep link):
+  // pause the tour and stop auto-scrolling this country.
+  on('user:interact', () => {
+    cooldown();
+    scrollCancelled = true;
+  });
   on('panel:close', () => {
     cooldown(); // closing the panel by hand holds the tour ~15 s, then it resumes
     if (iso) map.setSpotlight(iso);
