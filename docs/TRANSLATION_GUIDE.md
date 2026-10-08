@@ -9,7 +9,7 @@ country overviews **without** the Gemini API. GitHub Actions still fetches the d
 ```bash
 cd /home/user/safetravel || git clone https://github.com/ancientsky/safetravel /home/user/safetravel
 cd /home/user/safetravel && git checkout main && git pull --rebase origin main
-pip install -q -r pipeline/requirements.txt
+python -m pip install -q -r pipeline/requirements.txt   # same interpreter that runs the pipeline; bare `pip` may differ
 rm -rf /tmp/pend && python -m pipeline pending --out /tmp/pend      # prints JSON counts
 ```
 
