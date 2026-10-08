@@ -74,7 +74,7 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
 
 ## Scheduling
 
-- `update-data.yml`: `cron: '17 1,13 * * *'` (11:17 / 21:17 Asia/Taipei) + `workflow_dispatch` (inputs: `max_calls`, `skip_gemini`).
+- `update-data.yml`: `cron: '17 3,13 * * *'` (11:17 / 21:17 Asia/Taipei) + `workflow_dispatch` (inputs: `max_calls`, `skip_gemini`).
   Steps: checkout → setup-python → `pip install --require-hashes -r pipeline/requirements.lock` → `python -m pipeline run` → commit `data/` + `web/data/` if changed → deploy Pages (second job, needs `pages: write`, `id-token: write`).
 - `deploy-pages.yml`: on push to `main` touching `web/**` → upload `web/` → deploy. Uses `actions/configure-pages@v5` with `enablement: true`.
 - Commits made with `GITHUB_TOKEN` do not trigger other workflows, hence the deploy job lives inside `update-data.yml` too.
