@@ -1,5 +1,5 @@
-# flight fetch 2026-10-09T03:17:47+08:00
+# flight fetch 2026-10-09T18:37:36+08:00
 tdx auth: no TDX credentials in env: calling anonymously
-tdx_fids_tpe	https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE?%24format=JSON	200	1534773 bytes	2000 physical flights (all days)
+tdx_fids_tpe	https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE?%24format=JSON	200	1576073 bytes	1994 physical flights (all days)
 tdx_airports	469 airports
 RESULT ok=True source=https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE kind=tdx day=2026-10-09 routes=87 reason=None warn=None
