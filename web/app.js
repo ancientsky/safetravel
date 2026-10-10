@@ -252,9 +252,10 @@ async function main() {
     if (panel.isOpen()) map.setSelected(panel.current());
   }, 180));
 
-  on('panel:open', () => {
+  // keep the spotlight effect (outline + reticle) on the country whose panel is shown
+  on('panel:open', (iso) => {
     $('#spotlight')?.classList.add('is-hidden');
-    map.setSpotlight(null);
+    map.setSpotlight(iso);
   });
   on('panel:close', () => $('#spotlight')?.classList.remove('is-hidden'));
 

@@ -373,7 +373,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   function setSelected(iso) {
     const f = iso && byIso.get(iso);
     selOutline.setAttribute('d', f ? f._d || path(f) : '');
-    selSvg.hidden = !f;
+    selSvg.toggleAttribute('hidden', !f); // SVG elements have no .hidden property: toggle the attribute
   }
 
   // Compositor-only pulse (opacity on an overlay element), restarted without a forced reflow.
@@ -387,7 +387,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     spotIso = iso && byIso.has(iso) ? iso : null;
     const f = spotIso && byIso.get(spotIso);
     spotOutline.setAttribute('d', f ? f._d || path(f) : '');
-    spotSvg.hidden = !f;
+    spotSvg.toggleAttribute('hidden', !f);
     reticle.hidden = !f;
     if (f) {
       pulse(spotSvg, [{ opacity: 0 }, { opacity: 1 }, { opacity: 0.3 }, { opacity: 1 }, { opacity: 0.3 }, { opacity: 1 }, { opacity: 0.9 }],
