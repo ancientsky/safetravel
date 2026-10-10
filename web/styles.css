@@ -209,9 +209,9 @@ a { color: var(--cyan); }
 .country.lvl-1 { fill: var(--lvl1); fill-opacity: var(--fo1); stroke: var(--lvl1); stroke-opacity: .55; }
 .country.lvl-2 { fill: var(--lvl2); fill-opacity: var(--fo2); stroke: var(--lvl2); stroke-opacity: .7; }
 .country.lvl-3 { fill: var(--lvl3); fill-opacity: var(--fo3); stroke: var(--lvl3); stroke-opacity: .9; }
-/* hovered, selected, spotlit or filter-highlighted countries use the exact legend colour */
+/* hovered, selected, spotlit or filter-highlighted countries use the legend colour at 90% */
 .country.lvl-1:hover, .country.lvl-2:hover, .country.lvl-3:hover,
-.country.focus.lvl-1, .country.focus.lvl-2, .country.focus.lvl-3 { fill-opacity: 1; stroke-opacity: 1; }
+.country.focus.lvl-1, .country.focus.lvl-2, .country.focus.lvl-3 { fill-opacity: .9; stroke-opacity: 1; }
 .country.lvl-0:hover { fill: rgba(var(--accent-rgb), .12); }
 .country.home {
   fill: var(--home);
@@ -223,7 +223,7 @@ a { color: var(--cyan); }
 .country.marker { stroke-width: 1; }
 .country.dim { fill-opacity: .05; stroke-opacity: .18; }
 .country.lvl-0.dim { opacity: .6; }
-.country.lit { fill-opacity: 1; stroke-opacity: 1; }
+.country.lit { fill-opacity: .9; stroke-opacity: 1; }
 .country:focus-visible { stroke: var(--cyan); stroke-width: 2.4; stroke-opacity: 1; }
 
 .outline { fill: none; pointer-events: none; vector-effect: non-scaling-stroke; opacity: 0; }
