@@ -1,6 +1,6 @@
 // Unattended auto-refresh: poll meta.json and reload the page at a quiet moment when new data
 // has been published (or once the page has been open for more than a day).
-import { on } from './state.js';
+import { on, emit } from './state.js';
 import { t } from './i18n.js';
 import { toast } from './toast.js';
 
@@ -41,7 +41,10 @@ export function startRefresh({ generatedAt, reload = () => location.reload() } =
   function schedule(reason, gen) {
     if (pending) return;
     pending = { reason, gen, since: Date.now(), cycled: false, deferStart: 0 };
-    if (reason === 'data') toast(t('refresh_new_data'), 'info', 0);
+    if (reason === 'data') {
+      toast(t('refresh_new_data'), 'info', 0);
+      emit('refresh:pending');
+    }
     gate = setInterval(maybeReload, 1000);
   }
 

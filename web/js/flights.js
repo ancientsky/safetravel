@@ -1,5 +1,5 @@
 // Canvas overlay: great-circle arcs from TPE with animated comet glyphs and a hub radar.
-import { state } from './state.js';
+import { state, emit } from './state.js';
 import { reducedMotion, clamp } from './util.js';
 
 const d3 = window.d3;
@@ -177,6 +177,9 @@ export function createFlights({ canvas, map }) {
   }
 
   function ping(x, y, out) {
+    // screen-space x (0..1) of the landing, for the sound panner; listeners rate-limit themselves
+    const { k, x: tx } = map.transform();
+    emit('flight:landing', (x * k + tx) / (W || 1));
     for (const p of pings) {
       if (!p.on) { p.on = true; p.x = x; p.y = y; p.t = 0; p.out = out; return; }
     }

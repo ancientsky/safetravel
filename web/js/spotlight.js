@@ -88,6 +88,7 @@ export function createSpotlight({ root, map, panel }) {
   function next(forced) {
     const code = forced || choose();
     if (!code) return;
+    emit('spotlight:move', code); // e.g. the sonar ping
     if (state.spotlight.autoOpen) {
       // Auto-open: the panel does the fly-to (padded for the panel) and keeps focus where it is.
       show(code, { fly: false });

@@ -1,9 +1,12 @@
 // SafeTravel TW — entry point. Loads data, wires the map, flights, panel, spotlight and HUD.
-import { state, on, emit } from './js/state.js';
+import {
+  state, on, emit, levelOf,
+} from './js/state.js';
 import { setLang, t, applyStatic, bindData, getLang } from './js/i18n.js';
 import { $, debounce, storageGet, storageSet, parseDay, todayTaipei } from './js/util.js';
 import { toast } from './js/toast.js';
 import { startRefresh } from './js/refresh.js';
+import { createSound } from './js/sound.js';
 import { initTooltip } from './js/tooltip.js';
 import { createMap } from './js/map.js';
 import { createFlights } from './js/flights.js';
@@ -125,6 +128,19 @@ async function main() {
   }
   const clockTick = startClock($('#clock'));
 
+  // Synthesised sound effects (OFF by default; nothing is created until switched on).
+  const sound = createSound({ button: $('[data-testid="sound-toggle"]') });
+  on('spotlight:move', (iso) => sound.play('ping', levelOf(iso)));
+  on('panel:open', () => sound.play('chime'));
+  on('panel:close', () => sound.play('whoosh'));
+  on('map:hover', (iso) => { if (iso && levelOf(iso) > 0) sound.play('tick'); });
+  on('flight:landing', (x) => sound.landing(x));
+  on('refresh:pending', () => sound.play('arpeggio'));
+  // tiny click for the UI toggles (language, theme, filters, routes, spotlight switches)
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-testid="lang-toggle"], [data-testid="theme-toggle"], .chip-filter, .fh-toggle, .switch')) sound.play('click');
+  });
+
   // ---- critical data first ----
   const worldFile = LITE_MAP ? 'world-110m.json' : 'world.json';
   const files = [worldFile, 'alerts.json', 'meta.json', 'countries.json', 'flights.json'];
@@ -159,7 +175,9 @@ async function main() {
     return panel.open(iso, opts);
   }
 
-  window.__safetravel = { state, openCountry, closePanel: () => panel.close() };
+  window.__safetravel = {
+    state, openCountry, closePanel: () => panel.close(), sound: sound.debug,
+  };
 
   // HUD first so the map can fit around the overlays.
   renderTiles($('#stat-tiles'), { animate: true });
@@ -210,6 +228,7 @@ async function main() {
     state.lang = setLang(getLang() === 'en' ? 'zh-Hant' : 'en');
     storageSet(LANG_KEY, state.lang);
     applyStatic();
+    sound.refresh();
     applyTheme(state.theme);
     clockTick();
     renderTiles($('#stat-tiles'));

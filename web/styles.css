@@ -967,7 +967,7 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 /* Reserve HUD sizes from first paint (no shifts when data / i18n text arrives). */
 .is-pending { visibility: hidden; }
 .legend, .flight-hud { transition: opacity .3s; }
-.clock-date { display: inline-block; min-width: 7.5em; }
+@media (min-width: 1181px) { .clock-date { display: inline-block; min-width: 7.5em; } } /* hidden below 1181px */
 .freshness { min-width: 190px; }
 @media (max-width: 760px) { .freshness { min-width: 0; } }
 /* English visitors: the page stays hidden until the strings are swapped (no text-reflow shifts);
@@ -976,3 +976,18 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 @keyframes i18n-reveal { to { visibility: visible; } }
 /* footer height on phones is known per language: start with it so nothing moves when it is measured */
 @media (max-width: 760px) { :root { --foot-h: 52px; } :root[lang="en"] { --foot-h: 65px; } }
+
+/* ---------- sound toggle ---------- */
+.sound-toggle { position: relative; }
+.sound-toggle .i-sound-on { display: none; }
+.sound-toggle[aria-pressed="true"] .i-sound-on { display: block; }
+.sound-toggle[aria-pressed="true"] .i-sound-off { display: none; }
+.sound-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--border-strong); }
+.sound-hint {
+  display: none; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--lvl2); box-shadow: 0 0 8px var(--lvl2); animation: blink 1.4s ease-in-out infinite;
+}
+.sound-toggle.is-waiting .sound-hint { display: block; }
+@keyframes sound-hint { 50% { opacity: .35; transform: scale(.8); } }
+.sound-hint { animation-name: sound-hint; }
+@media (max-width: 760px) { .sound-toggle span[data-i18n] { display: none; } }
