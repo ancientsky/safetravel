@@ -45,13 +45,15 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     <svg class="fx-svg fx-danger"><g class="zt"></g></svg>
     <svg class="fx-svg fx-homeglow"><g class="zt"><path class="home-glow"/></g></svg>
     <svg class="fx-svg fx-sel" hidden><g class="zt"><path class="sel-outline"/></g></svg>
-    <svg class="fx-svg fx-spot" hidden><g class="zt"><path class="spot-outline"/></g></svg>
+    <svg class="fx-svg fx-spot" hidden><g class="zt"><path class="spot-case"/><path class="spot-outline"/></g></svg>
     <div class="fx-pin fx-homemark"><span class="home-ring"></span><span class="home-dot"></span><span class="home-label"></span></div>
     <div class="fx-pin fx-reticle" hidden>
-      <svg class="ret-static" viewBox="-50 -50 100 100"><circle r="34" class="ret-c2"/>
+      <svg class="ret-static" viewBox="-50 -50 100 100">
+        <g class="ret-case"><circle r="34"/><path d="M-44 0H-28M28 0H44M0 -44V-28M0 28V44"/><path d="M-30 -30h10M-30 -30v10M30 -30h-10M30 -30v10M-30 30h10M-30 30v-10M30 30h-10M30 30v-10"/></g>
+        <circle r="34" class="ret-c2"/>
         <path d="M-44 0H-28M28 0H44M0 -44V-28M0 28V44" class="ret-x"/>
         <path d="M-30 -30h10M-30 -30v10M30 -30h-10M30 -30v10M-30 30h10M-30 30v-10M30 30h-10M30 30v-10" class="ret-corner"/></svg>
-      <svg class="ret-spin" viewBox="-50 -50 100 100"><circle r="22" class="ret-c1"/></svg>
+      <svg class="ret-spin" viewBox="-50 -50 100 100"><g class="ret-case"><circle r="22"/></g><circle r="22" class="ret-c1"/></svg>
     </div>`;
   svgEl.after(fxLayer);
   const fxSvgs = Array.from(fxLayer.querySelectorAll('.fx-svg'));
@@ -61,11 +63,13 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   const selSvg = fxLayer.querySelector('.fx-sel');
   const selOutline = selSvg.querySelector('path');
   const spotSvg = fxLayer.querySelector('.fx-spot');
-  const spotOutline = spotSvg.querySelector('path');
+  const spotOutline = spotSvg.querySelector('.spot-outline');
+  const spotCase = spotSvg.querySelector('.spot-case');
   const homePin = fxLayer.querySelector('.fx-homemark');
   const homeLabel = homePin.querySelector('.home-label');
   homeLabel.textContent = t('home_label');
   const reticle = fxLayer.querySelector('.fx-reticle');
+  let reticleSize = 0;
   let homeXY = null;
 
   let features = [];
@@ -280,6 +284,13 @@ export function createMap({ svgEl, onOpen, getInsets }) {
       if (c) {
         const [x, y] = transform.apply(c);
         reticle.style.transform = `translate(${x}px, ${y}px)`;
+        // size the reticle to the country on screen so it stays legible on large countries
+        const b = largestBounds(spotIso);
+        if (b) {
+          const side = Math.min(b[1][0] - b[0][0], b[1][1] - b[0][1]) * k;
+          const size = Math.round(Math.max(90, Math.min(240, side * 0.6)));
+          if (size !== reticleSize) { reticleSize = size; reticle.style.setProperty('--ret-size', `${size}px`); }
+        }
       }
     }
     if (dotSel) {
@@ -395,7 +406,9 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   function setSpotlight(iso) {
     spotIso = iso && byIso.has(iso) ? iso : null;
     const f = spotIso && byIso.get(spotIso);
-    spotOutline.setAttribute('d', f ? f._d || path(f) : '');
+    const spotD = f ? f._d || path(f) : '';
+    spotOutline.setAttribute('d', spotD);
+    spotCase.setAttribute('d', spotD);
     spotSvg.toggleAttribute('hidden', !f);
     refreshFocus();
     reticle.hidden = !f;

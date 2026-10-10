@@ -24,6 +24,9 @@
   --accent: #19ff8a;
   --accent-rgb: 25, 255, 138;
   --cyan: #29e7ff;
+  --ret-ink: #ffffff;
+  --ret-case: #010604;
+  --ret-accent: #3df0ff;
   --cyan-rgb: 41, 231, 255;
   --home: #29e7ff;
   --glass: rgba(5, 16, 10, 0.84);
@@ -66,6 +69,9 @@
   --accent: #1f8f5a;
   --accent-rgb: 31, 143, 90;
   --cyan: #0b7891;
+  --ret-ink: #120d06;
+  --ret-case: #fffdf3;
+  --ret-accent: #0a6c84;
   --cyan-rgb: 11, 120, 145;
   --home: #0b7891;
   --glass: rgba(255, 251, 236, 0.9);
@@ -247,8 +253,9 @@ a { color: var(--cyan); }
 .fx-homeglow { animation: fx-breathe 2.6s ease-in-out infinite; }
 .fx-sel path { stroke: var(--cyan); stroke-width: 2.2; stroke-dasharray: 7 4; }
 .fx-sel { filter: drop-shadow(0 0 4px var(--cyan)); animation: fx-soft 2.4s ease-in-out infinite; }
-.fx-spot path { stroke: var(--fg); stroke-width: 1.6; }
-.fx-spot { opacity: .9; }
+/* spotlight outline + reticle: bright ink over a dark casing so they read on every level colour */
+.fx-spot .spot-case { stroke: var(--ret-case); stroke-width: 5; stroke-opacity: .55; }
+.fx-spot .spot-outline { stroke: var(--ret-ink); stroke-width: 2; }
 .fx-pin { position: absolute; left: 0; top: 0; width: 0; height: 0; }
 .home-dot {
   position: absolute; left: -3.5px; top: -3.5px; width: 7px; height: 7px; border-radius: 50%;
@@ -263,12 +270,17 @@ a { color: var(--cyan); }
   font: 700 9px/1.4 var(--mono); letter-spacing: .14em; color: var(--home);
   text-shadow: 1px 1px 0 var(--bg), -1px -1px 0 var(--bg), 1px -1px 0 var(--bg), -1px 1px 0 var(--bg);
 }
-.fx-reticle svg { position: absolute; left: -50px; top: -50px; width: 100px; height: 100px; overflow: visible; }
-.fx-reticle circle, .fx-reticle path { fill: none; stroke: var(--fg); stroke-width: 1; }
-.fx-reticle .ret-c1 { stroke-opacity: .8; stroke-dasharray: 3 5; }
-.fx-reticle .ret-c2 { stroke-opacity: .35; }
-.fx-reticle .ret-x { stroke: var(--accent); stroke-width: 1.4; }
-.fx-reticle .ret-corner { stroke: var(--cyan); stroke-width: 1.6; }
+.fx-reticle { --ret-size: 100px; }
+.fx-reticle svg {
+  position: absolute; overflow: visible;
+  left: calc(var(--ret-size) / -2); top: calc(var(--ret-size) / -2); width: var(--ret-size); height: var(--ret-size);
+}
+.fx-reticle circle, .fx-reticle path { fill: none; vector-effect: non-scaling-stroke; stroke-linecap: round; }
+.fx-reticle .ret-case circle, .fx-reticle .ret-case path { stroke: var(--ret-case); stroke-width: 5.5; stroke-opacity: .6; }
+.fx-reticle .ret-c1 { stroke: var(--ret-ink); stroke-width: 1.8; stroke-dasharray: 4 6; }
+.fx-reticle .ret-c2 { stroke: var(--ret-ink); stroke-width: 1.4; stroke-opacity: .75; }
+.fx-reticle .ret-x { stroke: var(--ret-ink); stroke-width: 2.4; }
+.fx-reticle .ret-corner { stroke: var(--ret-accent); stroke-width: 3; }
 .ret-spin { animation: spin 6s linear infinite; }
 @keyframes fx-breathe { 50% { opacity: .3; } }
 @keyframes fx-soft { 50% { opacity: .55; } }
