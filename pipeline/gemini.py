@@ -378,14 +378,15 @@ def refresh_overviews(conn, client, stats: dict) -> None:
 
 
 # ------------------------------------------------------------------- names
-def _missing_diseases(conn) -> list[str]:
+def missing_diseases(conn, retry_limit: bool = True) -> list[str]:
     known = {C.nfkc(k) for k in X._manual("diseases.json")} | set(db.names(conn, "disease_names"))
     seen: set[str] = set()
     for r in conn.execute("SELECT DISTINCT alert_disease d FROM alerts_raw WHERE alert_disease != ?", (C.COVID_OLD,)):
         seen.update(C.split_diseases(r["d"]))
     for r in conn.execute("SELECT DISTINCT disease d FROM epidemics"):
         seen.update(C.split_diseases(r["d"]))
-    return sorted(d for d in seen - known if db.ai_failure_count(conn, "disease", d) < MAX_FAILURES_PER_KEY)
+    return sorted(d for d in seen - known
+                  if not retry_limit or db.ai_failure_count(conn, "disease", d) < MAX_FAILURES_PER_KEY)
 
 
 def _missing_areas(conn) -> list[dict]:
@@ -423,7 +424,7 @@ def _names_job(conn, client, kind: str, table: str, items: list, stats: dict, ke
 
 
 def fill_names(conn, client, stats: dict) -> None:
-    dis = _missing_diseases(conn)
+    dis = missing_diseases(conn)
     C.log.info("names: %d diseases, ", len(dis))
     if dis:
         _names_job(conn, client, "disease", "disease_names", [{"zh": d} for d in dis], stats, key=lambda x: x["zh"])

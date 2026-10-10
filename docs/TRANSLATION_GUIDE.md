@@ -13,7 +13,7 @@ python -m pip install -q -r pipeline/requirements.txt   # same interpreter that 
 rm -rf /tmp/pend && python -m pipeline pending --out /tmp/pend      # prints JSON counts
 ```
 
-If both `translations` and `overviews` are 0: stop, nothing to do.
+If `translations`, `overviews` and `diseases` are all 0: stop, nothing to do.
 
 1. **Translations** — for each `/tmp/pend/translations/in/chunk_NNN.json`, produce `/tmp/pend/translations/out/chunk_NNN.json`
    (JSON list, one object per input item, same order) with keys
@@ -22,22 +22,28 @@ If both `translations` and `overviews` are 0: stop, nothing to do.
 2. **Overviews** — for each `/tmp/pend/overviews/in/countries_NN.json`, write the country overviews and merge them into
    `/tmp/pend/overviews/out/all.json` as `{ISO2: {"zh": ..., "en": ...}}` following the **overview rules** below.
    Delegate to Sonnet sub-agents, one per input file.
-3. **Validate** every output: parses as JSON, same count and hash order as the input, no empty field,
+3. **Disease names** — if `/tmp/pend/diseases/in/names.json` exists (a JSON list of Chinese disease names that have no
+   English name yet), write `/tmp/pend/diseases/out/names.json` as `{zh: en}` covering every name, using the standard
+   WHO / US CDC English name in a short tag form (e.g. `沙門氏菌感染症` → `Salmonellosis`, `急性病毒性A型肝炎` →
+   `Acute hepatitis A`, `流感併發重症` → `Severe complicated influenza`). Do this yourself (the list is short).
+   No Chinese characters in the English values.
+4. **Validate** every output: parses as JSON, same count and hash order as the input, no empty field,
    `summary_zh` ≤ 40 chars, `summary_en` ≤ 30 words, no Kangxi-radical characters (U+2F00–U+2FD5, U+2E80–U+2EF3).
-4. **Import, export, verify**
+5. **Import, export, verify**
    ```bash
    python pipeline/import_translations.py translations /tmp/pend/translations/out --model claude-haiku-routine
    python pipeline/import_translations.py overviews /tmp/pend/overviews/out/all.json --model claude-sonnet-routine
+   [ -f /tmp/pend/diseases/out/names.json ] && python pipeline/import_translations.py diseases /tmp/pend/diseases/out/names.json --model claude-routine
    python -m pipeline export && python -m pipeline validate
    ```
-5. **Commit and push** (`data/safetravel.db`, `web/data/`):
+6. **Commit and push** (`data/safetravel.db`, `web/data/`):
    ```bash
    git -c user.name=ancientsky -c user.email=7279958+ancientsky@users.noreply.github.com \
-       commit -am "data: translate N digests, refresh M overviews" && git push origin main
+       commit -am "data: translate N digests, refresh M overviews, name K diseases" && git push origin main
    ```
    On a non-fast-forward rejection (`data/safetravel.db` is binary and also written by the Actions workflow, so a rebase
    never merges it meaningfully): `git pull --rebase -X theirs origin main`, then **redo the whole import**: re-run
-   `import_translations.py` for both kinds (translations and overviews), `python -m pipeline export`,
+   `import_translations.py` for every kind (translations, overviews, diseases), `python -m pipeline export`,
    `python -m pipeline validate`, commit the result, and only then push again. Never push an export that was not
    validated after the rebase. Up to 3 attempts.
    Pushing `web/**` triggers the Pages deploy automatically; that workflow runs `python -m pipeline validate` first and

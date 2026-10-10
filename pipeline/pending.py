@@ -5,11 +5,12 @@
 Writes:
   DIR/translations/in/chunk_NNN.json   untranslated epidemic digests (hash, id, date, headline, description, ...)
   DIR/overviews/in/countries_NN.json   countries whose 2-year item set changed since their stored overview
+  DIR/diseases/in/names.json           disease names (zh) with no English name in the dictionary or the DB
   DIR/README.txt                       the expected output format (what import_translations.py consumes)
 
 Exits 0 and prints JSON counts. The translator writes DIR/translations/out/*.json and DIR/overviews/out/*.json,
 then runs `python pipeline/import_translations.py translations DIR/translations/out` and
-`python pipeline/import_translations.py overviews DIR/overviews/out/all.json`, followed by `python -m pipeline export`.
+`python pipeline/import_translations.py overviews DIR/overviews/out/all.json` (and `diseases DIR/diseases/out/names.json`), followed by `python -m pipeline export`.
 """
 from __future__ import annotations
 
@@ -29,6 +30,8 @@ translations/out/chunk_NNN.json : JSON list, one object per input item in the sa
 
 overviews/out/all.json : JSON object {ISO2: {"zh": str (2-3 sentences, <=120 chars), "en": str (2-3 sentences, <=70 words)}}
   covering every country listed in overviews/in/*.json.
+
+diseases/out/names.json : JSON object {zh: en} for every name in diseases/in/names.json (standard WHO English name).
 """
 
 
@@ -52,6 +55,11 @@ def pending_overviews(conn) -> list[dict]:
     """Same inputs the Gemini job would use (pipeline.gemini._overview_inputs), limited to changed countries."""
     from . import gemini
     return gemini.overviews_pending(conn, C.window_start())
+
+
+def pending_diseases(conn) -> list[str]:
+    from . import gemini
+    return gemini.missing_diseases(conn, retry_limit=False)
 
 
 def main(argv=None) -> int:
@@ -80,9 +88,17 @@ def main(argv=None) -> int:
         (odir / f"countries_{k // a.overview_batch:02d}.json").write_text(
             json.dumps(public[k:k + a.overview_batch], ensure_ascii=False, indent=0), encoding="utf-8")
 
+    dis = pending_diseases(conn)
+    ddir = out / "diseases" / "in"
+    ddir.mkdir(parents=True, exist_ok=True)
+    (out / "diseases" / "out").mkdir(parents=True, exist_ok=True)
+    if dis:
+        (ddir / "names.json").write_text(json.dumps(dis, ensure_ascii=False, indent=0), encoding="utf-8")
+
     (out / "README.txt").write_text(README, encoding="utf-8")
     counts = {"translations": len(items), "translation_chunks": -(-len(items) // a.chunk) if items else 0,
-              "overviews": len(ovs), "overview_files": -(-len(ovs) // a.overview_batch) if ovs else 0}
+              "overviews": len(ovs), "overview_files": -(-len(ovs) // a.overview_batch) if ovs else 0,
+              "diseases": len(dis)}
     print(json.dumps(counts))
     return 0
 

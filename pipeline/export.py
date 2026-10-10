@@ -344,6 +344,9 @@ def export_all(conn, out_dir=None) -> dict:
     for it in epid["items"]:
         used.update(C.split_diseases(it["disease_zh"]))
     alerts["diseases"] = {d: {"zh": d, "en": names.disease(d)} for d in sorted(used)}
+    untranslated = [d for d, v in alerts["diseases"].items() if v["en"] == d]
+    if untranslated:
+        C.log.warning("diseases without an English name (shown in Chinese): %s", ", ".join(untranslated))
 
     prev = C.load_json(out_dir / "flights.json", None)
     flights, finfo = build_flights(conn, gen, prev)

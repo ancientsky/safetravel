@@ -3,16 +3,19 @@
 Usage:
   python pipeline/import_translations.py translations <dir-or-file.json> [--model NAME]
   python pipeline/import_translations.py overviews <file.json> [--model NAME]
+  python pipeline/import_translations.py diseases <file.json> [--model NAME]
 
 translations: JSON list (or a directory of JSON lists) of
   {"hash": <epidemics.content_hash>, "headline_en", "description_en", "summary_zh", "summary_en"}
 overviews: JSON object {ISO2: {"zh": ..., "en": ...}}; items_hash is computed from the current 2-year window
   exactly like the exporter does, so the pipeline will not regenerate them until the country's items change.
+diseases: JSON object {zh: en} stored in the disease_names table (data/manual/diseases.json still takes precedence).
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sqlite3
 import sys
 from datetime import datetime, timezone, timedelta
@@ -22,9 +25,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from pipeline import common as C  # noqa: E402
+from pipeline import db  # noqa: E402
 from pipeline import export as X  # noqa: E402
 
 TPE = timezone(timedelta(hours=8))
+CJK = re.compile(r"[\u2e80-\u9fff\uf900-\ufaff]")
 REQUIRED = ("headline_en", "description_en", "summary_zh", "summary_en")
 
 
@@ -88,9 +93,21 @@ def import_overviews(conn: sqlite3.Connection, data: dict, model: str) -> tuple[
     return ok, skipped
 
 
+def import_diseases(conn: sqlite3.Connection, data: dict, model: str) -> tuple[int, int]:
+    ok = skipped = 0
+    for zh, en in data.items():
+        zh, en = C.nfkc(str(zh)).strip(), C.nfkc(str(en or "")).strip()
+        if not zh or not en or CJK.search(en):
+            skipped += 1
+            continue
+        db.put_name(conn, "disease_names", zh, en, model)
+        ok += 1
+    return ok, skipped
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("kind", choices=["translations", "overviews"])
+    ap.add_argument("kind", choices=["translations", "overviews", "diseases"])
     ap.add_argument("path")
     ap.add_argument("--model", default="batch-import")
     ap.add_argument("--db", default=str(ROOT / "data" / "safetravel.db"))
@@ -98,6 +115,8 @@ def main() -> None:
     conn = sqlite3.connect(a.db)
     if a.kind == "translations":
         ok, skipped = import_translations(conn, load_items(Path(a.path)), a.model)
+    elif a.kind == "diseases":
+        ok, skipped = import_diseases(conn, json.loads(Path(a.path).read_text(encoding="utf-8")), a.model)
     else:
         ok, skipped = import_overviews(conn, json.loads(Path(a.path).read_text(encoding="utf-8")), a.model)
     print(f"{a.kind}: imported {ok}, skipped {skipped}")
