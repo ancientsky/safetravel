@@ -8,6 +8,7 @@ from pathlib import Path
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TS = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$")
 ISO2 = re.compile(r"^[A-Z]{2}$")
+DETAIL_FILE = re.compile(r"^([A-Z]{2}|_global)\.json$")
 CDC_URL = re.compile(r"^https://([a-z0-9-]+\.)*cdc\.gov\.tw/")
 IATA = re.compile(r"^[A-Z]{3}$")
 
@@ -165,9 +166,11 @@ def check_alerts(v: V, a):
 
 def check_epidemics(v: V, e, alerts):
     w = "epidemics.json"
-    if not v.keys(w, e, ["generated_at", "window_start", "items", "overviews"]):
+    if not v.keys(w, e, ["generated_at", "window_start", "details_dir", "items", "overviews"]):
         return
     v.pat(w, e["generated_at"], TS, "generated_at")
+    if e["details_dir"] != "epidemics/":
+        v.err(w, f"details_dir must be 'epidemics/', got {e['details_dir']!r}")
     v.pat(w, e["window_start"], DATE, "window_start")
     items = e["items"]
     if not isinstance(items, list):
@@ -177,16 +180,17 @@ def check_epidemics(v: V, e, alerts):
     per_country: dict[str, int] = {}
     dis = (alerts or {}).get("diseases", {}) if isinstance(alerts, dict) else {}
     req = ["id", "date", "disease_zh", "disease_en", "headline_zh", "headline_en", "summary_zh", "summary_en",
-           "description_zh", "description_en", "countries", "area_zh", "area_en", "url", "ai"]
+           "countries", "area_zh", "area_en", "url", "ai", "has_full"]
     for i, it in enumerate(items):
         iw = f"{w}.items[{i}]"
-        if not v.keys(iw, it, req, ["global"]):
+        if not v.keys(iw, it, req, ["global"]) or any(k not in it for k in req):
             continue
         for k in req:
-            if k in ("countries", "ai"):
+            if k in ("countries", "ai", "has_full"):
                 continue
             v.typ(iw, it[k], str, k)
         v.typ(iw, it["ai"], bool, "ai")
+        v.typ(iw, it["has_full"], bool, "has_full")
         if isinstance(it["url"], str) and it["url"] and not CDC_URL.match(it["url"]):
             v.err(iw, f"url must be https on cdc.gov.tw: {it['url'][:60]!r}")
         v.pat(iw, it["date"], DATE, "date")
@@ -236,6 +240,47 @@ def check_epidemics(v: V, e, alerts):
     for iso in per_country:
         if iso not in ov:
             v.err(w, f"country {iso} has items but no overview")
+
+
+def check_epidemic_details(v: V, d: Path, e):
+    """epidemics/<KEY>.json files must agree with epidemics.json (ids, has_full, per-country placement)."""
+    w = "epidemics/"
+    items = e.get("items") if isinstance(e, dict) else None
+    if not isinstance(items, list):
+        return
+    if not d.is_dir():
+        if items:
+            v.err(w, "directory is missing")
+        return
+    files: dict[str, dict] = {}
+    for p in sorted(d.iterdir()):
+        if not p.is_file() or not DETAIL_FILE.match(p.name):
+            v.err(w + p.name, "file name must match <ISO2>.json or _global.json")
+            continue
+        try:
+            body = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as ex:
+            v.err(w + p.name, f"cannot read/parse: {ex}")
+            continue
+        if not isinstance(body, dict):
+            v.err(w + p.name, "expected object")
+            continue
+        files[p.stem] = body
+        for iid, val in body.items():
+            if v.keys(f"{w}{p.name}.{iid}", val, ["zh", "en"]):
+                v.typ(f"{w}{p.name}", val["zh"], str, f"{iid}.zh")
+                v.typ(f"{w}{p.name}", val["en"], str, f"{iid}.en")
+    ids = {it.get("id") for it in items if isinstance(it, dict)}
+    for key, body in files.items():
+        for iid in body:
+            if iid not in ids:
+                v.err(f"{w}{key}.json", f"id {iid!r} is not in epidemics.json items")
+    for it in items:
+        if not isinstance(it, dict) or it.get("has_full") is not True or not isinstance(it.get("countries"), list):
+            continue
+        for key in (it["countries"] or ["_global"]):
+            if it.get("id") not in files.get(key, {}):
+                v.err(f"{w}{key}.json", f"missing full text for item {it.get('id')!r}")
 
 
 def check_flights(v: V, f):
@@ -306,6 +351,8 @@ def validate_dir(d: Path) -> list[str]:
         check_epidemics(v, data["epidemics"], data.get("alerts"))
     if "flights" in data:
         check_flights(v, data["flights"])
+    if "epidemics" in data:
+        check_epidemic_details(v, d / "epidemics", data["epidemics"])
     if {"meta", "alerts", "epidemics"} <= set(data) and isinstance(data["meta"], dict):
         c = data["meta"].get("counts", {})
         if isinstance(c, dict) and isinstance(data["alerts"], dict):

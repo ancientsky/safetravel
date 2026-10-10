@@ -9,6 +9,7 @@ export default {
   clock_label: '台北時間',
   lang_toggle: 'EN',
   lang_toggle_label: '切換語言為英文',
+  lang_toggle_sr: ' — 切換語言為英文',
   theme_toggle_label_dark: '切換為淺色主題',
   theme_toggle_label_light: '切換為深色主題',
 
@@ -68,6 +69,7 @@ export default {
   flights_toggle_on: '航線 ON',
   flights_toggle_off: '航線 OFF',
   flights_toggle_label: '顯示或隱藏桃園機場航線動畫',
+  flights_toggle_sr: ' — 顯示或隱藏桃園機場航線動畫',
   flights_title: 'TPE 航線雷達',
   flights_dest: '航點',
   flights_dep: '出境',
@@ -102,6 +104,7 @@ export default {
   panel_timeline_count: ({ n }) => `${n} 則`,
   panel_more: ({ n }) => `顯示更多（尚有 ${n} 則）`,
   panel_full_text: '展開全文',
+  panel_full_loading: '載入全文…',
   panel_source: '疾管署原文',
   panel_zh_only: '僅中文原文',
   panel_stat_advisories: '建議',

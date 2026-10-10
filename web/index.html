@@ -2,7 +2,7 @@
 <html lang="zh-Hant" data-theme="dark">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-i9NMNU2xhunKewbBs27AOmmyg+TxuSCX8ppTT4H8Xoc='; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-41M+yJSuQlisk2d/KtCwIon0w9VNGtINUdo+cQsYY3o='; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>全球旅遊疫情情報板 · SafeTravel TW</title>
   <meta name="description" content="Taiwan CDC international travel health advisories on a live world map, with AI epidemic digests and animated Taoyuan Airport (TPE) routes.">
@@ -20,7 +20,8 @@
       try { th = localStorage.getItem('safetravel.theme'); lg = localStorage.getItem('safetravel.lang'); } catch (e) {}
       if (th !== 'light' && th !== 'dark') th = 'dark'; // dark is the product default
       d.setAttribute('data-theme', th);
-      if (lg === 'en') d.lang = 'en';
+      // non-default language: keep the page hidden until app.js has applied the English strings
+      if (lg === 'en') { d.lang = 'en'; d.classList.add('i18n-pending'); }
     })();
   </script>
   <link rel="stylesheet" href="styles.css">
@@ -54,7 +55,7 @@
         <div class="brand-text">
           <p class="brand-kicker mono" data-i18n="brand_kicker">TW-CDC // GLOBAL HEALTH RADAR</p>
           <h1 data-i18n="title">全球旅遊疫情情報板</h1>
-          <p class="brand-sub" data-i18n="subtitle"></p>
+          <p class="brand-sub" data-i18n="subtitle">SafeTravel TW · 疾管署旅遊疫情建議 × 桃園機場即時航線</p>
         </div>
       </div>
       <div class="hud-right">
@@ -63,11 +64,11 @@
           <span class="clock-time mono">--:--:--</span>
           <span class="clock-date"></span>
         </div>
-        <div id="freshness" class="freshness" role="status"></div>
+        <div id="freshness" class="freshness" role="status"><i class="pulse-dot" aria-hidden="true"></i><span>…</span></div>
         <div class="toggles">
-          <button type="button" class="btn-icon lang-toggle" data-testid="lang-toggle" data-i18n-attr="aria-label:lang_toggle_label;title:lang_toggle_label">
+          <button type="button" class="btn-icon lang-toggle" data-testid="lang-toggle" data-i18n-attr="title:lang_toggle_label">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg>
-            <span data-i18n="lang_toggle">EN</span>
+            <span data-i18n="lang_toggle">EN</span><span class="sr-only" data-i18n="lang_toggle_sr"> — 切換語言為英文</span>
           </button>
           <button type="button" class="btn-icon theme-toggle" data-testid="theme-toggle">
             <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>
@@ -92,12 +93,12 @@
     <div id="level-chips" class="chips" role="group"></div>
   </section>
 
-  <aside id="legend" class="legend glass" data-i18n-attr="aria-label:legend_title"></aside>
+  <aside id="legend" class="legend glass is-pending" data-i18n-attr="aria-label:legend_title"></aside>
 
-  <div id="flight-hud" class="flight-hud glass" role="region" data-i18n-attr="aria-label:flights_title">
+  <div id="flight-hud" class="flight-hud glass is-pending" role="region" data-i18n-attr="aria-label:flights_title">
     <div class="fh-head">
       <span class="fh-title mono" data-i18n="flights_title">TPE 航線雷達</span>
-      <button type="button" class="fh-toggle" aria-pressed="true"><i aria-hidden="true"></i><span class="fh-toggle-text">ON</span></button>
+      <button type="button" class="fh-toggle" aria-pressed="true"><i aria-hidden="true"></i><span class="fh-toggle-text">ON</span><span class="sr-only fh-toggle-sr"></span></button>
     </div>
     <div class="fh-stats"></div>
   </div>
@@ -131,7 +132,7 @@
       </span>
     </div>
     <div class="spot-progress" aria-hidden="true"><i></i></div>
-    <button type="button" class="spot-card"></button>
+    <button type="button" class="spot-card"><span class="spot-scan" data-i18n="spot_scanning">掃描全球疫情訊號中…</span></button>
   </section>
 
   <aside id="panel" class="panel glass" data-testid="country-panel" role="dialog" aria-modal="false" aria-labelledby="panel-title" hidden>
@@ -157,11 +158,11 @@
 
   <footer class="foot">
     <p>
-      <span data-i18n="footer_sources"></span>
+      <span data-i18n="footer_sources">資料來源：衛福部疾管署「國際旅遊疫情建議等級」與「國際重要疫情資訊」；桃園國際機場航班資訊。</span>
       <a href="https://www.cdc.gov.tw/" target="_blank" rel="noopener noreferrer" data-i18n="footer_cdc">疾管署</a> ·
       <a href="https://www.taoyuan-airport.com/" target="_blank" rel="noopener noreferrer" data-i18n="footer_airport">桃園機場</a>
     </p>
-    <p class="foot-disclaimer" data-i18n="footer_disclaimer"></p>
+    <p class="foot-disclaimer" data-i18n="footer_disclaimer">非官方資訊整理，AI 翻譯與摘要可能有誤，出國前請以疾管署最新公告為準。</p>
   </footer>
 
   <div id="toasts" class="toasts" aria-live="assertive"></div>

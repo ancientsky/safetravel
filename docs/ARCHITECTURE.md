@@ -27,7 +27,7 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
 | `data/manual/` | humans | Hand-maintained dictionaries: disease names zh→en, territory→ISO, level labels |
 | `data/safetravel.db` | pipeline | SQLite. Source of truth for history + Gemini cache. Committed. |
 | `web/` | frontend | The static site served by GitHub Pages (root = `web/`) |
-| `web/data/` | pipeline export | JSON consumed by the browser. Overwritten every run. |
+| `web/data/` | pipeline export | JSON consumed by the browser. Overwritten every run. `epidemics.json` is a slim index; full texts are lazy-loaded from `web/data/epidemics/<ISO2>.json` (+ `_global.json`). `world.json` (50m) and `world-110m.json` (narrow screens) are built by `build_geo.py`. |
 | `web/vendor/` | npm (vendored) | `d3.min.js`, `topojson-client.min.js` — no CDN at runtime |
 | `.github/workflows/` | ops | `update-data.yml` (cron) · `deploy-pages.yml` (on push to main, web/**) |
 | `docs/` | — | This file + `DATA_CONTRACT.md` |

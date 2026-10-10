@@ -4,10 +4,18 @@ import { reducedMotion, clamp } from './util.js';
 
 const d3 = window.d3;
 const MAX_GLYPHS = 150;
-const TARGET_ALIVE = 120;
+const TARGET_ALIVE_FULL = 120;
 const SPEED = 0.5; // along-arc speed factor (1 = original pace)
 const SAMPLES = 64;
-const TRAIL = 7;
+const TRAIL_FULL = 7;
+// Adaptive frame rate: low-end machines (or frames costing > SLOW_FRAME_MS of canvas work)
+// draw at 30 fps; capable machines keep 60 fps.
+const LOW_END = (navigator.hardwareConcurrency || 8) <= 4;
+const SLOW_FRAME_MS = 8;
+const LOW_FPS_INTERVAL = 1000 / 30;
+// Low-end machines also get fewer comets, shorter trails and a cached (bitmap) arc layer.
+const TARGET_ALIVE = LOW_END ? 70 : TARGET_ALIVE_FULL;
+const TRAIL = LOW_END ? 4 : TRAIL_FULL;
 
 export function createFlights({ canvas, map }) {
   const ctx = canvas.getContext('2d', { alpha: true });
@@ -26,6 +34,12 @@ export function createFlights({ canvas, map }) {
   let frames = 0;
   let cost = 0;
   let fpsWindowStart = 0;
+  let lowFps = LOW_END;
+  // cached arc layer (used in 30 fps mode): re-rendered only when the view / theme / size changes
+  const arcCanvas = document.createElement('canvas');
+  const arcCtx = arcCanvas.getContext('2d');
+  let arcKey = '';
+  let lastDraw = 0;
 
   // Fixed object pools: no allocation in the animation loop.
   const glyphs = Array.from({ length: MAX_GLYPHS }, () => ({ on: false, ri: 0, out: true, t: 0, dur: 1 }));
@@ -70,10 +84,10 @@ export function createFlights({ canvas, map }) {
   }
 
   function sizeCanvas() {
-    const r = canvas.getBoundingClientRect();
-    dpr = Math.min(2, window.devicePixelRatio || 1);
-    W = Math.max(1, r.width);
-    H = Math.max(1, r.height);
+    // full-viewport canvas: window size avoids a forced layout read
+    dpr = Math.min(LOW_END ? 1.5 : 2, window.devicePixelRatio || 1);
+    W = Math.max(1, window.innerWidth);
+    H = Math.max(1, window.innerHeight);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
   }
@@ -210,10 +224,34 @@ export function createFlights({ canvas, map }) {
     if (!routes.length || !hub) return;
 
     // --- arcs (zoomed coordinates) ---
+    if (lowFps && animate) {
+      // cheap path: one bitmap blit with a global "breathing" alpha instead of 55 strokes + dashes
+      const key = `${k}|${x}|${y}|${W}|${H}|${dpr}|${colors.arc}|${colors.light}`;
+      if (key !== arcKey) {
+        arcKey = key;
+        arcCanvas.width = canvas.width;
+        arcCanvas.height = canvas.height;
+        arcCtx.setTransform(dpr * k, 0, 0, dpr * k, dpr * x, dpr * y);
+        arcCtx.lineCap = 'round';
+        arcCtx.strokeStyle = colors.arc;
+        arcCtx.globalAlpha = colors.light ? 0.4 : 0.3;
+        for (const ro of routes) {
+          arcCtx.beginPath();
+          tracePath(ro, arcCtx);
+          arcCtx.lineWidth = ro.width / k;
+          arcCtx.stroke();
+        }
+      }
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 0.75 + 0.25 * Math.sin(time * 1.6);
+      ctx.drawImage(arcCanvas, 0, 0);
+      ctx.restore();
+    }
     ctx.save();
     ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * x, dpr * y);
     ctx.lineCap = 'round';
-    for (const ro of routes) {
+    for (const ro of (lowFps && animate) ? [] : routes) {
       const pulse = animate ? 0.5 + 0.5 * Math.sin(time * 1.6 + ro.phase) : 0.6;
       ctx.beginPath();
       tracePath(ro);
@@ -222,7 +260,7 @@ export function createFlights({ canvas, map }) {
       ctx.lineWidth = ro.width / k;
       ctx.stroke();
     }
-    if (animate) {
+    if (animate && !lowFps) {
       // flowing data-stream dashes (outbound direction)
       ctx.setLineDash([2.5 / k, 13 / k]);
       ctx.lineDashOffset = (-time * 26 * SPEED) / k;
@@ -335,17 +373,22 @@ export function createFlights({ canvas, map }) {
     ctx.restore();
   }
 
-  function tracePath(ro) {
+  function tracePath(ro, c = ctx) {
     const p = ro.pts;
-    ctx.moveTo(p[0], p[1]);
+    c.moveTo(p[0], p[1]);
     for (let s = 1; s < SAMPLES; s++) {
-      if (ro.breaks[s]) ctx.moveTo(p[s * 2], p[s * 2 + 1]);
-      else ctx.lineTo(p[s * 2], p[s * 2 + 1]);
+      if (ro.breaks[s]) c.moveTo(p[s * 2], p[s * 2 + 1]);
+      else c.lineTo(p[s * 2], p[s * 2 + 1]);
     }
   }
 
   function loop(ts) {
     if (!running) return;
+    if (lowFps && lastDraw && ts - lastDraw < LOW_FPS_INTERVAL - 4) { // skip alternate frames
+      requestAnimationFrame(loop);
+      return;
+    }
+    lastDraw = ts;
     const dt = lastTs ? Math.min(0.1, (ts - lastTs) / 1000) : 0.016;
     lastTs = ts;
     time += dt;
@@ -354,10 +397,14 @@ export function createFlights({ canvas, map }) {
     draw(true);
     cost += performance.now() - c0;
     frames++;
+    state.frames = (state.frames || 0) + 1; // drawn-frame counter (diagnostics / tests)
     if (!fpsWindowStart) fpsWindowStart = ts;
     if (ts - fpsWindowStart >= 1000) {
       state.fps = Math.round((frames * 1000) / (ts - fpsWindowStart));
       state.frameMs = +(cost / frames).toFixed(2);
+      if (!lowFps && state.frameMs > SLOW_FRAME_MS) lowFps = true;
+      else if (lowFps && !LOW_END && state.frameMs < SLOW_FRAME_MS / 3) lowFps = false;
+      state.fpsMode = lowFps ? 30 : 60;
       cost = 0;
       frames = 0;
       fpsWindowStart = ts;
@@ -366,11 +413,12 @@ export function createFlights({ canvas, map }) {
   }
 
   function start() {
-    if (!enabled || !routes.length) return;
+    if (!enabled || !routes.length || document.hidden) return;
     if (reducedMotion()) { running = false; draw(false); return; }
     if (running) return;
     running = true;
     lastTs = 0;
+    lastDraw = 0;
     fpsWindowStart = 0;
     frames = 0;
     requestAnimationFrame(loop);
@@ -389,8 +437,14 @@ export function createFlights({ canvas, map }) {
     else stop();
   }
 
-  map.onZoom(() => { if (enabled && !running) draw(false); });
-  map.onResize(() => { sizeCanvas(); build(); if (enabled && !running) draw(false); });
+  // Stop the loop while the tab is hidden; resume cleanly (fresh timestamps) when visible again.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) running = false;
+    else if (enabled) start();
+  });
+
+  map.onZoom(() => { if (enabled && !running && !document.hidden) draw(false); });
+  map.onResize(() => { arcKey = ''; sizeCanvas(); build(); if (enabled && !running) draw(false); });
 
   function init() {
     sizeCanvas();
@@ -402,7 +456,7 @@ export function createFlights({ canvas, map }) {
   return {
     init,
     setEnabled,
-    refreshTheme: () => { readColors(); if (enabled && !running) draw(false); },
+    refreshTheme: () => { arcKey = ''; readColors(); if (enabled && !running) draw(false); },
     stats: () => ({ active: glyphs.filter((g) => g.on).length, routes: routes.length }),
   };
 }

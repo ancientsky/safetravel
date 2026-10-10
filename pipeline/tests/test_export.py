@@ -1,4 +1,5 @@
 import json
+import re
 
 from pipeline import common as C
 from pipeline import db, export, load, validate
@@ -7,6 +8,11 @@ from pipeline import db, export, load, validate
 def _export(conn):
     export.export_all(conn)
     return {n: json.loads((C.web_data() / f"{n}.json").read_text(encoding="utf-8")) for n in ("alerts", "epidemics", "meta")}
+
+
+def _details():
+    d = C.web_data() / "epidemics"
+    return {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in d.glob("*.json")}
 
 
 def test_load_is_idempotent(conn):
@@ -59,8 +65,9 @@ def test_sorting_and_diseases(loaded):
 def test_fallback_without_ai(loaded):
     out = _export(loaded)
     it = out["epidemics"]["items"][0]
-    assert it["ai"] is False and it["headline_en"] == it["headline_zh"] and it["description_en"] == it["description_zh"]
-    assert it["summary_zh"] and it["summary_zh"] in it["description_zh"]
+    full = _details()[(it["countries"] or ["_global"])[0]][it["id"]]
+    assert it["ai"] is False and it["headline_en"] == it["headline_zh"] and full["en"] == full["zh"]
+    assert it["summary_zh"] and it["summary_zh"] in full["zh"]
     assert out["meta"]["counts"]["ai_translated"] == 0
     assert all(not o["ai"] for o in out["epidemics"]["overviews"].values())
     g = [i for i in out["epidemics"]["items"] if i.get("global")]
@@ -117,3 +124,49 @@ def test_epidemic_urls_are_cdc_https_only(loaded):
     d["items"][0]["url"] = "https://evil.example.com/x"
     p.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
     assert any("cdc.gov.tw" in e for e in validate.validate_dir(C.web_data()))
+
+
+def test_full_text_split_and_validation(loaded):
+    from pipeline.__main__ import apply_static_fallback
+    out = _export(loaded)
+    apply_static_fallback(loaded)
+    export.export_all(loaded)
+    e = out["epidemics"]
+    assert e["details_dir"] == "epidemics/"
+    assert all("description_zh" not in i and "description_en" not in i and isinstance(i["has_full"], bool) for i in e["items"])
+    det = _details()
+    assert "_global" in det and all(re.fullmatch(r"[A-Z]{2}|_global", k) for k in det)
+    multi = next(i for i in e["items"] if len(i["countries"]) > 1)
+    for c in multi["countries"]:
+        assert multi["id"] in det[c]
+    for i in e["items"]:
+        for k in (i["countries"] or ["_global"]):
+            assert set(det[k][i["id"]]) == {"zh", "en"}
+            assert i["has_full"] == bool(det[k][i["id"]]["zh"] or det[k][i["id"]]["en"])
+    assert validate.validate_dir(C.web_data()) == []
+
+    # stale files are removed, non-json files are left alone
+    d = C.web_data() / "epidemics"
+    (d / "ZZ.json").write_text("{}", encoding="utf-8")
+    (d / "keep.txt").write_text("x", encoding="utf-8")
+    export.export_all(loaded)
+    assert not (d / "ZZ.json").exists() and (d / "keep.txt").exists()
+
+    # validator rules
+    key = multi["countries"][0]
+    body = json.loads((d / f"{key}.json").read_text(encoding="utf-8"))
+    del body[multi["id"]]
+    body["bogus-id"] = {"zh": "a", "en": "b"}
+    (d / f"{key}.json").write_text(json.dumps(body), encoding="utf-8")
+    (d / "bad.json").write_text("{}", encoding="utf-8")
+    (d / "XX.json").write_text(json.dumps({multi["id"]: {"zh": 1, "en": "x"}}), encoding="utf-8")
+    errs = " | ".join(validate.validate_dir(C.web_data()))
+    assert "missing full text" in errs and "bogus-id" in errs and "bad.json" in errs and "should be str" in errs
+    p = C.web_data() / "epidemics.json"
+    j = json.loads(p.read_text(encoding="utf-8"))
+    j["details_dir"] = "x/"
+    j["items"][0]["description_zh"] = "old"
+    del j["items"][1]["has_full"]
+    p.write_text(json.dumps(j, ensure_ascii=False), encoding="utf-8")
+    errs = " | ".join(validate.validate_dir(C.web_data()))
+    assert "details_dir" in errs and "description_zh" in errs and "has_full" in errs

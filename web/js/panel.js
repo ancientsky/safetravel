@@ -7,6 +7,7 @@ import {
 import {
   esc, clean, reducedMotion, safeUrl, levelNum, $,
 } from './util.js';
+import { toast } from './toast.js';
 
 const PAGE = 20;
 const GROUPS_SHOWN = 5; // advisory groups visible before "show all"
@@ -22,6 +23,54 @@ export function createPanel({ root, map }) {
   let hideTimer = 0;
   let showAllGroups = false;
   const expandedAreas = new Set();
+
+  // ---- lazy full texts: data/<details_dir><ISO>.json = { "<item id>": { zh, en } } ----
+  const details = new Map(); // iso -> { status: 'loading'|'ready'|'error', data, ctrl }
+  let detailsErrorShown = false;
+
+  function loadDetails(code) {
+    if (details.has(code)) return;
+    const items = state.byCountry.get(code) || [];
+    if (!items.some((it) => it.has_full)) return;
+    const dir = state.data.epidemics?.details_dir || 'epidemics/';
+    const entry = { status: 'loading', data: null, ctrl: new AbortController() };
+    details.set(code, entry);
+    fetch(`data/${dir}${encodeURIComponent(code)}.json`, { cache: 'no-cache', signal: entry.ctrl.signal })
+      .then((res) => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+      .then((data) => { entry.status = 'ready'; entry.data = data || {}; })
+      .catch((err) => {
+        if (err?.name === 'AbortError') { details.delete(code); return; } // panel moved on; retry next time
+        entry.status = 'error';
+        if (!detailsErrorShown) { detailsErrorShown = true; toast(t('error_load', { file: `${dir}${code}.json` })); }
+      })
+      .finally(() => { if (code === iso) fillDetails(); });
+  }
+
+  /** Abort an in-flight full-text fetch when the panel switches to another country. */
+  function abortOtherDetails(code) {
+    for (const [k, e] of details) if (k !== code && e.status === 'loading') e.ctrl.abort();
+  }
+
+  function fullHtml(it) {
+    const e = details.get(iso);
+    if (!e || e.status === 'loading') return `<span class="tl-loading mono">${esc(t('panel_full_loading'))}</span>`;
+    const d = e.status === 'ready' ? e.data[it.id] : null;
+    if (!d) return ''; // failed or missing: keep the summary only
+    const zh = clean(d.zh);
+    const en = clean(d.en);
+    const text = isEn() ? en || zh : zh || en;
+    if (!text || text === pick(it, 'summary').text) return '';
+    const zhOnly = isEn() && (!en || en === zh);
+    return `<details><summary>${esc(t('panel_full_text'))}</summary><p${zhOnly ? ' lang="zh-Hant"' : ''}>${esc(text)}</p></details>`;
+  }
+
+  function fillDetails() {
+    const byId = new Map((state.byCountry.get(iso) || []).map((it) => [it.id, it]));
+    body.querySelectorAll('.tl-full[data-id]').forEach((el) => {
+      const it = byId.get(el.dataset.id);
+      el.innerHTML = it ? fullHtml(it) : '';
+    });
+  }
 
   // Delegated handlers survive re-renders (language switch, digests arriving).
   body.addEventListener('click', (ev) => {
@@ -99,7 +148,7 @@ export function createPanel({ root, map }) {
       g.areas.forEach((r, i) => list.push(areaChip(r, i >= AREA_CHIPS)));
       const rest = g.areas.length - AREA_CHIPS;
       if (rest > 0 && !open) {
-        list.push(`<li class="area-more-li"><button type="button" class="area-more" data-group="${gi}" aria-label="${esc(t('panel_areas_more_label', { n: rest }))}">${esc(t('panel_areas_more', { n: rest }))}</button></li>`);
+        list.push(`<li class="area-more-li"><button type="button" class="area-more" data-group="${gi}" title="${esc(t('panel_areas_more_label', { n: rest }))}">${esc(t('panel_areas_more', { n: rest }))}<span class="sr-only"> — ${esc(t('panel_areas_more_label', { n: rest }))}</span></button></li>`);
       }
       chips = `<ul class="area-chips${open ? ' is-open' : ''}">${list.join('')}</ul>`;
     }
@@ -167,9 +216,7 @@ export function createPanel({ root, map }) {
     return timelineItems().slice(from, to).map((it) => {
       const head = pick(it, 'headline');
       const sum = pick(it, 'summary');
-      const desc = pick(it, 'description');
       const dis = isEn() ? clean(it.disease_en || it.disease_zh) : clean(it.disease_zh);
-      const showDesc = desc.text && desc.text !== sum.text;
       const href = safeUrl(it.url); // only https *.cdc.gov.tw; anything else renders no link
       const zhOnly = isEn() && (head.fallback || sum.fallback);
       return `
@@ -179,7 +226,7 @@ export function createPanel({ root, map }) {
             <div class="tl-tags">${dis ? `<span class="tag">${esc(dis)}</span>` : ''}${zhOnly ? `<span class="tag tag-muted">${esc(t('panel_zh_only'))}</span>` : ''}</div>
             <h4${isEn() && head.fallback ? ' lang="zh-Hant"' : ''}>${esc(head.text)}</h4>
             ${sum.text ? `<p class="tl-sum">${esc(sum.text)}</p>` : ''}
-            ${showDesc ? `<details><summary>${esc(t('panel_full_text'))}</summary><p>${esc(desc.text)}</p></details>` : ''}
+            ${it.has_full ? `<div class="tl-full" data-id="${esc(it.id)}">${fullHtml(it)}</div>` : ''}
             ${href ? `<a class="tl-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(t('panel_source'))} ↗</a>` : ''}
           </div>
         </li>`;
@@ -234,6 +281,10 @@ export function createPanel({ root, map }) {
 
   function render() {
     if (!iso) return;
+    if (state.epidemicsStatus === 'ready') {
+      abortOtherDetails(iso);
+      loadDetails(iso); // memoised per country; fills the "full text" toggles when it arrives
+    }
     renderHead();
     body.innerHTML = renderAdvisories() + renderAI() + renderTimeline();
     startTypewriter();
@@ -274,7 +325,7 @@ export function createPanel({ root, map }) {
     if (fly) {
       const narrow = window.innerWidth < 760;
       map.flyTo(up, {
-        pad: narrow ? { top: 140, bottom: window.innerHeight * 0.62 } : { right: root.offsetWidth + 24, top: 150, left: 40, bottom: 60 },
+        pad: narrow ? { top: 140, bottom: window.innerHeight * 0.62 } : { right: Math.min(460, window.innerWidth * 0.42) + 24, top: 150, left: 40, bottom: 60 }, // = --panel-w, no layout read
         maxScale: 4.5,
       });
     }

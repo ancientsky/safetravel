@@ -2,6 +2,7 @@
 
 Outputs (see docs/DATA_CONTRACT.md):
   web/data/world.json     TopoJSON countries-50m, geometry id = ISO alpha-2
+  web/data/world-110m.json  same from countries-110m (simplified map for narrow screens)
   web/data/countries.json {A2: {zh, en, lat, lon}}
   web/data/airports.json  {IATA: {name, city, country, lat, lon}}
 
@@ -82,8 +83,8 @@ def load_world_countries():
     return data, by_ccn3, by_name, by_a2
 
 
-def build_world(by_ccn3):
-    topo = json.loads((NM / "world-atlas" / "countries-50m.json").read_text(encoding="utf-8"))
+def build_world(by_ccn3, src="countries-50m", dest="world.json"):
+    topo = json.loads((NM / "world-atlas" / f"{src}.json").read_text(encoding="utf-8"))
     geoms = topo["objects"]["countries"]["geometries"]
     missing = []
     for g in geoms:
@@ -100,8 +101,8 @@ def build_world(by_ccn3):
     # keep only the countries object; drop land to save bytes
     topo["objects"] = {"countries": topo["objects"]["countries"]}
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "world.json").write_text(json.dumps(topo, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
-    print(f"world.json: {len(geoms)} geometries, unmapped: {missing}")
+    (OUT / dest).write_text(json.dumps(topo, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
+    print(f"{dest}: {len(geoms)} geometries, unmapped: {missing}")
 
 
 def build_countries(data):
@@ -149,6 +150,7 @@ def build_airports(by_name):
 
 if __name__ == "__main__":
     data, by_ccn3, by_name, _ = load_world_countries()
-    build_world(by_ccn3)
+    build_world(by_ccn3, "countries-50m", "world.json")
+    build_world(by_ccn3, "countries-110m", "world-110m.json")
     build_countries(data)
     build_airports(by_name)

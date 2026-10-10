@@ -237,6 +237,39 @@ def build_epidemics(conn, generated_at: str, names: Names, start: date | None = 
     return {"generated_at": generated_at, "window_start": start.isoformat(), "items": items, "overviews": overviews}
 
 
+DETAILS_DIR = "epidemics/"
+GLOBAL_KEY = "_global"
+
+
+def split_epidemics(full: dict) -> tuple[dict, dict[str, dict]]:
+    """Split build_epidemics() output into the slim epidemics.json index and per-country full-text maps.
+
+    Returns (index, details) where details maps a file stem (ISO2 or "_global") to {id: {"zh", "en"}}.
+    """
+    items, details = [], {}
+    for it in full["items"]:
+        zh, en = it["description_zh"], it["description_en"]
+        slim = {k: v for k, v in it.items() if k not in ("description_zh", "description_en")}
+        slim["has_full"] = bool(zh or en)
+        items.append(slim)
+        for key in (it["countries"] or [GLOBAL_KEY]):
+            details.setdefault(key, {})[it["id"]] = {"zh": zh, "en": en}
+    index = {"generated_at": full["generated_at"], "window_start": full["window_start"],
+             "details_dir": DETAILS_DIR, "items": items, "overviews": full["overviews"]}
+    return index, dict(sorted(details.items()))
+
+
+def write_epidemic_details(out_dir: Path, details: dict[str, dict]) -> None:
+    """Write <out_dir>/epidemics/<KEY>.json and delete *.json files from earlier runs that were not rewritten."""
+    d = Path(out_dir) / DETAILS_DIR.rstrip("/")
+    d.mkdir(parents=True, exist_ok=True)
+    for key, body in details.items():
+        C.write_json(d / f"{key}.json", body)
+    for p in d.glob("*.json"):
+        if p.stem not in details:
+            p.unlink()
+
+
 # ------------------------------------------------------------------ flights
 def build_flights(conn, generated_at: str, previous: dict | None):
     """Return (flights.json dict or None to keep the previous file, info for meta)."""
@@ -302,7 +335,8 @@ def export_all(conn, out_dir=None) -> dict:
     gen = C.iso_ts()
     names = Names(conn)
     alerts = build_alerts(conn, gen, names)
-    epid = build_epidemics(conn, gen, names)
+    epid_full = build_epidemics(conn, gen, names)
+    epid, epid_details = split_epidemics(epid_full)
 
     # diseases: every name used by alerts.json and epidemics.json
     used = {a["disease"] for c in list(alerts["countries"].values()) + alerts["unmapped"] for a in c["alerts"]}
@@ -317,6 +351,7 @@ def export_all(conn, out_dir=None) -> dict:
 
     C.write_json(out_dir / "alerts.json", alerts)
     C.write_json(out_dir / "epidemics.json", epid)
+    write_epidemic_details(out_dir, epid_details)
     if flights is not None:
         C.write_json(out_dir / "flights.json", flights)
     C.write_json(out_dir / "meta.json", meta)

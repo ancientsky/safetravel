@@ -32,21 +32,41 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   const graticule = gZoom.append('path').attr('class', 'graticule').datum(d3.geoGraticule10());
   const gCountries = gZoom.append('g').attr('class', 'countries');
   const gFx = gZoom.append('g').attr('class', 'fx').attr('aria-hidden', 'true');
-  const gDanger = gFx.append('g').attr('class', 'danger-glow');
-  const selOutline = gFx.append('path').attr('class', 'outline sel-outline');
-  const spotOutline = gFx.append('path').attr('class', 'outline spot-outline');
   const hoverOutline = gFx.append('path').attr('class', 'outline hover-outline');
-  const gScaled = gFx.append('g').attr('class', 'scaled'); // items kept at constant screen size
-  const homeMark = gScaled.append('g').attr('class', 'home-mark');
-  homeMark.append('circle').attr('r', 3.2).attr('class', 'home-dot');
-  homeMark.append('circle').attr('r', 9).attr('class', 'home-ring');
-  const homeLabel = homeMark.append('text').attr('class', 'home-label').attr('x', 12).attr('y', 4).text(t('home_label'));
-  const reticle = gScaled.append('g').attr('class', 'reticle').style('display', 'none');
-  reticle.html(`
-    <circle r="22" class="ret-c1"/><circle r="34" class="ret-c2"/>
-    <path d="M-44 0H-28M28 0H44M0 -44V-28M0 28V44" class="ret-x"/>
-    <path d="M-30 -30h10M-30 -30v10M30 -30h-10M30 -30v10M-30 30h10M-30 30v-10M30 30h-10M30 30v-10" class="ret-corner"/>`);
   const gDots = gZoom.append('g').attr('class', 'flight-dots');
+
+  // Animated effects live in separate overlay elements so the compositor can animate their
+  // opacity/transform without repainting the (large) map SVG: one full-size <svg> per effect that
+  // mirrors the zoom transform, plus HTML "pins" positioned in screen pixels.
+  const fxLayer = document.createElement('div');
+  fxLayer.className = 'fx-layer';
+  fxLayer.setAttribute('aria-hidden', 'true');
+  fxLayer.innerHTML = `
+    <svg class="fx-svg fx-danger"><g class="zt"></g></svg>
+    <svg class="fx-svg fx-homeglow"><g class="zt"><path class="home-glow"/></g></svg>
+    <svg class="fx-svg fx-sel" hidden><g class="zt"><path class="sel-outline"/></g></svg>
+    <svg class="fx-svg fx-spot" hidden><g class="zt"><path class="spot-outline"/></g></svg>
+    <div class="fx-pin fx-homemark"><span class="home-ring"></span><span class="home-dot"></span><span class="home-label"></span></div>
+    <div class="fx-pin fx-reticle" hidden>
+      <svg class="ret-static" viewBox="-50 -50 100 100"><circle r="34" class="ret-c2"/>
+        <path d="M-44 0H-28M28 0H44M0 -44V-28M0 28V44" class="ret-x"/>
+        <path d="M-30 -30h10M-30 -30v10M30 -30h-10M30 -30v10M-30 30h10M-30 30v-10M30 30h-10M30 30v-10" class="ret-corner"/></svg>
+      <svg class="ret-spin" viewBox="-50 -50 100 100"><circle r="22" class="ret-c1"/></svg>
+    </div>`;
+  svgEl.after(fxLayer);
+  const fxSvgs = Array.from(fxLayer.querySelectorAll('.fx-svg'));
+  const fxGroups = fxSvgs.map((s) => s.querySelector('.zt'));
+  const dangerG = d3.select(fxLayer.querySelector('.fx-danger .zt'));
+  const homeGlow = fxLayer.querySelector('.home-glow');
+  const selSvg = fxLayer.querySelector('.fx-sel');
+  const selOutline = selSvg.querySelector('path');
+  const spotSvg = fxLayer.querySelector('.fx-spot');
+  const spotOutline = spotSvg.querySelector('path');
+  const homePin = fxLayer.querySelector('.fx-homemark');
+  const homeLabel = homePin.querySelector('.home-label');
+  homeLabel.textContent = t('home_label');
+  const reticle = fxLayer.querySelector('.fx-reticle');
+  let homeXY = null;
 
   let features = [];
   const byIso = new Map();
@@ -105,10 +125,11 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   }
 
   function fit() {
-    const rect = svgEl.getBoundingClientRect();
-    width = Math.max(320, rect.width);
-    height = Math.max(240, rect.height);
+    // The map is fixed to the full viewport: use the window size (no forced layout read).
+    width = Math.max(320, window.innerWidth);
+    height = Math.max(240, window.innerHeight);
     svg.attr('viewBox', `0 0 ${width} ${height}`);
+    fxSvgs.forEach((s) => s.setAttribute('viewBox', `0 0 ${width} ${height}`));
     const narrow = width < 760;
     const ins = getInsets?.() || null;
     const land = { type: 'FeatureCollection', features: features.filter((f) => f.id !== 'AQ') };
@@ -132,8 +153,10 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     sphere.attr('d', path);
     graticule.attr('d', path);
     if (countrySel) countrySel.attr('d', (d) => (d._d = path(d)));
-    const tw = centroid('TW');
-    if (tw) homeMark.attr('data-x', tw[0]).attr('data-y', tw[1]);
+    homeXY = centroid('TW');
+    homePin.hidden = !homeXY;
+    const tw = byIso.get('TW');
+    homeGlow.setAttribute('d', tw ? tw._d || path(tw) : '');
     renderDanger();
     renderDots();
     if (state.selected) setSelected(state.selected);
@@ -199,7 +222,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   function renderDanger() {
     const l3 = features.filter((f) => levelOf(f.id) === 3);
     const rows = l3.flatMap((f) => [{ f, halo: true }, { f, halo: false }]);
-    gDanger.selectAll('path').data(rows).join('path')
+    dangerG.selectAll('path').data(rows).join('path')
       .attr('class', (r) => (r.halo ? 'halo' : null))
       .attr('d', (r) => r.f._d || path(r.f));
   }
@@ -236,24 +259,28 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     updateScaled();
   }
 
-  // Keep markers / dots / reticle constant on screen regardless of zoom.
+  // Keep dots constant on screen regardless of zoom; mirror the zoom onto the fx overlays.
   function updateScaled() {
     const k = transform.k;
-    homeMark.attr('transform', function () {
-      const x = +this.getAttribute('data-x') || 0;
-      const y = +this.getAttribute('data-y') || 0;
-      return `translate(${x},${y}) scale(${1 / k})`;
-    });
+    const tr = transform.toString();
+    fxGroups.forEach((g) => g.setAttribute('transform', tr));
+    if (homeXY) {
+      const [x, y] = transform.apply(homeXY);
+      homePin.style.transform = `translate(${x}px, ${y}px)`;
+    }
+    if (spotIso) {
+      const c = centroid(spotIso);
+      if (c) {
+        const [x, y] = transform.apply(c);
+        reticle.style.transform = `translate(${x}px, ${y}px)`;
+      }
+    }
     if (dotSel) {
       dotSel.attr('transform', function () {
         return `translate(${this.getAttribute('data-x')},${this.getAttribute('data-y')}) scale(${1 / k})`;
       });
       dotSel.select('.dest-dot').attr('r', (r) => 1.8 + Math.sqrt(r.departures + r.arrivals) * 0.45);
       dotSel.select('.dest-halo').attr('r', (r) => 5 + Math.sqrt(r.departures + r.arrivals) * 0.9);
-    }
-    if (spotIso) {
-      const c = centroid(spotIso);
-      if (c) reticle.attr('transform', `translate(${c[0]},${c[1]}) scale(${1 / k})`);
     }
   }
 
@@ -345,24 +372,29 @@ export function createMap({ svgEl, onOpen, getInsets }) {
 
   function setSelected(iso) {
     const f = iso && byIso.get(iso);
-    selOutline.attr('d', f ? f._d || path(f) : null).classed('on', !!f);
+    selOutline.setAttribute('d', f ? f._d || path(f) : '');
+    selSvg.hidden = !f;
+  }
+
+  // Compositor-only pulse (opacity on an overlay element), restarted without a forced reflow.
+  function pulse(el, keyframes, opts) {
+    if (reducedMotion() || !el.animate) return;
+    el.getAnimations?.().forEach((a) => a.cancel());
+    el.animate(keyframes, opts);
   }
 
   function setSpotlight(iso) {
     spotIso = iso && byIso.has(iso) ? iso : null;
     const f = spotIso && byIso.get(spotIso);
-    spotOutline.attr('d', f ? f._d || path(f) : null).classed('on', !!f);
-    // restart CSS animation
-    spotOutline.classed('pulse', false);
+    spotOutline.setAttribute('d', f ? f._d || path(f) : '');
+    spotSvg.hidden = !f;
+    reticle.hidden = !f;
     if (f) {
-      void spotOutline.node().getBoundingClientRect();
-      spotOutline.classed('pulse', true);
-    }
-    reticle.style('display', f ? null : 'none');
-    reticle.classed('pulse', false);
-    if (f) {
-      void reticle.node().getBoundingClientRect();
-      reticle.classed('pulse', true);
+      pulse(spotSvg, [{ opacity: 0 }, { opacity: 1 }, { opacity: 0.3 }, { opacity: 1 }, { opacity: 0.3 }, { opacity: 1 }, { opacity: 0.9 }],
+        { duration: 3600, easing: 'ease-out' });
+      // the pin itself carries the position transform, so the zoom-in runs on its inner svg
+      pulse(reticle.querySelector('.ret-static'), [{ opacity: 0, transform: 'scale(1.6)' }, { opacity: 1, transform: 'scale(1)' }],
+        { duration: 700, easing: 'cubic-bezier(.2,.8,.2,1)' });
     }
     updateScaled();
   }
@@ -373,7 +405,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
 
   function relabel() {
     svg.attr('aria-label', t('map_label'));
-    homeLabel.text(t('home_label'));
+    homeLabel.textContent = t('home_label');
     if (countrySel) countrySel.attr('aria-label', labelFor);
   }
 

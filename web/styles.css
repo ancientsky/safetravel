@@ -182,7 +182,8 @@ a { color: var(--cyan); }
   background: conic-gradient(from 0deg, rgba(var(--accent-rgb), .35), transparent 25%);
   animation: spin 1.4s linear infinite;
 }
-.map.is-ready .map-loading, .map.map-error .map-loading { opacity: 0; }
+.map.is-ready .map-loading, .map.map-error .map-loading { opacity: 0; visibility: hidden; transition: opacity .6s, visibility 0s .6s; }
+.map.is-ready .map-loading span, .map.map-error .map-loading span { animation: none; }
 .map-error-msg {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   padding: 14px 20px; border: 1px solid var(--lvl3); color: var(--lvl3); border-radius: 8px;
@@ -216,7 +217,6 @@ a { color: var(--cyan); }
   stroke: var(--home);
   stroke-width: 1.4;
   stroke-opacity: 1;
-  animation: home-pulse 2.6s ease-in-out infinite;
 }
 .country.marker { stroke-width: 1; }
 .country.dim { fill-opacity: .05; stroke-opacity: .18; }
@@ -233,30 +233,43 @@ a { color: var(--cyan); }
 .hover-outline.home { stroke: var(--home); }
 .hover-outline.on { opacity: 1; filter: drop-shadow(0 0 3px currentColor) drop-shadow(0 0 7px rgba(var(--accent-rgb), .55)); }
 :root[data-theme="light"] .hover-outline.on { filter: drop-shadow(0 0 2px rgba(122, 88, 32, .5)); }
-.sel-outline { stroke: var(--cyan); stroke-width: 2.2; stroke-dasharray: 7 4; }
-.sel-outline.on { opacity: 1; animation: dash 1.2s linear infinite; filter: drop-shadow(0 0 4px var(--cyan)); }
-.spot-outline { stroke: var(--fg); stroke-width: 1.6; }
-.spot-outline.on { opacity: .9; }
-.spot-outline.pulse { animation: spot-pulse 1.6s ease-out 3; }
-.danger-glow path {
-  fill: none; stroke: var(--lvl3); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none;
-  stroke-linejoin: round;
-  animation: danger 1.8s ease-in-out infinite;
+/* ---- fx overlays: animated only through opacity/transform of their own elements, so the
+   compositor runs them without repainting the map SVG (see map.js fxLayer) ---- */
+.fx-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.fx-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fx-svg path { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.fx-danger path { stroke: var(--lvl3); stroke-width: 2; }
+.fx-danger path.halo { stroke-width: 7; stroke-opacity: .22; }
+.fx-danger { animation: fx-breathe 1.8s ease-in-out infinite; }
+.fx-homeglow .home-glow { fill: var(--home); fill-opacity: .3; stroke: var(--home); stroke-width: 3; stroke-opacity: .6; }
+.fx-homeglow { animation: fx-breathe 2.6s ease-in-out infinite; }
+.fx-sel path { stroke: var(--cyan); stroke-width: 2.2; stroke-dasharray: 7 4; }
+.fx-sel { filter: drop-shadow(0 0 4px var(--cyan)); animation: fx-soft 2.4s ease-in-out infinite; }
+.fx-spot path { stroke: var(--fg); stroke-width: 1.6; }
+.fx-spot { opacity: .9; }
+.fx-pin { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+.home-dot {
+  position: absolute; left: -3.5px; top: -3.5px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--home); box-shadow: 0 0 6px var(--home);
 }
-.danger-glow path.halo { stroke-width: 7; stroke-opacity: .22; }
-.home-dot { fill: var(--home); }
-.home-ring { fill: none; stroke: var(--home); stroke-width: 1; opacity: .8; transform-box: fill-box; transform-origin: center; animation: ring 2.4s ease-out infinite; }
+.home-ring {
+  position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%;
+  border: 1px solid var(--home); opacity: .8; animation: ring 2.4s ease-out infinite;
+}
 .home-label {
-  font: 700 9px var(--mono); letter-spacing: .14em; fill: var(--home);
-  paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round;
+  position: absolute; left: 12px; top: -7px; white-space: nowrap;
+  font: 700 9px/1.4 var(--mono); letter-spacing: .14em; color: var(--home);
+  text-shadow: 1px 1px 0 var(--bg), -1px -1px 0 var(--bg), 1px -1px 0 var(--bg), -1px 1px 0 var(--bg);
 }
-.reticle { pointer-events: none; }
-.reticle circle, .reticle path { fill: none; stroke: var(--fg); stroke-width: 1; }
-.reticle .ret-c1 { stroke-opacity: .8; stroke-dasharray: 3 5; transform-box: fill-box; transform-origin: center; animation: spin 6s linear infinite; }
-.reticle .ret-c2 { stroke-opacity: .35; }
-.reticle .ret-x { stroke: var(--accent); stroke-width: 1.4; }
-.reticle .ret-corner { stroke: var(--cyan); stroke-width: 1.6; }
-.reticle.pulse { animation: reticle-in .7s var(--ease) both; }
+.fx-reticle svg { position: absolute; left: -50px; top: -50px; width: 100px; height: 100px; overflow: visible; }
+.fx-reticle circle, .fx-reticle path { fill: none; stroke: var(--fg); stroke-width: 1; }
+.fx-reticle .ret-c1 { stroke-opacity: .8; stroke-dasharray: 3 5; }
+.fx-reticle .ret-c2 { stroke-opacity: .35; }
+.fx-reticle .ret-x { stroke: var(--accent); stroke-width: 1.4; }
+.fx-reticle .ret-corner { stroke: var(--cyan); stroke-width: 1.6; }
+.ret-spin { animation: spin 6s linear infinite; }
+@keyframes fx-breathe { 50% { opacity: .3; } }
+@keyframes fx-soft { 50% { opacity: .55; } }
 
 .dest { cursor: pointer; }
 .dest-dot { fill: var(--flight-out); stroke: var(--bg); stroke-width: .8; }
@@ -532,8 +545,9 @@ a { color: var(--cyan); }
   position: fixed; z-index: 10; right: var(--gutter); top: 150px;
   display: flex; flex-direction: column; gap: 4px; padding: 4px;
 }
-body.panel-open .zoom-ctrl { right: calc(var(--panel-w) + var(--gutter) * 2); }
-.zoom-ctrl { transition: right .4s var(--ease); }
+/* moved with transform (not `right`) so the panel opening never counts as a layout shift */
+body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + var(--gutter)))); }
+.zoom-ctrl { transition: transform .4s var(--ease); }
 .zoom-ctrl .btn-icon { border-color: transparent; background: transparent; padding: 0; width: 34px; height: 34px; }
 .zoom-ctrl .btn-icon:hover { border-color: var(--border); }
 
@@ -567,10 +581,12 @@ body.panel-open .zoom-ctrl { right: calc(var(--panel-w) + var(--gutter) * 2); }
 .spot-card:focus-visible { outline-offset: 4px; border-radius: 6px; }
 .spot-title { display: flex; align-items: flex-start; gap: 10px; }
 .spot-title .badge { margin-top: 3px; }
-.spot-title h3 { margin: 0; font-size: 19px; line-height: 1.25; }
+.spot-names { display: block; min-width: 0; }
+.spot-name { display: block; margin: 0; font-size: 19px; line-height: 1.25; font-weight: 700; }
+.spot-alt { display: block; }
 .spot-alt { margin: 1px 0 0; font-size: 12px; color: var(--fg-dim); }
-.spot-advs { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.spot-advs li {
+.spot-advs { margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; max-height: 58px; overflow: hidden; flex: none; }
+.spot-adv {
   display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px;
   border: 1px solid var(--border); border-radius: 4px; font-size: 12px; background: rgba(var(--accent-rgb), .04);
 }
@@ -578,13 +594,14 @@ body.panel-open .zoom-ctrl { right: calc(var(--panel-w) + var(--gutter) * 2); }
 .spot-advs .more { color: var(--fg-mute); }
 .spot-ai { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; padding: 8px 10px; border-left: 2px solid var(--cyan); background: rgba(var(--cyan-rgb), .06); border-radius: 0 6px 6px 0; }
 .spot-ai.is-auto { border-left-color: var(--fg-mute); background: rgba(var(--accent-rgb), .04); }
-.spot-ai p { margin: 0; font-size: 12.5px; color: var(--fg); line-height: 1.5; }
-.spot-recent { margin-top: 10px; font-size: 12.5px; }
-.spot-recent p { margin: 2px 0 0; color: var(--fg-dim); }
+.spot-ai .spot-text { font-size: 12.5px; color: var(--fg); line-height: 1.5; }
+.spot-recent { display: block; margin-top: 10px; font-size: 12.5px; }
+.spot-recent .spot-label { display: block; }
+.spot-recent .spot-text { display: block; margin: 2px 0 0; color: var(--fg-dim); }
 .spot-label { font-size: 11px; color: var(--fg-mute); }
 .spot-open { display: inline-block; margin-top: 10px; font: 600 12px var(--mono); color: var(--accent); letter-spacing: .04em; }
 .spot-card:hover .spot-open { text-decoration: underline; }
-.spot-scan { margin: 4px 0; font: 13px var(--mono); color: var(--fg-dim); }
+.spot-scan { display: block; margin: 4px 0; font: 13px var(--mono); color: var(--fg-dim); }
 
 /* ---------- country panel ---------- */
 .panel {
@@ -705,6 +722,7 @@ body.panel-open .zoom-ctrl { right: calc(var(--panel-w) + var(--gutter) * 2); }
 .tl-body summary { cursor: pointer; color: var(--cyan); font-size: 12px; }
 .tl-body details p { margin: 6px 0 0; white-space: pre-line; color: var(--fg); padding: 8px 10px; border-left: 2px solid var(--border-strong); background: rgba(var(--accent-rgb), .03); }
 .tl-link { display: inline-block; margin-top: 4px; font-size: 12px; }
+.tl-loading { display: inline-block; margin-top: 4px; font-size: 11px; color: var(--fg-mute); animation: blink 1.4s ease-in-out infinite; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; margin-top: 8px;
   border: 1px solid var(--border-strong); border-radius: 8px; background: rgba(var(--accent-rgb), .06); color: var(--accent);
@@ -827,13 +845,13 @@ body.panel-open .zoom-ctrl { right: calc(var(--panel-w) + var(--gutter) * 2); }
   .fh-stats { display: none; }
   .fh-head { margin: 0; }
   .zoom-ctrl { top: auto; bottom: calc(var(--foot-h) + 220px); }
-  body.panel-open .zoom-ctrl { right: var(--gutter); }
+  body.panel-open .zoom-ctrl { transform: none; }
   .spotlight { left: var(--gutter); right: var(--gutter); width: auto; bottom: calc(var(--foot-h) + 8px); padding: 8px 10px 10px; height: 200px; overflow: hidden; }
   .spot-advs { flex-wrap: nowrap; overflow: hidden; margin-top: 8px; }
-  .spot-advs li { flex: none; white-space: nowrap; }
+  .spot-adv { flex: none; white-space: nowrap; }
   .spot-open { margin-top: 8px; }
   .spot-ai, .spot-recent { display: none; }
-  .spot-title h3 { font-size: 16px; }
+  .spot-name { font-size: 16px; }
   .panel {
     top: auto; left: 0; right: 0; bottom: 0; width: 100%;
     max-height: 78vh; height: 78vh;
@@ -927,3 +945,32 @@ body.panel-open .zoom-ctrl { right: calc(var(--panel-w) + var(--gutter) * 2); }
   .spot-kicker span:not(.rec) { display: none; }
   .spot-auto label { font-size: 10.5px; }
 }
+
+/* Spotlight keeps one fixed size from first paint (no layout shift when digests arrive or the
+   country changes): the card fills the box, long texts are clamped, the link sits at the bottom. */
+.spotlight { height: 384px; display: flex; flex-direction: column; }
+.spot-card { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.spot-title { flex: none; }
+.spot-ai, .spot-recent, .spot-skeleton { flex: none; }
+.spot-ai .spot-text, .spot-recent .spot-text {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden;
+}
+.spot-skeleton { margin-top: 10px; }
+.spot-open { margin-top: auto; padding-top: 8px; flex: none; }
+@media (max-width: 760px) {
+  .spotlight { height: 200px; }
+  .spot-ai, .spot-recent, .spot-skeleton { display: none; }
+}
+
+/* Reserve HUD sizes from first paint (no shifts when data / i18n text arrives). */
+.is-pending { visibility: hidden; }
+.legend, .flight-hud { transition: opacity .3s; }
+.clock-date { display: inline-block; min-width: 7.5em; }
+.freshness { min-width: 190px; }
+@media (max-width: 760px) { .freshness { min-width: 0; } }
+/* English visitors: the page stays hidden until the strings are swapped (no text-reflow shifts);
+   failsafe reveal after 3 s in case the scripts never run. */
+.i18n-pending body { visibility: hidden; animation: i18n-reveal 0s linear 3s forwards; }
+@keyframes i18n-reveal { to { visibility: visible; } }
+/* footer height on phones is known per language: start with it so nothing moves when it is measured */
+@media (max-width: 760px) { :root { --foot-h: 52px; } :root[lang="en"] { --foot-h: 65px; } }

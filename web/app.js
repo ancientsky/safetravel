@@ -18,11 +18,58 @@ const LANG_KEY = 'safetravel.lang';
 const THEME_KEY = 'safetravel.theme';
 const FLIGHTS_KEY = 'safetravel.flights';
 
+/** epidemics.json via a worker (parse off the main thread, items streamed in batches). */
+function loadEpidemicsData() {
+  if (typeof Worker !== 'function') return getJSON('epidemics.json');
+  return new Promise((resolve, reject) => {
+    let worker;
+    try {
+      worker = new Worker('js/epidemics-worker.js');
+    } catch {
+      getJSON('epidemics.json').then(resolve, reject);
+      return;
+    }
+    let data = null;
+    worker.onmessage = ({ data: msg }) => {
+      if (msg.type === 'meta') {
+        data = { ...msg.rest, items: [] };
+      } else if (msg.type === 'items') {
+        data.items.push(...msg.items);
+      } else if (msg.type === 'done') {
+        worker.terminate();
+        resolve(data);
+      } else if (msg.type === 'error') {
+        worker.terminate();
+        reject(new Error(msg.message));
+      }
+    };
+    worker.onerror = (ev) => { // e.g. worker blocked: fall back to the main thread
+      ev.preventDefault?.();
+      worker.terminate();
+      getJSON('epidemics.json').then(resolve, reject);
+    };
+    worker.postMessage({ url: new URL('data/epidemics.json', document.baseURI).href });
+  });
+}
+
 async function getJSON(file) {
   const res = await fetch(`data/${file}`, { cache: 'no-cache' });
   if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
   return res.json();
 }
+
+/** Resolve after the next frame has been rendered (layout is clean, nothing is pending). */
+const afterPaint = () => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+const yieldToMain = () => new Promise((resolve) => setTimeout(resolve, 0));
+const whenIdle = (fn, timeout) => ('requestIdleCallback' in window
+  ? requestIdleCallback(fn, { timeout })
+  : setTimeout(fn, 300));
+
+// Phones and low-core machines get the simplified 110m map (fewer, lighter paths).
+// Simplified 110m geometry only on phone-width screens: the demo display keeps the detailed map
+// (small advisory countries such as HK/SG/MO exist only in the 50m geometry) even on 4-core PCs,
+// which instead get the lighter animation settings in flights.js.
+const LITE_MAP = typeof matchMedia === 'function' && matchMedia('(max-width: 760px)').matches;
 
 function initialTheme() {
   const stored = storageGet(THEME_KEY);
@@ -65,18 +112,26 @@ async function main() {
   state.flightsOn = storageGet(FLIGHTS_KEY) !== 'off';
   bindData(state.data);
   applyStatic();
+  document.documentElement.classList.remove('i18n-pending'); // see the inline script in index.html
   initTooltip($('#tooltip'));
   // Overlays sit above the footer; keep --foot-h in sync with its real (wrapped) height.
+  // The ResizeObserver reports the size after layout, so there is no forced synchronous reflow.
   const foot = $('.foot');
-  const syncFoot = () => document.documentElement.style.setProperty('--foot-h', `${Math.ceil(foot.offsetHeight)}px`);
-  if ('ResizeObserver' in window) new ResizeObserver(syncFoot).observe(foot);
-  syncFoot();
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(([entry]) => {
+      const h = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+      document.documentElement.style.setProperty('--foot-h', `${Math.ceil(h)}px`);
+    }).observe(foot);
+  }
   const clockTick = startClock($('#clock'));
 
   // ---- critical data first ----
-  const files = ['world.json', 'alerts.json', 'meta.json', 'countries.json', 'flights.json'];
+  const worldFile = LITE_MAP ? 'world-110m.json' : 'world.json';
+  const files = [worldFile, 'alerts.json', 'meta.json', 'countries.json', 'flights.json'];
   const keys = ['world', 'alerts', 'meta', 'countries', 'flights'];
-  const settled = await Promise.allSettled(files.map(getJSON));
+  const settled = await Promise.allSettled(files.map((f) => (f === 'world-110m.json'
+    ? getJSON(f).catch(() => getJSON('world.json')) // simplified map missing: fall back to the full one
+    : getJSON(f))));
   settled.forEach((r, i) => {
     if (r.status === 'fulfilled') state.data[keys[i]] = r.value;
     else {
@@ -118,6 +173,9 @@ async function main() {
   };
   renderFilterChips(chipsNode, onFilter);
 
+  // Let the HUD paint first; the map (one long d3 task) renders in the next frame on clean layout.
+  await afterPaint();
+
   if (!state.data.world) {
     mapRoot.classList.add('map-error');
     $('#map-error').hidden = false;
@@ -132,13 +190,19 @@ async function main() {
   const search = createSearch({ root: $('#search'), onPick: (iso) => openCountry(iso) });
 
   if (state.data.world) {
-    flights = createFlights({ canvas: $('#flights-canvas'), map });
-    flights.init();
-    flights.setEnabled(state.flightsOn && !!state.data.flights);
     map.setDotsVisible(state.flightsOn);
-    spotlight = createSpotlight({ root: $('#spotlight'), map, panel });
-    spotlight.start();
-    window.__safetravel.spotlight = { next: (iso) => spotlight.next(iso), current: () => spotlight.current() };
+    // Animations start only once the map has painted and the main thread is idle, so they don't
+    // compete with the first render.
+    requestAnimationFrame(() => whenIdle(() => {
+      flights = createFlights({ canvas: $('#flights-canvas'), map });
+      flights.init();
+      flights.setEnabled(state.flightsOn && !!state.data.flights);
+      whenIdle(() => { // separate task from the flight set-up
+        spotlight = createSpotlight({ root: $('#spotlight'), map, panel });
+        spotlight.start();
+        window.__safetravel.spotlight = { next: (iso) => spotlight.next(iso), current: () => spotlight.current() };
+      }, 1000);
+    }, 1500));
   }
 
   // ---- controls ----
@@ -212,10 +276,12 @@ async function main() {
   state.epidemicsStatus = 'loading';
   const loadEpidemics = async () => {
     try {
-      const ep = await getJSON('epidemics.json');
+      const ep = await loadEpidemicsData();
+      await yieldToMain(); // keep parse, indexing and re-render in separate (short) tasks
       state.data.epidemics = ep;
       indexEpidemics(ep);
       state.epidemicsStatus = 'ready';
+      await yieldToMain();
     } catch (err) {
       state.epidemicsStatus = 'error';
       state.errors.push(String(err?.message || err));
@@ -225,15 +291,16 @@ async function main() {
     $('#digest-status').hidden = true;
     if (!state.data.meta) renderTiles($('#stat-tiles'));
     panel.refresh();
+    await yieldToMain();
     spotlight?.refresh();
   };
   $('#digest-status').hidden = false;
-  if ('requestIdleCallback' in window) requestIdleCallback(loadEpidemics, { timeout: 800 });
-  else setTimeout(loadEpidemics, 200);
+  whenIdle(loadEpidemics, 2500);
 
 }
 
 main().catch((err) => {
+  document.documentElement.classList.remove('i18n-pending');
   console.error(err);
   toast(String(err?.message || err));
 });

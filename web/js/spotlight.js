@@ -3,7 +3,7 @@ import {
   state, on, emit, levelOf, alertsOf, groupAlerts,
 } from './state.js';
 import {
-  t, countryName, countryAltName, diseaseName, levelShort, badge, fmtDay, pick, isEn,
+  t, countryName, countryAltName, diseaseName, badge, fmtDay, pick, isEn,
 } from './i18n.js';
 import {
   esc, clean, truncate, weightedPick, reducedMotion, storageGet, storageSet, clamp, levelNum, $,
@@ -58,10 +58,20 @@ export function createSpotlight({ root, map, panel }) {
     return weightedPick(pool, (c) => WEIGHT[levelOf(c)] || 1);
   }
 
+  // Card size cached from a ResizeObserver: reading offsetWidth right after re-rendering the card
+  // would force a synchronous layout on every cycle.
+  let box = { w: 372, h: 384 };
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(([e]) => {
+      const b = e.borderBoxSize?.[0];
+      box = b ? { w: b.inlineSize, h: b.blockSize } : { w: e.contentRect.width, h: e.contentRect.height };
+    }).observe(root);
+  }
+
   function pad() {
     const narrow = window.innerWidth < 760;
-    if (narrow) return { top: 150, bottom: root.offsetHeight + 90 };
-    return { top: 150, left: 300, right: root.offsetWidth + 40, bottom: 60 };
+    if (narrow) return { top: 150, bottom: box.h + 90 };
+    return { top: 150, left: 300, right: box.w + 40, bottom: 60 };
   }
 
   function show(code, { fly = true } = {}) {
@@ -137,7 +147,7 @@ export function createSpotlight({ root, map, panel }) {
 
   function render() {
     if (!iso) {
-      card.innerHTML = `<p class="spot-scan">${esc(t('spot_scanning'))}</p>`;
+      card.innerHTML = `<span class="spot-scan">${esc(t('spot_scanning'))}</span>`;
       return;
     }
     const lvl = levelOf(iso);
@@ -149,26 +159,26 @@ export function createSpotlight({ root, map, panel }) {
       const it = state.byCountry.get(iso)?.[0];
       if (it) {
         const s = pick(it, 'summary').text || pick(it, 'headline').text;
-        recent = `<div class="spot-recent"><span class="spot-label">${esc(t('spot_recent'))} · <time class="mono">${esc(fmtDay(it.date, 'short'))}</time></span><p>${esc(truncate(s, 96))}</p></div>`;
+        recent = `<span class="spot-recent"><span class="spot-label">${esc(t('spot_recent'))} · <time class="mono">${esc(fmtDay(it.date, 'short'))}</time></span><span class="spot-text">${esc(truncate(s, 96))}</span></span>`;
       }
       const ov = state.data.epidemics?.overviews?.[iso];
       if (ov) {
         const txt = clean(isEn() ? ov.en || ov.zh : ov.zh || ov.en);
         const isAi = ov.ai === true || (ov.ai !== false && (state.data.meta?.counts?.ai_translated ?? 0) > 0);
-        ai = `<div class="spot-ai${isAi ? '' : ' is-auto'}">${isAi ? '<span class="chip chip-ai-mini">AI</span>' : ''}<p>${esc(truncate(txt, 110))}</p></div>`;
+        ai = `<span class="spot-ai${isAi ? '' : ' is-auto'}">${isAi ? '<span class="chip chip-ai-mini">AI</span>' : ''}<span class="spot-text">${esc(truncate(txt, 110))}</span></span>`;
       }
     } else if (state.epidemicsStatus === 'loading') {
-      recent = `<div class="skeleton skeleton-sm" aria-busy="true"><span></span><span></span><em>${esc(t('loading_digests'))}</em></div>`;
+      recent = `<span class="skeleton skeleton-sm spot-skeleton" aria-busy="true"><span></span><span></span><span></span><em>${esc(t('loading_digests'))}</em></span>`;
     }
+    // Only phrasing content (spans) inside the <button>: no headings, lists or divs.
     card.innerHTML = `
-      <div class="spot-title">
+      <span class="spot-title">
         ${badge(lvl)}
-        <div><h3>${esc(countryName(iso))}</h3><p class="spot-alt">${esc(countryAltName(iso))} · <span class="mono">${esc(iso)}</span></p></div>
-      </div>
-      <ul class="spot-advs">${top.map((g) => `<li><span class="dot lvl-${levelNum(g.level)}" aria-hidden="true"></span><span class="spot-lv mono">L${levelNum(g.level)}</span>${esc(diseaseName(g.disease))}${g.areas.length > 1 ? `<span class="spot-n mono">×${g.areas.length}</span>` : ''}</li>`).join('')}${groups.length > top.length ? `<li class="more mono">+${groups.length - top.length}</li>` : ''}</ul>
+        <span class="spot-names"><span class="spot-name">${esc(countryName(iso))}</span><span class="spot-alt">${esc(countryAltName(iso))} · <span class="mono">${esc(iso)}</span></span></span>
+      </span>
+      <span class="spot-advs">${top.map((g) => `<span class="spot-adv"><span class="dot lvl-${levelNum(g.level)}" aria-hidden="true"></span><span class="spot-lv mono">L${levelNum(g.level)}</span>${esc(diseaseName(g.disease))}${g.areas.length > 1 ? `<span class="spot-n mono">×${g.areas.length}</span>` : ''}</span>`).join('')}${groups.length > top.length ? `<span class="spot-adv more mono">+${groups.length - top.length}</span>` : ''}</span>
       ${ai}${recent}
       <span class="spot-open">${esc(t('spot_open'))} →</span>`;
-    card.setAttribute('aria-label', `${countryName(iso)} — ${levelShort(lvl)} — ${t('spot_open')}`);
   }
 
   function paused() {
@@ -207,15 +217,17 @@ export function createSpotlight({ root, map, panel }) {
   function tick() {
     lastTickAt = performance.now();
     const p = paused();
-    root.classList.toggle('is-paused', p);
+    let len = cycleLength(); // layout reads first, DOM writes after
     if (!p) {
       elapsed += TICK;
-      if (elapsed >= cycleLength()) {
+      if (elapsed >= len) {
         emit('spotlight:cycle'); // quiet moment: the auto-refresh may reload here
         next();
+        len = INTERVAL; // new country starts at the top; its glide length is re-measured next tick
       }
     }
-    const progress = `scaleX(${Math.min(1, elapsed / cycleLength())})`;
+    root.classList.toggle('is-paused', p);
+    const progress = `scaleX(${Math.min(1, elapsed / len)})`;
     bar.style.transform = progress;
     if (autobar) {
       const showBar = state.spotlight.autoOpen && panel.isOpen();
@@ -275,6 +287,12 @@ export function createSpotlight({ root, map, panel }) {
     clearInterval(timer);
     timer = setInterval(tick, TICK);
   }
+
+  // No timers while the tab is hidden; resume where the cycle left off.
+  document.addEventListener('visibilitychange', () => {
+    clearInterval(timer);
+    timer = document.hidden ? 0 : setInterval(tick, TICK);
+  });
 
   return {
     start,

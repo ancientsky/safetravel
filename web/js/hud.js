@@ -6,18 +6,32 @@ import {
 } from './util.js';
 
 let clockTimer = 0;
+const LOW_END = (navigator.hardwareConcurrency || 8) <= 4
+  || (typeof matchMedia === 'function' && matchMedia('(max-width: 760px)').matches);
+
+// Intl formatters are expensive to construct: build them once (per language), not every second.
+const TIME_FMT = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+});
+const dateFmts = new Map();
+function dateFmt(lang) {
+  if (!dateFmts.has(lang)) {
+    dateFmts.set(lang, new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'zh-Hant-TW', {
+      timeZone: 'Asia/Taipei', month: 'short', day: 'numeric', weekday: 'short',
+    }));
+  }
+  return dateFmts.get(lang);
+}
 
 export function startClock(node) {
+  const timeEl = node.querySelector('.clock-time');
+  const dateEl = node.querySelector('.clock-date');
   const tick = () => {
     const now = new Date();
-    const time = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-    }).format(now);
-    const date = new Intl.DateTimeFormat(getLang() === 'en' ? 'en-GB' : 'zh-Hant-TW', {
-      timeZone: 'Asia/Taipei', month: 'short', day: 'numeric', weekday: 'short',
-    }).format(now);
-    node.querySelector('.clock-time').textContent = time;
-    node.querySelector('.clock-date').textContent = date;
+    const time = TIME_FMT.format(now);
+    const date = dateFmt(getLang()).format(now);
+    if (timeEl.textContent !== time) timeEl.textContent = time;
+    if (dateEl.textContent !== date) dateEl.textContent = date;
   };
   tick();
   clearInterval(clockTimer);
@@ -38,6 +52,8 @@ function derivedCounts() {
 }
 
 export function renderTiles(node, { animate = false } = {}) {
+  // count-up is decoration: skip it on low-end devices (each step re-lays out the header)
+  const anim = animate && !reducedMotion() && !LOW_END;
   const meta = state.data.meta;
   const counts = { ...derivedCounts(), ...(meta?.counts || {}) };
   if (state.data.epidemics && counts.epidemic_items == null) counts.epidemic_items = state.data.epidemics.items.length;
@@ -52,13 +68,13 @@ export function renderTiles(node, { animate = false } = {}) {
   node.innerHTML = tiles.map((x) => `
     <li class="tile ${x.cls}">
       <span class="tile-label">${x.lvl ? `<i class="dot lvl-${x.lvl}" aria-hidden="true"></i>` : ''}${esc(t(x.key))}</span>
-      <b class="tile-val mono" data-v="${x.v == null ? '' : finiteNum(x.v)}">${x.v == null ? '—' : fmtNum(animate ? 0 : finiteNum(x.v))}</b>
+      <b class="tile-val mono" data-v="${x.v == null ? '' : finiteNum(x.v)}">${x.v == null ? '—' : fmtNum(anim ? 0 : finiteNum(x.v))}</b>
     </li>`).join('') + `
     <li class="tile tile-updated">
       <span class="tile-label">${esc(t('tile_updated'))}</span>
       <b class="tile-val mono small">${meta?.generated_at ? esc(fmtDateTime(meta.generated_at)) : '—'}</b>
     </li>`;
-  if (animate && !reducedMotion()) countUp(node);
+  if (anim) countUp(node);
   else node.querySelectorAll('.tile-val[data-v]').forEach((b) => { if (b.dataset.v !== '') b.textContent = fmtNum(+b.dataset.v); });
 }
 
@@ -92,6 +108,7 @@ export function renderFreshness(node) {
 }
 
 export function renderLegend(node) {
+  node.classList.remove('is-pending');
   const c = state.data.alerts?.countries || {};
   const counts = { 0: 0, 1: 0, 2: 0, 3: 0 };
   for (const v of Object.values(c)) counts[v.max_level || 0]++;
@@ -114,12 +131,13 @@ export function renderLegend(node) {
 }
 
 export function renderFlightHud(node) {
+  node.classList.remove('is-pending');
   const f = state.data.flights;
   const stats = $('.fh-stats', node);
   const btn = $('.fh-toggle', node);
   btn.setAttribute('aria-pressed', String(state.flightsOn));
   btn.querySelector('.fh-toggle-text').textContent = state.flightsOn ? t('flights_toggle_on') : t('flights_toggle_off');
-  btn.setAttribute('aria-label', t('flights_toggle_label'));
+  btn.querySelector('.fh-toggle-sr').textContent = t('flights_toggle_sr'); // name = visible text + description
   btn.title = t('flights_toggle_label');
   if (!f || !f.routes) {
     stats.innerHTML = `<span class="fh-warn">${esc(t('flights_unavailable'))}</span>`;
