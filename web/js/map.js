@@ -75,6 +75,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   let countrySel = null;
   let dotSel = null;
   let spotIso = null;
+  let selIso = null;
 
   function buildFeatures(world) {
     const geoms = world.objects.countries.geometries;
@@ -121,7 +122,13 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     if (d.marker) c += ' marker';
     if (state.filter.size && !state.filter.has(lvl)) c += ' dim';
     if (state.filter.size && state.filter.has(lvl)) c += ' lit';
+    if (d.id === selIso || d.id === spotIso) c += ' focus';
     return c;
+  }
+
+  // countries shown in the panel or picked by the spotlight render in their full level colour
+  function refreshFocus() {
+    if (countrySel) countrySel.classed('focus', (d) => d.id === selIso || d.id === spotIso);
   }
 
   function fit() {
@@ -372,6 +379,8 @@ export function createMap({ svgEl, onOpen, getInsets }) {
 
   function setSelected(iso) {
     const f = iso && byIso.get(iso);
+    selIso = f ? iso : null;
+    refreshFocus();
     selOutline.setAttribute('d', f ? f._d || path(f) : '');
     selSvg.toggleAttribute('hidden', !f); // SVG elements have no .hidden property: toggle the attribute
   }
@@ -388,6 +397,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     const f = spotIso && byIso.get(spotIso);
     spotOutline.setAttribute('d', f ? f._d || path(f) : '');
     spotSvg.toggleAttribute('hidden', !f);
+    refreshFocus();
     reticle.hidden = !f;
     if (f) {
       pulse(spotSvg, [{ opacity: 0 }, { opacity: 1 }, { opacity: 0.3 }, { opacity: 1 }, { opacity: 0.3 }, { opacity: 1 }, { opacity: 0.9 }],
