@@ -70,6 +70,10 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg>
             <span data-i18n="lang_toggle">EN</span><span class="sr-only" data-i18n="lang_toggle_sr"> — 切換語言為英文</span>
           </button>
+          <button type="button" class="btn-icon arr-toggle" data-testid="arrivals-toggle" aria-pressed="false" aria-controls="arrivals" data-i18n-attr="title:arr_toggle_title">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.5h18"/><path d="M4.2 8.6l1.7-.4 2.6 2.7 3.9-1-3-5.6 2.1-.5 5 5 3.4-.9a1.5 1.5 0 0 1 .8 2.9L7.9 14.5a1.9 1.9 0 0 1-2-.8z"/></svg>
+            <span data-i18n="arr_toggle">入境航班</span>
+          </button>
           <button type="button" class="btn-icon sound-toggle" data-testid="sound-toggle" aria-pressed="false">
             <svg class="i-sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
             <svg class="i-sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
@@ -98,6 +102,27 @@
     </div>
     <div id="level-chips" class="chips" role="group"></div>
   </section>
+
+  <aside id="arrivals" class="arrivals glass" data-testid="arrivals" role="region" aria-labelledby="arr-title" hidden>
+    <div class="arr-head" data-i18n-attr="title:arr_drag_hint">
+      <div class="arr-heading">
+        <span class="arr-kicker mono"><i class="rec" aria-hidden="true"></i><span data-i18n="arr_kicker">INBOUND // ±60 MIN</span></span>
+        <h2 id="arr-title" data-i18n="arr_title">入境航班</h2>
+      </div>
+      <div class="arr-actions">
+        <button type="button" class="btn-icon arr-big" aria-pressed="false" data-i18n-attr="title:arr_big_title"><span data-i18n="arr_big">大字</span></button>
+        <button type="button" class="btn-icon arr-dock" data-i18n-attr="title:arr_dock_title;aria-label:arr_dock_title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9.5 4.5v15"/></svg></button>
+        <button type="button" class="btn-icon arr-min" aria-expanded="true" data-i18n-attr="title:arr_min_title;aria-label:arr_min_title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button type="button" class="btn-icon arr-close" data-i18n-attr="title:arr_close;aria-label:arr_close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+    </div>
+    <div class="arr-controls">
+      <label class="arr-field"><span data-i18n="arr_airport">機場</span><select class="arr-airport" data-testid="arrivals-airport"></select></label>
+      <div class="arr-cps" role="group" data-i18n-attr="aria-label:arr_checkpoint"></div>
+    </div>
+    <div class="arr-status mono" role="status"></div>
+    <div class="arr-body" tabindex="-1"></div>
+  </aside>
 
   <aside id="legend" class="legend glass is-pending" data-i18n-attr="aria-label:legend_title"></aside>
 

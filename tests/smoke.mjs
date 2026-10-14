@@ -236,6 +236,21 @@ async function run(browser) {
     consoleErrors.length === 0 ? '' : `${consoleErrors.length} error(s)`,
   );
 
+  // 9. Inbound flights board (after the console check: data/arrivals.json is published outside git,
+  //    so a local 404 is expected and only has to render a status message)
+  await check('arrivals board opens and renders', async () => {
+    await page.locator('[data-testid="arrivals-toggle"]').click();
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-testid="arrivals"]');
+      return !!el && !el.hidden && (el.querySelector('.arr-row, .arr-empty, .arr-summary') !== null);
+    }, null, { timeout: 10000, polling: 250 });
+    const rows = await page.locator('[data-testid="arrivals"] .arr-row').count();
+    await shot(page, '05-arrivals.png');
+    await page.locator('[data-testid="arrivals-toggle"]').click();
+    if (!(await page.locator('[data-testid="arrivals"]').isHidden())) throw new Error('board did not close');
+    return `${rows} flight row(s)`;
+  });
+
 }
 
 function finish() {

@@ -12,6 +12,7 @@ import { createMap } from './js/map.js';
 import { createFlights } from './js/flights.js';
 import { createPanel } from './js/panel.js';
 import { createSpotlight } from './js/spotlight.js';
+import { createArrivals } from './js/arrivals.js';
 import { createSearch, renderFilterChips } from './js/search.js';
 import {
   startClock, renderTiles, renderFreshness, renderLegend, renderFlightHud,
@@ -138,7 +139,7 @@ async function main() {
   on('refresh:pending', () => sound.play('arpeggio'));
   // tiny click for the UI toggles (language, theme, filters, routes, spotlight switches)
   document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-testid="lang-toggle"], [data-testid="theme-toggle"], .chip-filter, .fh-toggle, .switch')) sound.play('click');
+    if (e.target.closest('[data-testid="lang-toggle"], [data-testid="theme-toggle"], .chip-filter, .fh-toggle, .switch, .arr-toggle, .arr-cp, .arr-big')) sound.play('click');
   });
 
   // ---- critical data first ----
@@ -157,8 +158,9 @@ async function main() {
   });
 
   const mapRoot = $('#map');
+  let arrivals = null;
   const getInsets = () => {
-    if (window.innerWidth >= 760) return null;
+    if (window.innerWidth >= 760) return arrivals?.insets() || null;
     const bottomOf = (sel) => document.querySelector(sel)?.getBoundingClientRect().bottom || 0;
     const top = Math.max(bottomOf('.toolbar'), bottomOf('.legend'), bottomOf('.flight-hud')) + 8;
     const spot = document.querySelector('#spotlight')?.getBoundingClientRect().top || window.innerHeight;
@@ -207,6 +209,18 @@ async function main() {
 
   const search = createSearch({ root: $('#search'), onPick: (iso) => openCountry(iso) });
 
+  // Inbound flights board for quarantine stations (off by default; ?arr=TPE-C deep link).
+  const relayout = () => {
+    if (!state.data.world) return;
+    map.resize();
+    if (panel.isOpen()) map.setSelected(panel.current());
+  };
+  arrivals = createArrivals({
+    root: $('#arrivals'), button: $('[data-testid="arrivals-toggle"]'), map, openCountry, onLayout: relayout,
+  });
+  arrivals.init();
+  window.__safetravel.arrivals = arrivals.debug;
+
   if (state.data.world) {
     map.setDotsVisible(state.flightsOn);
     // Animations start only once the map has painted and the main thread is idle, so they don't
@@ -240,6 +254,7 @@ async function main() {
     search.refresh();
     panel.refresh();
     spotlight?.refresh();
+    arrivals.refresh();
   });
   $('[data-testid="theme-toggle"]').addEventListener('click', () => {
     applyTheme(state.theme === 'dark' ? 'light' : 'dark');
@@ -267,6 +282,7 @@ async function main() {
   });
 
   window.addEventListener('resize', debounce(() => {
+    arrivals.resize();
     map.resize();
     if (panel.isOpen()) map.setSelected(panel.current());
   }, 180));

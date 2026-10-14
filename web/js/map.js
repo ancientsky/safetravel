@@ -153,8 +153,10 @@ export function createMap({ svgEl, onOpen, getInsets }) {
       const [tx, ty] = projection.translate();
       projection.translate([tx + (width * 0.5 - home[0]), ty]); // centre on Taiwan
     } else {
-      const top = Math.min(150, height * 0.17);
-      projection.fitExtent([[18, top], [width - 18, height - 46]], land);
+      // wide screens: an optional docked overlay (arrivals board) reserves the left or top band
+      const top = Math.max(Math.min(150, height * 0.17), Math.min(ins?.top || 0, height * 0.6));
+      const left = 18 + Math.min(ins?.left || 0, width * 0.45);
+      projection.fitExtent([[left, top], [width - 18, height - 46]], land);
     }
     centroidCache.clear();
     boundsCache.clear();
