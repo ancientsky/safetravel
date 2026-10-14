@@ -20,7 +20,8 @@ const TICK_MS = 20 * 1000;
 const SCROLL_PX_S = 28;
 const REST_TOP_MS = 5000;
 const REST_BOTTOM_MS = 6000;
-const HOLD_MS = 20000; // pause after a person touches / scrolls the list
+const HOLD_MS = 15000; // pause after a person touches / scrolls / clicks the list
+const HOVER_HOLD_MS = 8000; // pause while a mouse is actually moving over it (a parked cursor does not block)
 const STATUSES = new Set(['arrived', 'on_time', 'early', 'delayed', 'changed', 'cancelled', 'other']);
 const AIRPORT_ORDER = ['TPE', 'TSA', 'KHH', 'RMQ', 'TNN', 'HUN'];
 const PLANE = 'M0-5.5 1.1-1.6 5.5 1.3V2.6L1.1 1.1.8 4 2.3 5.1V6L0 5.3-2.3 6V5.1L-.8 4-1.1 1.1-5.5 2.6V1.3L-1.1-1.6Z';
@@ -53,7 +54,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
   const btnDock = root.querySelector('.arr-dock');
   const btnMin = root.querySelector('.arr-min');
   const btnClose = root.querySelector('.arr-close');
-  const swScroll = root.querySelector('#arr-autoscroll');
+  const swScroll = root.querySelector('.arr-scroll');
 
   const url = fromUrl();
   const cfg = { airport: 'TPE', cp: 'ALL', big: false, scroll: true, ...(readJSON(CFG_KEY) || {}) };
@@ -133,7 +134,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     tickTimer = setInterval(() => { if (!document.hidden) render(); }, TICK_MS);
   }
   // ---------------------------------------------------------------- auto-scroll
-  const glide = { raf: 0, last: 0, pos: 0, phase: 'rest-top', until: 0, holdUntil: 0, hover: false };
+  const glide = { raf: 0, last: 0, pos: 0, phase: 'rest-top', until: 0, holdUntil: 0 };
   function glideFrame(ts) {
     glide.raf = requestAnimationFrame(glideFrame);
     const dt = glide.last ? Math.min(100, ts - glide.last) : 0;
@@ -141,7 +142,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     const max = body.scrollHeight - body.clientHeight;
     if (!on || !cfg.scroll || minimized || document.hidden || max < 8) { glide.phase = 'rest-top'; glide.until = ts + REST_TOP_MS; return; }
     const now = Date.now();
-    if (glide.hover || now < glide.holdUntil) { glide.pos = body.scrollTop; return; }
+    if (now < glide.holdUntil) { glide.pos = body.scrollTop; return; }
     if (Math.abs(body.scrollTop - glide.pos) > 3) glide.pos = body.scrollTop; // re-render or manual change
     if (glide.phase === 'rest-top' || glide.phase === 'rest-bottom') {
       if (ts < glide.until) return;
@@ -174,12 +175,11 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     glide.raf = requestAnimationFrame(glideFrame);
   }
   function stopGlide() { cancelAnimationFrame(glide.raf); glide.raf = 0; }
-  const holdGlide = () => { glide.holdUntil = Date.now() + HOLD_MS; };
-  ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach((ev) => body.addEventListener(ev, holdGlide, { passive: true }));
-  body.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') glide.hover = true; });
-  body.addEventListener('pointerleave', () => { glide.hover = false; holdGlide(); });
+  const holdGlide = (ms = HOLD_MS) => { glide.holdUntil = Math.max(glide.holdUntil, Date.now() + ms); };
+  ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach((ev) => body.addEventListener(ev, () => holdGlide(), { passive: true }));
+  body.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') holdGlide(HOVER_HOLD_MS); }, { passive: true });
   function renderScrollSwitch() {
-    swScroll?.setAttribute('aria-checked', String(!!cfg.scroll));
+    swScroll?.setAttribute('aria-pressed', String(!!cfg.scroll));
   }
 
   function stopPolling() {

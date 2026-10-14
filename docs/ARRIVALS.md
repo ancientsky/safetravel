@@ -52,7 +52,7 @@ usage counters. A run calls TDX only if **all** hold:
 3. `calls_day < min(130, floor((cap − calls_month_before_today) / days_left_in_month_incl_today))` — self-balancing
    when a month runs hot.
 
-Otherwise the run ends without deploying. Extra triggers (backup cron, double dispatches, manual clicks) are
+Otherwise the run ends without deploying. Extra triggers (double dispatches, manual clicks) are
 therefore harmless to the quota.
 
 ## Triggering: external scheduler (GitHub cron is not usable here)
@@ -64,7 +64,7 @@ Measured on this repo (Oct 2026): scheduled runs start **4.5–8.5 h late** (`17
   `{"ref":"main"}` every 10 min, authenticated with a fine-grained PAT limited to this repository with
   **Actions: Read and write** only. The same service can dispatch `update-data.yml` at 11:17 / 21:17 Taipei to fix
   the late daily refresh. Setup steps: `docs/ARRIVALS_SETUP.md`.
-- **Backup:** `schedule: '7,37 * * * *'` in `arrivals.yml` (fires late, but the guard keeps it harmless).
+- No in-repo `schedule:` in either workflow (removed 2026-10-14: it only produced late duplicate runs).
 
 ## Publishing
 
@@ -159,6 +159,7 @@ Rules:
   - *Phone* (≤ 760 px): bottom sheet.
   - Map zooms (spotlight tour, country panel) keep the target country clear of a docked board; in portrait the board
     narrows beside the open country panel so the gate column stays visible.
-- **Auto-scroll** (switch on the board, default on, remembered): the list glides down at ≈ 28 px/s, rests 5 s at the
-  top and 6 s at the bottom, then returns to the top; it pauses while a mouse is over the list and for 20 s after a
-  touch / wheel / click. Reduced-motion users get page-by-page steps instead.
+- **Auto-scroll** (「自動捲動」 button next to 「大字」 in the board header, default on, remembered): the list glides
+  down at ≈ 28 px/s, rests 5 s at the top and 6 s at the bottom, then returns to the top. It pauses for 8 s after the
+  mouse last moved over the list (a parked cursor does not block it — wall PCs often leave the pointer there) and for
+  15 s after a touch / wheel / click. Reduced-motion users get page-by-page steps instead.

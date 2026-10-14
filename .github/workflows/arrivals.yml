@@ -6,7 +6,7 @@ name: Arrivals board
 # Triggering: GitHub's own cron starts 4.5-8.5 h late on this repository, so the real clock is an external scheduler
 # (cron-job.org) that POSTs /repos/<owner>/<repo>/actions/workflows/arrivals.yml/dispatches {"ref":"main"} every
 # 10 minutes with a fine-grained PAT (Actions: read and write). Setup: docs/ARRIVALS_SETUP.md.
-# The `schedule` below is only a backup; the guard step keeps extra runs harmless (it costs no TDX call).
+# There is no in-repo `schedule:` (it would fire hours late); the guard step keeps extra triggers harmless (no TDX call).
 #
 # Repository configuration:
 #   secrets.TDX_CLIENT_ID       TDX (tdx.transportdata.tw) OAuth2 client credentials. Scheduled runs do nothing without
@@ -20,8 +20,6 @@ on:
         type: boolean
         required: false
         default: false
-  schedule:
-    - cron: '7,37 * * * *'
 
 permissions: {}
 

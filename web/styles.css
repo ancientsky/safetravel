@@ -1026,7 +1026,6 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 /* portrait: the country panel opens on the right; the board narrows beside it (and the zoom buttons) */
 body.panel-open .arrivals[data-mode="portrait"]:not(.is-floating) { right: calc(var(--panel-w) + var(--gutter) * 2 + 58px); }
 .arrivals { transition: right .4s var(--ease); }
-.arr-auto { margin-left: auto; }
 .arrivals.is-floating { resize: both; overflow: hidden; min-width: 300px; min-height: 160px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
 .arrivals.is-min { height: auto !important; min-height: 0; bottom: auto !important; resize: none; }
 .arrivals.is-min .arr-controls, .arrivals.is-min .arr-body { display: none; }
@@ -1050,7 +1049,9 @@ body.arr-open .flights-canvas { opacity: .35; }
 .arr-actions { display: flex; gap: 4px; flex: none; }
 .arr-actions .btn-icon { min-width: 30px; height: 30px; padding: 0 7px; font-size: 11px; }
 .arr-actions .btn-icon svg { width: 15px; height: 15px; transition: transform .2s; }
-.arr-big[aria-pressed="true"] { color: var(--cyan); border-color: rgba(var(--cyan-rgb), .7); }
+.arr-big[aria-pressed="true"], .arr-scroll[aria-pressed="true"] { color: var(--cyan); border-color: rgba(var(--cyan-rgb), .7); }
+.arr-scroll[aria-pressed="false"] svg { opacity: .45; }
+.arr-scroll { gap: 4px; }
 .arrivals:not(.is-floating) .arr-dock { display: none; }
 .arrivals[data-mode="phone"] .arr-dock { display: none; }
 
@@ -1162,7 +1163,7 @@ body.arr-open .flights-canvas { opacity: .35; }
   body.arr-dock-left .flight-hud { display: none; }
 }
 @media (max-width: 760px) {
-  .arr-toggle span[data-i18n] { display: none; }
+  .arr-toggle span[data-i18n], .arr-scroll span { display: none; }
   .arrivals, .arrivals[data-mode] {
     left: 0; right: 0; bottom: 0; top: auto; width: 100%; height: 58vh; z-index: 15;
     border-radius: 16px 16px 0 0; resize: none;

@@ -195,5 +195,6 @@ export default {
   arr_status_cancelled: 'Cancelled',
   arr_status_other: '—',
   arr_autoscroll: 'Auto-scroll',
+  arr_autoscroll_title: 'Scroll the flight list automatically (wall screens; pauses while the mouse moves or on touch)',
   arr_quota: ({ used, cap }) => `API this month ${used}/${cap}`,
 };

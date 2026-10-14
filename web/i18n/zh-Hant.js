@@ -193,5 +193,6 @@ export default {
   arr_status_cancelled: '取消',
   arr_status_other: '—',
   arr_autoscroll: '自動捲動',
+  arr_autoscroll_title: '自動捲動航班列表（牆面螢幕用；滑鼠移動或觸控時暫停）',
   arr_quota: ({ used, cap }) => `本月 API ${used}/${cap}`,
 };

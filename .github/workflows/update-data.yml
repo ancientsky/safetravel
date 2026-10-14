@@ -1,7 +1,10 @@
 name: Update data
 
 # Refreshes data/ and web/data/ twice a day (11:17 and 21:17 Asia/Taipei), commits the result to main and
-# redeploys GitHub Pages (commits made with GITHUB_TOKEN do not trigger other workflows, hence the deploy job here).
+# redeploys GitHub Pages. Triggered by an external scheduler (cron-job.org → workflow_dispatch, docs/ARRIVALS_SETUP.md):
+# GitHub's own cron started runs 4.5-8.5 h late on this repository, so it is not used.
+#
+# Commits made with GITHUB_TOKEN do not trigger other workflows, hence the deploy job here.
 #
 # Repository configuration:
 #   vars.AI_PROVIDER            'gemini' to translate with the Gemini API inside this workflow. Anything else (default)
@@ -11,8 +14,6 @@ name: Update data
 #   secrets.TDX_CLIENT_ID       optional; TDX (tdx.transportdata.tw) OAuth2 client credentials for the TPE flight feed.
 #   secrets.TDX_CLIENT_SECRET   Without them the pipeline calls TDX anonymously (small daily quota per IP).
 on:
-  schedule:
-    - cron: '17 3,13 * * *'
   workflow_dispatch:
     inputs:
       max_calls:
