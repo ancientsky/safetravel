@@ -71,13 +71,13 @@
 
 ## (d) 如何確認有在運作
 
-- **Actions 分頁**：<https://github.com/ancientsky/safetravel/actions> 應該每 10 分鐘出現一次 *Arrivals board*。大多數執行只跑完 *guard* 工作就結束（資料未滿 9 分鐘、或已達用量上限，*publish* 會顯示為略過），只有真正抓資料的那一次會執行 *publish* 並部署網站。這是正常的，不耗額度。
+- **Actions 分頁**：<https://github.com/ancientsky/safetravel/actions> 應該每 10 分鐘出現一次 *Arrivals board*。白天（05–24 時）幾乎每次都會執行 *publish* 抓資料並部署；夜間（00–05 時）每 3 次只有 1 次抓資料，其餘只跑完 *guard* 就結束（*publish* 顯示為略過）。資料太新或已達用量上限時也會略過，這是正常的，不耗額度。
 - **已發布的檔案**：<https://ancientsky.github.io/safetravel/data/arrivals.json>
   - `generated_at`：最近一次抓取時間（日間應不超過約 20 分鐘前）
   - `source`：`tdx`（有金鑰）或 `tdx-anon`（匿名，僅 TPE）
   - `flights`：視窗內的航班；`airports`：各機場及其航班數
 - **用量計數（`quota` 區塊）**：`calls_month` / `cap_month` 為本月已用／上限，`calls_day` 為今日已用。每次抓取 +1（萬一全部機場那次失敗再補抓 TPE 則 +2）。
-- 手動測試：Actions → *Arrivals board* → **Run workflow**；勾選 *force* 可略過「資料至少 9 分鐘」的限制（月／日上限仍然有效）。
+- 手動測試：Actions → *Arrivals board* → **Run workflow**；勾選 *force* 可略過「資料至少 7 分鐘」的限制（月／日上限仍然有效）。
 
 ## (e) 站點專用網址（可加入書籤或放在牆面螢幕）
 
@@ -106,7 +106,7 @@ TDX 免費方案：每月 4,500 次。
 | `arrivals.yml` 夜間 00:00–04:59（台北），每 30 分鐘 | 5 h × 2 = 10／天 |
 | **合計**（31 天的月份） | ≈ 3,968，剩約 530 次（12 %）供手動執行與重試 |
 
-三道防線（皆不耗額度）：資料未滿 9 分鐘（夜間 29 分鐘）不抓；`calls_month` 達上限不抓；當日用量超過 `min(130, floor((上限 − 今日之前已用) ÷ 本月剩餘天數))` 不抓。因此重複觸發、備援 cron、手動誤按都不會超支。
+三道防線（皆不耗額度）：資料未滿 7 分鐘（夜間 25 分鐘）不抓；`calls_month` 達上限不抓；當日用量超過 `min(130, floor((上限 − 今日之前已用) ÷ 本月剩餘天數))` 不抓。因此重複觸發、備援 cron、手動誤按都不會超支。
 
 要降低用量：
 

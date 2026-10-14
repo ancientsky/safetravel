@@ -235,17 +235,17 @@ def at(h, m=0, day=14, month=10):
 
 def test_guard_age_day_and_night():
     p = prev_doc("2026-10-14T12:00:00+08:00")
-    assert A.guard(p, at(12, 8), 4200)[0] is False
-    assert A.guard(p, at(12, 9), 4200)[0] is True
+    assert A.guard(p, at(12, 6), 4200)[0] is False
+    assert A.guard(p, at(12, 7), 4200)[0] is True
     p = prev_doc("2026-10-14T03:00:00+08:00")
-    ok, reason, _ = A.guard(p, at(3, 28), 4200)
-    assert not ok and "29" in reason
-    assert A.guard(p, at(3, 29), 4200)[0] is True
+    ok, reason, _ = A.guard(p, at(3, 24), 4200)
+    assert not ok and "25" in reason
+    assert A.guard(p, at(3, 25), 4200)[0] is True
     # 04:59 is still night, 05:00 is day
     p = prev_doc("2026-10-14T04:40:00+08:00")
     assert A.guard(p, at(4, 59), 4200)[0] is False
-    p = prev_doc("2026-10-14T04:50:00+08:00")
-    assert A.guard(p, at(5, 0), 4200)[0] is True  # 10 min old, day rule 9
+    p = prev_doc("2026-10-14T04:52:00+08:00")
+    assert A.guard(p, at(5, 0), 4200)[0] is True  # 8 min old, day rule 7
     # 23:59 is day
     assert A.guard(prev_doc("2026-10-14T23:50:00+08:00"), at(23, 59), 4200)[0] is True
 

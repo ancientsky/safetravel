@@ -46,7 +46,8 @@ do nothing; a manual run may call `/Arrival/TPE` anonymously for testing.
 The previous `arrivals.json` is read from the live site (`<pages_url>/data/arrivals.json`), which carries the
 usage counters. A run calls TDX only if **all** hold:
 
-1. age of the published data ≥ 9 min (05:00–23:59 Taipei) or ≥ 29 min (00:00–04:59);
+1. age of the published data ≥ 7 min (05:00–23:59 Taipei) or ≥ 25 min (00:00–04:59) — with a trigger every 10 min
+   this gives one call per trigger by day and one per three triggers at night, even when a run queued for the Pages lock;
 2. `calls_month < cap` (`vars.ARRIVALS_MONTHLY_CAP`, default **4200**);
 3. `calls_day < min(130, floor((cap − calls_month_before_today) / days_left_in_month_incl_today))` — self-balancing
    when a month runs hot.

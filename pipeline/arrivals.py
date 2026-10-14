@@ -26,7 +26,7 @@ ENDPOINT_TPE = f"{tdx.BASE}/FIDS/Airport/Arrival/TPE"
 QUERY = "?IsCargo=false&%24format=JSON"
 DEFAULT_CAP = 4200
 DAILY_MAX = 130
-AGE_DAY_MIN, AGE_NIGHT_MIN = 9, 29
+AGE_DAY_MIN, AGE_NIGHT_MIN = 7, 25  # triggers every 10 min: tolerate a run that queued for the Pages lock
 REFRESH = {"day": 10, "night": 30}
 WINDOW_BEFORE, WINDOW_AFTER = timedelta(hours=2), timedelta(hours=4)
 
