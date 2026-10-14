@@ -1,0 +1,64 @@
+name: Probe TDX arrivals (temporary)
+# One-off research probe: reads the TDX Air swagger (no quota) and makes ONE anonymous call to the all-airports
+# FIDS arrival endpoint, printing a summary. Delete after use.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Swagger
+        run: |
+          set +e
+          for u in "https://tdx.transportdata.tw/webapi/File/Swagger/V3/eb87998f-2f9c-4592-8d75-c62e5b724962" \
+                   "https://tdx.transportdata.tw/webapi/File/Swagger/V3/eb87998f-2f9c-4592-8d75-c62e5b724962?format=json"; do
+            curl -sS -m 30 -o swagger.json -w "%{http_code} %{content_type} %{size_download}\n" "$u" && break
+          done
+          python3 - <<'PY'
+          import json
+          try:
+              d = json.load(open('swagger.json'))
+          except Exception as e:
+              print('swagger not json:', e, open('swagger.json', errors='replace').read()[:500]); raise SystemExit
+          for p, ops in d.get('paths', {}).items():
+              for m, op in ops.items():
+                  if 'FIDS' in p or 'Arrival' in op.get('operationId', ''):
+                      prm = [(x.get('name'), x.get('in')) for x in op.get('parameters', [])]
+                      print(m.upper(), p, op.get('operationId'), '|', (op.get('summary') or '')[:80], '|', prm)
+                      print('   desc:', (op.get('description') or '').replace('\n', ' ')[:600])
+          for name, sch in (d.get('components', {}).get('schemas', {}) or d.get('definitions', {})).items():
+              if 'FIDS' in name or 'Arrival' in name:
+                  props = sch.get('properties', {})
+                  print('SCHEMA', name, {k: (v.get('description') or '')[:40] for k, v in props.items()})
+          PY
+      - name: One anonymous call (all airports)
+        run: |
+          curl -sS -m 90 -o arr.json -w "%{http_code} %{content_type} %{size_download}\n" \
+            -H 'Accept-Encoding: gzip' --compressed \
+            "https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/Arrival?%24format=JSON"
+          python3 - <<'PY'
+          import json, collections
+          raw = open('arr.json', errors='replace').read()
+          try:
+              d = json.loads(raw)
+          except Exception as e:
+              print('not json:', raw[:400]); raise SystemExit
+          print('type', type(d).__name__, 'len', len(d))
+          rows = d
+          if isinstance(d, list) and d and 'FIDSArrival' in d[0]:
+              rows = [r for a in d for r in a['FIDSArrival']]
+          print('first', json.dumps(rows[0], ensure_ascii=False) if rows else None)
+          print('arr airports', collections.Counter(r.get('ArrivalAirportID') for r in rows).most_common())
+          print('dates', collections.Counter(r.get('FlightDate') for r in rows))
+          print('keys', collections.Counter(k for r in rows for k in r))
+          print('remarks', collections.Counter(r.get('ArrivalRemark') for r in rows).most_common(20))
+          print('cargo', collections.Counter(r.get('IsCargo') for r in rows))
+          for ap in ('TSA', 'KHH', 'RMQ', 'TNN', 'HUN'):
+              sample = [r for r in rows if r.get('ArrivalAirportID') == ap][:2]
+              print(ap, json.dumps(sample, ensure_ascii=False))
+          print('gates by airport', {ap: sorted({(r.get('Gate') or '').strip()[:1] for r in rows if r.get('ArrivalAirportID') == ap}) for ap in {r.get('ArrivalAirportID') for r in rows}})
+          print('UpdateTime sample', sorted({r.get('UpdateTime') for r in rows})[-3:])
+          PY
