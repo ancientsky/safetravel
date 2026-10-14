@@ -375,9 +375,11 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     const b = largestBounds(iso);
     if (!b) return false;
     const [[x0, y0], [x1, y1]] = b;
-    const left = pad.left ?? 0;
+    // wide screens: also keep clear of a docked overlay (arrivals board on the left / top)
+    const ins = width >= 760 ? getInsets?.() : null;
+    const left = Math.max(pad.left ?? 0, ins?.left ?? 0);
     const right = pad.right ?? 0;
-    const top = pad.top ?? 0;
+    const top = Math.max(pad.top ?? 0, ins?.top ?? 0);
     const bottom = pad.bottom ?? 0;
     const aw = Math.max(120, width - left - right);
     const ah = Math.max(120, height - top - bottom);

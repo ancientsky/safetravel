@@ -1023,6 +1023,10 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 .arrivals[data-mode="portrait"]:not(.is-floating) {
   left: var(--gutter); right: calc(var(--gutter) + 58px); top: var(--arr-top); height: min(42vh, calc(100vh - var(--arr-top) - 360px));
 }
+/* portrait: the country panel opens on the right; the board narrows beside it (and the zoom buttons) */
+body.panel-open .arrivals[data-mode="portrait"]:not(.is-floating) { right: calc(var(--panel-w) + var(--gutter) * 2 + 58px); }
+.arrivals { transition: right .4s var(--ease); }
+.arr-auto { margin-left: auto; }
 .arrivals.is-floating { resize: both; overflow: hidden; min-width: 300px; min-height: 160px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
 .arrivals.is-min { height: auto !important; min-height: 0; bottom: auto !important; resize: none; }
 .arrivals.is-min .arr-controls, .arrivals.is-min .arr-body { display: none; }

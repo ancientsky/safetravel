@@ -156,3 +156,8 @@ Rules:
   - *Portrait* (airport wall screens, default dock **top**): full width under the toolbar, ≈ 42 % of the height —
     the map in portrait only fills the middle third, so the board takes the empty band and the map refits below it.
   - *Phone* (≤ 760 px): bottom sheet.
+  - Map zooms (spotlight tour, country panel) keep the target country clear of a docked board; in portrait the board
+    narrows beside the open country panel so the gate column stays visible.
+- **Auto-scroll** (switch on the board, default on, remembered): the list glides down at ≈ 28 px/s, rests 5 s at the
+  top and 6 s at the bottom, then returns to the top; it pauses while a mouse is over the list and for 20 s after a
+  touch / wheel / click. Reduced-motion users get page-by-page steps instead.

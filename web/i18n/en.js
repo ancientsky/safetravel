@@ -194,5 +194,6 @@ export default {
   arr_status_changed: 'Time changed',
   arr_status_cancelled: 'Cancelled',
   arr_status_other: '—',
+  arr_autoscroll: 'Auto-scroll',
   arr_quota: ({ used, cap }) => `API this month ${used}/${cap}`,
 };

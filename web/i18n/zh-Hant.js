@@ -192,5 +192,6 @@ export default {
   arr_status_changed: '時間更改',
   arr_status_cancelled: '取消',
   arr_status_other: '—',
+  arr_autoscroll: '自動捲動',
   arr_quota: ({ used, cap }) => `本月 API ${used}/${cap}`,
 };

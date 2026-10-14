@@ -16,6 +16,11 @@ const POS_KEY = 'safetravel.arrivals.pos';
 const WINDOW_MS = 60 * 60 * 1000;
 const POLL_MS = 60 * 1000;
 const TICK_MS = 20 * 1000;
+// unattended wall screens: the list glides down at a reading pace, rests at both ends, then starts over
+const SCROLL_PX_S = 28;
+const REST_TOP_MS = 5000;
+const REST_BOTTOM_MS = 6000;
+const HOLD_MS = 20000; // pause after a person touches / scrolls the list
 const STATUSES = new Set(['arrived', 'on_time', 'early', 'delayed', 'changed', 'cancelled', 'other']);
 const AIRPORT_ORDER = ['TPE', 'TSA', 'KHH', 'RMQ', 'TNN', 'HUN'];
 const PLANE = 'M0-5.5 1.1-1.6 5.5 1.3V2.6L1.1 1.1.8 4 2.3 5.1V6L0 5.3-2.3 6V5.1L-.8 4-1.1 1.1-5.5 2.6V1.3L-1.1-1.6Z';
@@ -48,9 +53,10 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
   const btnDock = root.querySelector('.arr-dock');
   const btnMin = root.querySelector('.arr-min');
   const btnClose = root.querySelector('.arr-close');
+  const swScroll = root.querySelector('#arr-autoscroll');
 
   const url = fromUrl();
-  const cfg = { airport: 'TPE', cp: 'ALL', big: false, ...(readJSON(CFG_KEY) || {}) };
+  const cfg = { airport: 'TPE', cp: 'ALL', big: false, scroll: true, ...(readJSON(CFG_KEY) || {}) };
   if (url) Object.assign(cfg, Object.fromEntries(Object.entries(url).filter(([, v]) => v !== undefined)));
   let positions = readJSON(POS_KEY) || {};
   let on = url ? true : storageGet(ON_KEY) === 'on';
@@ -126,6 +132,56 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     pollTimer = setInterval(() => { if (!document.hidden) load(); }, POLL_MS);
     tickTimer = setInterval(() => { if (!document.hidden) render(); }, TICK_MS);
   }
+  // ---------------------------------------------------------------- auto-scroll
+  const glide = { raf: 0, last: 0, pos: 0, phase: 'rest-top', until: 0, holdUntil: 0, hover: false };
+  function glideFrame(ts) {
+    glide.raf = requestAnimationFrame(glideFrame);
+    const dt = glide.last ? Math.min(100, ts - glide.last) : 0;
+    glide.last = ts;
+    const max = body.scrollHeight - body.clientHeight;
+    if (!on || !cfg.scroll || minimized || document.hidden || max < 8) { glide.phase = 'rest-top'; glide.until = ts + REST_TOP_MS; return; }
+    const now = Date.now();
+    if (glide.hover || now < glide.holdUntil) { glide.pos = body.scrollTop; return; }
+    if (Math.abs(body.scrollTop - glide.pos) > 3) glide.pos = body.scrollTop; // re-render or manual change
+    if (glide.phase === 'rest-top' || glide.phase === 'rest-bottom') {
+      if (ts < glide.until) return;
+      if (glide.phase === 'rest-bottom') {
+        glide.pos = 0;
+        body.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' });
+        glide.phase = 'rest-top';
+        glide.until = ts + REST_TOP_MS;
+        return;
+      }
+      glide.phase = 'down';
+    }
+    if (reducedMotion()) { // no gliding: turn a page every few seconds
+      glide.pos = Math.min(max, glide.pos + body.clientHeight * 0.8);
+      body.scrollTop = glide.pos;
+      glide.phase = glide.pos >= max - 1 ? 'rest-bottom' : 'rest-top';
+      glide.until = ts + (glide.phase === 'rest-bottom' ? REST_BOTTOM_MS : REST_TOP_MS);
+      return;
+    }
+    glide.pos = Math.min(max, glide.pos + (SCROLL_PX_S * (cfg.big ? 1.3 : 1) * dt) / 1000);
+    body.scrollTop = glide.pos;
+    if (glide.pos >= max - 0.5) { glide.phase = 'rest-bottom'; glide.until = ts + REST_BOTTOM_MS; }
+  }
+  function startGlide() {
+    if (glide.raf) return;
+    glide.last = 0;
+    glide.pos = body.scrollTop;
+    glide.phase = 'rest-top';
+    glide.until = performance.now() + REST_TOP_MS;
+    glide.raf = requestAnimationFrame(glideFrame);
+  }
+  function stopGlide() { cancelAnimationFrame(glide.raf); glide.raf = 0; }
+  const holdGlide = () => { glide.holdUntil = Date.now() + HOLD_MS; };
+  ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach((ev) => body.addEventListener(ev, holdGlide, { passive: true }));
+  body.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') glide.hover = true; });
+  body.addEventListener('pointerleave', () => { glide.hover = false; holdGlide(); });
+  function renderScrollSwitch() {
+    swScroll?.setAttribute('aria-checked', String(!!cfg.scroll));
+  }
+
   function stopPolling() {
     clearInterval(pollTimer);
     clearInterval(tickTimer);
@@ -187,6 +243,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
       : '';
     cpsNode.hidden = !cps.length;
     btnBig.setAttribute('aria-pressed', String(!!cfg.big));
+    renderScrollSwitch();
     root.classList.toggle('is-big', !!cfg.big);
   }
 
@@ -378,7 +435,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     root.hidden = !on;
     measureTop();
     applyLayout();
-    if (on) { startPolling(); render(); } else { stopPolling(); layer.hide(); }
+    if (on) { startPolling(); render(); startGlide(); } else { stopPolling(); stopGlide(); layer.hide(); }
     emit(on ? 'arrivals:open' : 'arrivals:close');
     onLayout?.();
   }
@@ -387,6 +444,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
   button?.addEventListener('click', () => setOn(!on));
   btnClose.addEventListener('click', () => { setOn(false); button?.focus(); });
   btnBig.addEventListener('click', () => { cfg.big = !cfg.big; saveCfg(); render(); });
+  swScroll?.addEventListener('click', () => { cfg.scroll = !cfg.scroll; saveCfg(); renderScrollSwitch(); glide.holdUntil = 0; });
   btnMin.addEventListener('click', () => {
     minimized = !minimized;
     root.classList.toggle('is-min', minimized);
@@ -403,13 +461,15 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     applyLayout();
     onLayout?.();
   });
-  selAirport.addEventListener('change', () => { cfg.airport = selAirport.value; cfg.cp = 'ALL'; saveCfg(); hotId = null; render(); });
+  const toTop = () => { body.scrollTop = 0; glide.pos = 0; glide.phase = 'rest-top'; glide.until = performance.now() + REST_TOP_MS; };
+  selAirport.addEventListener('change', () => { cfg.airport = selAirport.value; cfg.cp = 'ALL'; saveCfg(); hotId = null; render(); toTop(); });
   cpsNode.addEventListener('click', (e) => {
     const b = e.target.closest('[data-cp]');
     if (!b) return;
     cfg.cp = b.dataset.cp;
     saveCfg();
     render();
+    toTop();
   });
   body.addEventListener('click', (e) => {
     const b = e.target.closest('.arr-hit[data-iso]');
