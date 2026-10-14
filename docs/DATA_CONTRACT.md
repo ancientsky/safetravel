@@ -157,3 +157,9 @@ From OpenFlights `airports.dat`, IATA-keyed, only airports with a 3-letter IATA 
 { "JP": { "zh": "日本", "en": "Japan", "lat": 36.2, "lon": 138.25 } }
 ```
 Name lookup for every ISO alpha-2 (zh from `world-countries` `translations.zho`, with `data/manual/country_names.json` override), centroid for label/arc placement.
+
+## `arrivals.json`
+
+Inbound international passenger flights per Taiwan airport / quarantine checkpoint for the arrivals board. Unlike the files above it is **not** written by `pipeline/export.py`, **not** committed (`.gitignore`), and is published straight to GitHub Pages by `.github/workflows/arrivals.yml` every ~10 minutes (`python -m pipeline arrivals`, built by `pipeline/arrivals.py`). The page must treat it as optional: it can be absent (fresh deployment, no TDX credentials) or older than the other data files.
+
+**The authoritative contract (fields, window, codeshare/checkpoint/status rules, usage counters) is `docs/ARRIVALS.md`.** Summary: `generated_at`, `source` (`tdx` | `tdx-anon`), `endpoint`, `tdx_updated`, `window` (`generated_at − 2 h … + 4 h`), `refresh_minutes`, `quota` (call counters carried between runs), `airports` (Taiwan airports with short zh/en names, coordinates, in-window flight count, TPE checkpoints A–D), and `flights` (sorted by best time; times `YYYY-MM-DDTHH:MM+08:00`; origin `lat`/`lon` or `null`). `python -m pipeline validate` checks it when present (`pipeline/validate.py: check_arrivals`).

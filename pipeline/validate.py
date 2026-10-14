@@ -11,6 +11,8 @@ ISO2 = re.compile(r"^[A-Z]{2}$")
 DETAIL_FILE = re.compile(r"^([A-Z]{2}|_global)\.json$")
 CDC_URL = re.compile(r"^https://([a-z0-9-]+\.)*cdc\.gov\.tw/")
 IATA = re.compile(r"^[A-Z]{3}$")
+TS_ARR = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?[+-]\d{2}:\d{2}$")  # arrivals.json: seconds optional, offset mandatory
+ARR_STATUS = ("arrived", "on_time", "early", "delayed", "changed", "cancelled", "other")
 
 
 class V:
@@ -333,6 +335,136 @@ def check_flights(v: V, f):
             v.err(w, f"totals {t} do not match routes ({dep}/{arr}/{len(routes)})")
 
 
+def _ts(v, where=None):
+    """datetime of an arrivals.json time string, or None when malformed."""
+    from datetime import datetime
+    if not isinstance(v, str) or not TS_ARR.match(v):
+        return None
+    try:
+        return datetime.fromisoformat(v)
+    except ValueError:
+        return None
+
+
+def check_arrivals(v: V, a):
+    w = "arrivals.json"
+    top = ["generated_at", "source", "endpoint", "tdx_updated", "window", "refresh_minutes", "quota", "airports", "flights"]
+    if not v.keys(w, a, top) or any(k not in a for k in top):
+        return
+    v.pat(w, a["generated_at"], TS_ARR, "generated_at")
+    if a["tdx_updated"] is not None:
+        v.pat(w, a["tdx_updated"], TS_ARR, "tdx_updated")
+    if a["source"] not in ("tdx", "tdx-anon"):
+        v.err(w, f"source {a['source']!r} not in tdx | tdx-anon")
+    v.typ(w, a["endpoint"], str, "endpoint")
+    win = a["window"]
+    if v.keys(w + ".window", win, ["from", "to"]):
+        v.pat(w, win["from"], TS_ARR, "window.from")
+        v.pat(w, win["to"], TS_ARR, "window.to")
+        if _ts(win["from"]) and _ts(win["to"]) and _ts(win["from"]) >= _ts(win["to"]):
+            v.err(w, "window.from must be before window.to")
+    if v.keys(w + ".refresh_minutes", a["refresh_minutes"], ["day", "night"]):
+        for k in ("day", "night"):
+            if v.typ(w, a["refresh_minutes"][k], int, f"refresh_minutes.{k}") and a["refresh_minutes"][k] <= 0:
+                v.err(w, f"refresh_minutes.{k} must be positive")
+    q = a["quota"]
+    if v.keys(w + ".quota", q, ["month", "calls_month", "cap_month", "day", "calls_day"]):
+        v.pat(w, q["month"], re.compile(r"^\d{4}-\d{2}$"), "quota.month")
+        v.pat(w, q["day"], DATE, "quota.day")
+        ok = [v.typ(w, q[k], int, f"quota.{k}") for k in ("calls_month", "cap_month", "calls_day")]
+        if all(ok):
+            if min(q["calls_month"], q["cap_month"], q["calls_day"]) < 0:
+                v.err(w, "quota counters must not be negative")
+            if q["calls_day"] > q["calls_month"]:
+                v.err(w, "quota.calls_day exceeds quota.calls_month")
+        if isinstance(q["day"], str) and isinstance(q["month"], str) and not q["day"].startswith(q["month"]):
+            v.err(w, "quota.day is not inside quota.month")
+    airports = a["airports"]
+    if not isinstance(airports, dict):
+        v.err(w, "airports must be an object")
+        airports = {}
+    counts: dict[str, int] = {}
+    for iata, ap in airports.items():
+        aw = f"{w}.airports.{iata}"
+        if not IATA.match(iata):
+            v.err(aw, "key is not an IATA code")
+        if not v.keys(aw, ap, ["name_zh", "name_en", "lat", "lon", "flights", "checkpoints"]):
+            continue
+        for k in ("name_zh", "name_en"):
+            if v.typ(aw, ap[k], str, k) and not ap[k]:
+                v.err(aw, f"empty {k}")
+        for k in ("lat", "lon"):
+            if ap[k] is not None:
+                v.typ(aw, ap[k], (int, float), k)
+        if v.typ(aw, ap["flights"], int, "flights") and ap["flights"] < 0:
+            v.err(aw, "negative flights")
+        cps = ap["checkpoints"]
+        if not isinstance(cps, list):
+            v.err(aw, "checkpoints must be a list")
+        else:
+            for j, c in enumerate(cps):
+                if v.keys(f"{aw}.checkpoints[{j}]", c, ["id", "terminal"]):
+                    if c["id"] not in ("A", "B", "C", "D"):
+                        v.err(aw, f"checkpoint id {c['id']!r} not in A-D")
+                    v.typ(aw, c["terminal"], str, "checkpoint terminal")
+    fl = a["flights"]
+    if not isinstance(fl, list):
+        v.err(w, "flights must be a list")
+        return
+    req = ["id", "airport", "flight", "airline", "codeshares", "from", "from_zh", "from_en", "country", "lat", "lon",
+           "terminal", "gate", "checkpoint", "apron", "scheduled", "estimated", "actual", "status", "status_zh",
+           "status_en", "aircraft"]
+    ids, last = set(), None
+    for i, f in enumerate(fl):
+        fw = f"{w}.flights[{i}]"
+        if not v.keys(fw, f, req) or any(k not in f for k in req):
+            continue
+        for k in ("id", "airport", "flight", "airline", "from", "from_zh", "from_en", "country", "terminal", "gate",
+                  "apron", "status_zh", "status_en", "aircraft"):
+            v.typ(fw, f[k], str, k)
+        if not isinstance(f["codeshares"], list) or not all(isinstance(x, str) for x in f["codeshares"]):
+            v.err(fw, "codeshares must be a list of strings")
+        elif f["codeshares"] != sorted(f["codeshares"]):
+            v.err(fw, "codeshares not sorted")
+        if f["id"] in ids:
+            v.err(fw, f"duplicate id {f['id']!r}")
+        ids.add(f["id"])
+        if f["airport"] not in airports:
+            v.err(fw, f"airport {f['airport']!r} missing from airports")
+        else:
+            counts[f["airport"]] = counts.get(f["airport"], 0) + 1
+        v.pat(fw, f["from"], IATA, "from")
+        if not f["flight"]:
+            v.err(fw, "empty flight")
+        if isinstance(f["country"], str) and f["country"] and not ISO2.match(f["country"]):
+            v.err(fw, f"country {f['country']!r} is not alpha-2")
+        if f["country"] == "TW":
+            v.err(fw, "domestic origin (country TW) must not be listed")
+        for k, lim in (("lat", 90), ("lon", 180)):
+            if f[k] is not None and v.typ(fw, f[k], (int, float), k) and not -lim <= f[k] <= lim:
+                v.err(fw, f"{k} out of range")
+        if f["checkpoint"] is not None and f["checkpoint"] not in ("A", "B", "C", "D"):
+            v.err(fw, f"checkpoint {f['checkpoint']!r} not in A-D | null")
+        if f["status"] not in ARR_STATUS:
+            v.err(fw, f"status {f['status']!r} not in {'|'.join(ARR_STATUS)}")
+        v.pat(fw, f["scheduled"], TS_ARR, "scheduled")
+        for k in ("estimated", "actual"):
+            if f[k] is not None:
+                v.pat(fw, f[k], TS_ARR, k)
+        best = _ts(f["scheduled"]) if f["status"] == "cancelled" else (_ts(f["actual"]) or _ts(f["estimated"]) or _ts(f["scheduled"]))
+        if best is None:
+            continue
+        if last is not None and best < last:
+            v.err(fw, "flights not sorted by best time ascending")
+        last = best
+        lo, hi = _ts(win.get("from")) if isinstance(win, dict) else None, _ts(win.get("to")) if isinstance(win, dict) else None
+        if lo and hi and not lo <= best <= hi:
+            v.err(fw, "best time is outside window")
+    for iata, ap in airports.items():
+        if isinstance(ap, dict) and ap.get("flights") != counts.get(iata, 0):
+            v.err(f"{w}.airports.{iata}", f"flights={ap.get('flights')} but {counts.get(iata, 0)} listed")
+
+
 def validate_dir(d: Path) -> list[str]:
     d = Path(d)
     v = V()
@@ -360,4 +492,10 @@ def validate_dir(d: Path) -> list[str]:
                 v.err("meta.json", "counts.countries_with_alerts does not match alerts.json")
             if c.get("epidemic_items") != len(data["epidemics"].get("items", [])):
                 v.err("meta.json", "counts.epidemic_items does not match epidemics.json")
+    p = d / "arrivals.json"  # optional: published by arrivals.yml, never committed
+    if p.exists():
+        try:
+            check_arrivals(v, json.loads(p.read_text(encoding="utf-8")))
+        except (OSError, ValueError) as e:
+            v.err(p.name, f"cannot read/parse: {e}")
     return v.errors

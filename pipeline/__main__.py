@@ -159,6 +159,11 @@ def cmd_flights(args) -> int:
     return 0 if routes else 2
 
 
+def cmd_arrivals(args) -> int:
+    from . import arrivals
+    return arrivals.run(args)
+
+
 def cmd_pending(args) -> int:
     from . import pending
     return pending.main(["--out", args.out, "--chunk", str(args.chunk), "--overview-batch", str(args.overview_batch)])
@@ -193,6 +198,16 @@ def main(argv=None) -> int:
     p.add_argument("--date", help="YYYY-MM-DD to count (default: today, Asia/Taipei)")
     p.add_argument("--save", action="store_true", help="store the parsed day in the database")
     p.set_defaults(fn=cmd_flights)
+    p = sub.add_parser("arrivals", help="inbound international flights board (web/data/arrivals.json)")
+    p.add_argument("--prev", help="previously published arrivals.json (carries the quota counters; may not exist)")
+    p.add_argument("--out", help="output file (default web/data/arrivals.json)")
+    p.add_argument("--offline", metavar="FILE", help="parse a saved TDX payload instead of calling TDX (quota unchanged)")
+    p.add_argument("--shift-to-now", action="store_true", help="with --offline: move the fixture's times so its 'as of' moment is now")
+    p.add_argument("--now", help="ISO-8601 time to use instead of the clock (fixtures, tests)")
+    p.add_argument("--check-only", action="store_true", help="run the guard only; print {ok, reason}; write fetch=true|false to $GITHUB_OUTPUT")
+    p.add_argument("--cap", type=int, help="monthly call cap (default env ARRIVALS_MONTHLY_CAP or 4200)")
+    p.add_argument("--force", action="store_true", help="skip the minimum-age rule (caps still apply)")
+    p.set_defaults(fn=cmd_arrivals)
     p = sub.add_parser("pending", help="export untranslated digests / stale overviews for an external translator")
     p.add_argument("--out", required=True)
     p.add_argument("--chunk", type=int, default=25)

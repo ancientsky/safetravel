@@ -1,0 +1,146 @@
+name: Arrivals board
+
+# Publishes web/data/arrivals.json (inbound international flights for the quarantine-station board, docs/ARRIVALS.md)
+# straight to GitHub Pages every ~10 minutes. The file is not committed.
+#
+# Triggering: GitHub's own cron starts 4.5-8.5 h late on this repository, so the real clock is an external scheduler
+# (cron-job.org) that POSTs /repos/<owner>/<repo>/actions/workflows/arrivals.yml/dispatches {"ref":"main"} every
+# 10 minutes with a fine-grained PAT (Actions: read and write). Setup: docs/ARRIVALS_SETUP.md.
+# The `schedule` below is only a backup; the guard step keeps extra runs harmless (it costs no TDX call).
+#
+# Repository configuration:
+#   secrets.TDX_CLIENT_ID       TDX (tdx.transportdata.tw) OAuth2 client credentials. Scheduled runs do nothing without
+#   secrets.TDX_CLIENT_SECRET   them; a manual run may call the anonymous TPE endpoint for testing.
+#   vars.ARRIVALS_MONTHLY_CAP   optional; TDX calls per month this workflow may spend (default 4200 of the 4500 free).
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Skip the minimum-age rule (the monthly and daily caps still apply)'
+        type: boolean
+        required: false
+        default: false
+  schedule:
+    - cron: '7,37 * * * *'
+
+permissions: {}
+
+jobs:
+  # Cheap pre-check without the Pages lock: most triggers end here (data still fresh / budget used).
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      fetch: ${{ steps.guard.outputs.fetch }}
+    steps:
+      - name: Check credentials
+        id: creds
+        env:
+          EVENT: ${{ github.event_name }}
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+        run: |
+          if [ "${EVENT}" = "schedule" ] && { [ -z "${TDX_CLIENT_ID}" ] || [ -z "${TDX_CLIENT_SECRET}" ]; }; then
+            echo "Scheduled run without TDX credentials: nothing to do."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.creds.outputs.run == 'true'
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        if: steps.creds.outputs.run == 'true'
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pipeline/requirements.lock
+      - name: Install dependencies
+        if: steps.creds.outputs.run == 'true'
+        run: pip install --require-hashes -r pipeline/requirements.lock
+      - name: Download the published arrivals.json (usage counters)
+        id: prev
+        if: steps.creds.outputs.run == 'true'
+        # project site URL derived from the repository (the lock-free job has no Pages API permission)
+        run: .github/scripts/prev-arrivals.sh "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}" /tmp/prev.json
+      - name: Guard (may this run call TDX?)
+        id: guard
+        if: steps.creds.outputs.run == 'true' && steps.prev.outputs.ok == 'true'
+        env:
+          FORCE: ${{ inputs.force }}
+          ARRIVALS_MONTHLY_CAP: ${{ vars.ARRIVALS_MONTHLY_CAP || '4200' }}
+        run: |
+          args=(--check-only --prev /tmp/prev.json)
+          if [ "${FORCE}" = "true" ]; then args+=(--force); fi
+          python -m pipeline arrivals "${args[@]}"
+
+  # Holds the Pages lock: re-reads the counters (another run may have published while this one queued),
+  # re-checks the guard, then makes the TDX call and deploys the current main with the fresh file.
+  publish:
+    needs: guard
+    if: needs.guard.outputs.fetch == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pipeline/requirements.lock
+      - name: Install dependencies
+        run: pip install --require-hashes -r pipeline/requirements.lock
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        id: pages
+        with:
+          enablement: true
+      - name: Download the published arrivals.json again (under the lock)
+        id: prev
+        run: .github/scripts/prev-arrivals.sh "${{ steps.pages.outputs.base_url }}" /tmp/prev.json
+      - name: Guard again
+        id: guard
+        if: steps.prev.outputs.ok == 'true'
+        env:
+          FORCE: ${{ inputs.force }}
+          ARRIVALS_MONTHLY_CAP: ${{ vars.ARRIVALS_MONTHLY_CAP || '4200' }}
+        run: |
+          args=(--check-only --prev /tmp/prev.json)
+          if [ "${FORCE}" = "true" ]; then args+=(--force); fi
+          python -m pipeline arrivals "${args[@]}"
+      - name: Fetch and build arrivals.json
+        if: steps.guard.outputs.fetch == 'true'
+        env:
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+          ARRIVALS_MONTHLY_CAP: ${{ vars.ARRIVALS_MONTHLY_CAP || '4200' }}
+        run: python -m pipeline arrivals --prev /tmp/prev.json
+      - name: Validate web/data
+        if: steps.guard.outputs.fetch == 'true'
+        run: python -m pipeline validate
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: steps.guard.outputs.fetch == 'true'
+        with:
+          path: web
+          retention-days: 1
+      - id: deployment
+        if: steps.guard.outputs.fetch == 'true'
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

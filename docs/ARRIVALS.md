@@ -69,9 +69,11 @@ Measured on this repo (Oct 2026): scheduled runs start **4.5–8.5 h late** (`17
 
 `web/data/arrivals.json` is **not committed** (`.gitignore`); it is published straight to GitHub Pages:
 
-- `arrivals.yml` (one job, `concurrency: pages`, no cancel): checkout `main` → guard → fetch → `python -m pipeline arrivals`
-  → validate → upload `web/` → deploy. Checkout happens inside the job that holds the `pages` lock, so it always
-  publishes the newest site code.
+- `arrivals.yml` has two jobs. `guard` (no Pages lock, no TDX call) reads the live counters and stops most triggers.
+  `publish` (`concurrency: pages`, no cancel) re-reads the counters **under the lock** and re-runs the guard — two
+  queued runs can never both spend a call — then fetches, validates, uploads `web/` from a fresh checkout of `main`
+  and deploys. The live file is read by `.github/scripts/prev-arrivals.sh`: HTTP 200 + valid JSON or 404 (first run)
+  continue; any other outcome skips the run rather than restarting the counters at zero.
 - Every other Pages deploy (`deploy-pages.yml`, the deploy job of `update-data.yml`) first copies the live
   `data/arrivals.json` into `web/data/` (no TDX call), so a code or data deploy never drops the board.
 - `refresh.js` (page auto-reload) watches `meta.json` only, so the 10-minute arrivals deploys never reload the page.
