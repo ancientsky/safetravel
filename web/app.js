@@ -13,6 +13,7 @@ import { createFlights } from './js/flights.js';
 import { createPanel } from './js/panel.js';
 import { createSpotlight } from './js/spotlight.js';
 import { createArrivals } from './js/arrivals.js';
+import { createWatch } from './js/watch.js';
 import { createSearch, renderFilterChips } from './js/search.js';
 import {
   startClock, renderTiles, renderFreshness, renderLegend, renderFlightHud,
@@ -139,7 +140,7 @@ async function main() {
   on('refresh:pending', () => sound.play('arpeggio'));
   // tiny click for the UI toggles (language, theme, filters, routes, spotlight switches)
   document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-testid="lang-toggle"], [data-testid="theme-toggle"], .chip-filter, .fh-toggle, .switch, .arr-toggle, .arr-cp, .arr-big')) sound.play('click');
+    if (e.target.closest('[data-testid="lang-toggle"], [data-testid="theme-toggle"], .chip-filter, .fh-toggle, .switch, .arr-toggle, .arr-cp, .arr-big, .watch-toggle')) sound.play('click');
   });
 
   // ---- critical data first ----
@@ -221,6 +222,11 @@ async function main() {
   arrivals.init();
   window.__safetravel.arrivals = arrivals.debug;
 
+  // Outbreak route watch (e.g. Irkutsk direct flights): header menu, off by default; ?watch=irkutsk deep link.
+  const watch = createWatch({ button: $('[data-testid="watch-toggle"]'), menu: $('#watch-menu'), map });
+  if (state.data.world) watch.init();
+  window.__safetravel.watch = watch.debug;
+
   if (state.data.world) {
     map.setDotsVisible(state.flightsOn);
     // Animations start only once the map has painted and the main thread is idle, so they don't
@@ -255,6 +261,7 @@ async function main() {
     panel.refresh();
     spotlight?.refresh();
     arrivals.refresh();
+    watch.refresh();
   });
   $('[data-testid="theme-toggle"]').addEventListener('click', () => {
     applyTheme(state.theme === 'dark' ? 'light' : 'dark');

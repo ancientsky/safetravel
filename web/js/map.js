@@ -392,6 +392,26 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     return true;
   }
 
+  /** Smoothly zoom so a set of [lon, lat] points fills the free area (same padding rules as flyTo). */
+  function fitPoints(lonlats, { pad = {}, maxScale = 6, ms = 1600 } = {}) {
+    const pts = lonlats.map((p) => projection(p)).filter((p) => p && Number.isFinite(p[0]));
+    if (!pts.length) return false;
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const ins = width >= 760 ? getInsets?.() : null;
+    const left = Math.max(pad.left ?? 0, ins?.left ?? 0);
+    const top = Math.max(pad.top ?? 0, ins?.top ?? 0);
+    const aw = Math.max(120, width - left - (pad.right ?? 0));
+    const ah = Math.max(120, height - top - (pad.bottom ?? 0));
+    const k = clamp(0.88 / Math.max((x1 - x0) / aw, (y1 - y0) / ah, 1e-6), 1, maxScale);
+    const tx = left + aw / 2 - k * (x0 + x1) / 2;
+    const ty = top + ah / 2 - k * (y0 + y1) / 2;
+    svg.interrupt().transition().duration(dur(ms)).ease(d3.easeCubicInOut)
+      .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(k));
+    return true;
+  }
+
   function setSelected(iso) {
     const f = iso && byIso.get(iso);
     selIso = f ? iso : null;
@@ -456,6 +476,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     reset,
     zoomBy,
     flyTo,
+    fitPoints,
     setSelected,
     setSpotlight,
     applyFilter,

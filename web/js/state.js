@@ -14,6 +14,7 @@ export const state = {
   filter: new Set(), // levels to highlight; empty = all
   flightsOn: true,
   spotlight: { iso: null, playing: true },
+  mapPinned: false, // true while an overlay owns the map view (outbreak route watch): the tour does not move the map
   fps: 0,
   errors: [],
 };

@@ -67,7 +67,7 @@ def test_fallback_without_ai(loaded):
     it = out["epidemics"]["items"][0]
     full = _details()[(it["countries"] or ["_global"])[0]][it["id"]]
     assert it["ai"] is False and it["headline_en"] == it["headline_zh"] and full["en"] == full["zh"]
-    assert it["summary_zh"] and it["summary_zh"] in full["zh"]
+    assert it["summary_zh"] and it["summary_zh"].removesuffix("…") in full["zh"]  # first sentence, may be truncated
     assert out["meta"]["counts"]["ai_translated"] == 0
     assert all(not o["ai"] for o in out["epidemics"]["overviews"].values())
     g = [i for i in out["epidemics"]["items"] if i.get("global")]

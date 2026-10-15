@@ -163,3 +163,28 @@ Name lookup for every ISO alpha-2 (zh from `world-countries` `translations.zho`,
 Inbound international passenger flights per Taiwan airport / quarantine checkpoint for the arrivals board. Unlike the files above it is **not** written by `pipeline/export.py`, **not** committed (`.gitignore`), and is published straight to GitHub Pages by `.github/workflows/arrivals.yml` every ~10 minutes (`python -m pipeline arrivals`, built by `pipeline/arrivals.py`). The page must treat it as optional: it can be absent (fresh deployment, no TDX credentials) or older than the other data files.
 
 **The authoritative contract (fields, window, codeshare/checkpoint/status rules, usage counters) is `docs/ARRIVALS.md`.** Summary: `generated_at`, `source` (`tdx` | `tdx-anon`), `endpoint`, `tdx_updated`, `window` (`generated_at − 2 h … + 4 h`), `refresh_minutes`, `quota` (call counters carried between runs), `airports` (Taiwan airports with short zh/en names, coordinates, in-window flight count, TPE checkpoints A–D), and `flights` (sorted by best time; times `YYYY-MM-DDTHH:MM+08:00`; origin `lat`/`lon` or `null`). `python -m pipeline validate` checks it when present (`pipeline/validate.py: check_arrivals`).
+
+## `watch.json` (outbreak route watch)
+
+Direct-flight networks of outbreak cities, drawn on the map when switched on in the header menu 「疫區航線」.
+Built by `python -m pipeline watch` (also at the end of every `export`) from hand-maintained inputs in
+`data/manual/watch/`: one `<id>.json` (hub, titles, reason, source, `as_of`, country-name → ISO map, coordinate
+overrides) plus the routes CSV it names (`Country,City_Airport,IATA,Monthly_Flights,City_zh`). No timestamp, so the
+file only changes when the inputs do.
+
+```json
+{ "sets": [ {
+  "id": "irkutsk", "hub_zh": "伊爾庫次克", "hub_en": "Irkutsk",
+  "title_zh": "…", "title_en": "…", "reason_zh": "疑似鼠疫疫情", "reason_en": "Suspected plague outbreak",
+  "source_zh": "…", "source_en": "…", "as_of": "2026-10",
+  "hub": { "iata": "IKT", "country": "RU", "lat": 52.268, "lon": 104.389 },
+  "routes": [ { "iata": "OVB", "city_en": "Novosibirsk", "city_zh": "新西伯利亞", "country": "RU",
+                "lat": 55.0126, "lon": 82.6507, "monthly": 176 } ],
+  "totals": { "destinations": 51, "monthly": 1568, "countries": 7 }
+} ] }
+```
+
+Rules: `routes` sorted by `monthly` desc; coordinates from `airports.json`, else the set's `coords` override
+(`[lat, lon]`); a route without coordinates is dropped with a warning. To add or retire a watch, add/remove the
+`<id>.json` + CSV pair (or set `"enabled": false`) and run `python -m pipeline watch`. Deep link: `?watch=<id>`.
+

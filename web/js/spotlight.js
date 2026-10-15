@@ -82,7 +82,8 @@ export function createSpotlight({ root, map, panel }) {
     elapsed = 0;
     render();
     map.setSpotlight(code);
-    if (fly && !panel.isOpen()) map.flyTo(code, { pad: pad(), maxScale: 4, ms: 2000 });
+    // a pinned map (outbreak route watch shown) keeps its view; the tour still cycles the card and outline
+    if (fly && !panel.isOpen() && !state.mapPinned) map.flyTo(code, { pad: pad(), maxScale: 4, ms: 2000 });
   }
 
   function next(forced) {
@@ -94,7 +95,7 @@ export function createSpotlight({ root, map, panel }) {
       show(code, { fly: false });
       autoIso = code;
       scrollCancelled = false;
-      panel.open(code, { focus: false, fly: !reducedMotion() });
+      panel.open(code, { focus: false, fly: !reducedMotion() && !state.mapPinned });
       ensureScroll();
     } else {
       // Under reduced motion the carousel only swaps the card + outline, never moves the map.

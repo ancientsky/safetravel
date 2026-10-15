@@ -1171,3 +1171,95 @@ body.arr-open .flights-canvas { opacity: .35; }
   body.arr-open .spotlight { visibility: hidden; }
   .arr-hit { grid-template-columns: 58px minmax(0, 1fr) auto; gap: 8px; }
 }
+
+/* ---------- outbreak route watch (docs/DATA_CONTRACT.md · watch.json) ---------- */
+:root, :root[data-theme="dark"] { --watch: #ff4fd8; --watch-rgb: 255, 79, 216; }
+:root[data-theme="light"] { --watch: #b0168f; --watch-rgb: 176, 22, 143; }
+.watch-toggle { position: relative; }
+.watch-toggle.is-active { color: var(--watch); border-color: rgba(var(--watch-rgb), .7); box-shadow: 0 0 12px rgba(var(--watch-rgb), .35); }
+.watch-dot { display: none; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--watch); box-shadow: 0 0 8px var(--watch); animation: blink 1.4s ease-in-out infinite; }
+.watch-toggle.is-active .watch-dot { display: block; }
+
+.watch-menu {
+  position: fixed; z-index: 25; max-height: calc(100vh - 110px); display: flex; flex-direction: column;
+  background: var(--glass-strong); animation: card-in .25s var(--ease);
+}
+.watch-menu[hidden] { display: none; }
+.wt-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 10px 10px 8px 14px;
+  border-bottom: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0;
+  background: linear-gradient(135deg, rgba(var(--watch-rgb), .12), transparent 65%);
+}
+.wt-kicker { font-size: 10px; letter-spacing: .16em; color: var(--watch); }
+.wt-head h2 { margin: 2px 0 0; font-size: 17px; letter-spacing: .04em; }
+.wt-close { min-width: 30px; height: 30px; padding: 0 6px; }
+.wt-close svg { width: 15px; height: 15px; }
+.wt-body { overflow-y: auto; padding: 8px 14px 12px; scrollbar-width: thin; }
+.wt-empty, .wt-hint { margin: 6px 0; font-size: 12px; color: var(--fg-mute); }
+.wt-set + .wt-set { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.wt-row { display: flex; align-items: center; gap: 10px; }
+.wt-set .switch[aria-checked="true"] { background: rgba(var(--watch-rgb), .25); border-color: var(--watch); box-shadow: 0 0 10px rgba(var(--watch-rgb), .35); }
+.wt-set .switch[aria-checked="true"] i { background: var(--watch); }
+.wt-name { display: flex; flex-direction: column; cursor: pointer; user-select: none; min-width: 0; }
+.wt-name b { font-size: 14px; }
+.wt-name b .mono { font-size: 11px; color: var(--fg-dim); font-weight: 400; }
+.wt-reason { font-size: 12px; color: var(--watch); font-weight: 600; }
+.wt-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0 4px; }
+.wt-stats div { border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
+.wt-stats dt { font-size: 10px; color: var(--fg-mute); }
+.wt-stats dd { margin: 0; font-size: 18px; font-weight: 600; color: var(--watch); }
+.wt-label { margin: 10px 0 4px; font-size: 11px; color: var(--fg-dim); letter-spacing: .04em; }
+.wt-label.wt-tpe { color: var(--cyan); font-weight: 600; }
+.wt-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.wt-chips li { display: inline-flex; align-items: baseline; gap: 6px; padding: 1px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; }
+.wt-chips b { font-size: 11px; color: var(--fg-dim); }
+.wt-chips-tpe li { border-color: rgba(var(--cyan-rgb), .6); background: rgba(var(--cyan-rgb), .07); }
+.wt-chips-tpe b { color: var(--cyan); }
+.wt-top { margin: 0; padding: 0 0 0 18px; font-size: 12px; display: grid; gap: 2px; }
+.wt-top li { padding-left: 2px; }
+.wt-top li span { display: inline-block; min-width: 60%; }
+.wt-top i { font-style: normal; font-size: 10px; color: var(--fg-mute); }
+.wt-top b { float: right; font-weight: 400; color: var(--fg-dim); font-size: 11px; }
+.wt-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 10px; }
+.wt-fit {
+  height: 26px; padding: 0 10px; border: 1px solid rgba(var(--watch-rgb), .7); border-radius: 6px; background: transparent;
+  color: var(--watch); font: 600 12px var(--sans); cursor: pointer;
+}
+.wt-fit:hover { background: rgba(var(--watch-rgb), .1); }
+.wt-src { font-size: 10px; color: var(--fg-mute); }
+
+/* map layer */
+.watch-layer { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.watch-layer[hidden] { display: none; }
+.watch-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.wt-arc {
+  fill: none; stroke: var(--watch); stroke-opacity: .7; stroke-linecap: round; vector-effect: non-scaling-stroke;
+  stroke-dasharray: 2 7; animation: wt-flow 1.4s linear infinite;
+}
+.wt-arc.is-tpe { stroke: var(--cyan); stroke-opacity: .9; }
+@keyframes wt-flow { to { stroke-dashoffset: -18; } }
+.wt-dest { pointer-events: auto; cursor: help; }
+.wt-dot { fill: var(--watch); fill-opacity: .85; stroke: var(--bg); stroke-width: 1; }
+.wt-tpe-ring { fill: none; stroke: none; }
+.wt-dest.is-tpe .wt-dot { fill: var(--cyan); }
+.wt-dest.is-tpe .wt-tpe-ring { stroke: var(--cyan); stroke-width: 1.4; stroke-dasharray: 3 2; }
+.wt-label, .wt-hub-label, .wt-hub-sub {
+  font: 600 10px var(--mono); fill: var(--fg); paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round;
+}
+.wt-dest.is-tpe .wt-label { fill: var(--cyan); }
+.wt-hub-dot { fill: var(--watch); stroke: #fff; stroke-width: 1.5; }
+.wt-hub-ring { fill: none; stroke: var(--watch); stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: wt-hub 2.2s ease-out infinite; }
+.wt-hub-ring2 { animation-delay: 1.1s; }
+@keyframes wt-hub { from { transform: scale(.3); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
+.wt-hub-label { font-size: 13px; fill: var(--watch); }
+.wt-hub-sub { font-size: 11px; font-family: var(--sans); fill: var(--watch); }
+.wt-tip-n { color: var(--watch); }
+.wt-tip-tpe { color: var(--cyan); }
+body.watch-on .flights-canvas { opacity: .4; }
+
+@media (max-width: 1180px) {
+  .watch-toggle span[data-i18n], .arr-toggle span[data-i18n] { display: none; }
+}
+@media (max-width: 760px) {
+  .watch-menu { left: 8px !important; right: 8px; width: auto !important; max-height: 70vh; }
+}

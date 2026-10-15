@@ -251,6 +251,19 @@ async function run(browser) {
     return `${rows} flight row(s)`;
   });
 
+  // 10. Outbreak route watch: menu switch draws the Irkutsk network and switching it off removes it
+  await check('outbreak route watch toggles the map layer', async () => {
+    await page.locator('[data-testid="watch-toggle"]').click();
+    await page.locator('[data-testid="watch-menu"] .wt-switch').first().click();
+    await page.waitForFunction(() => document.querySelectorAll('.watch-layer:not([hidden]) .wt-arc').length > 10, null, { timeout: 8000, polling: 250 });
+    const arcs = await page.locator('.wt-arc').count();
+    await shot(page, '06-watch.png');
+    await page.locator('[data-testid="watch-menu"] .wt-switch').first().click();
+    await page.waitForFunction(() => document.querySelector('.watch-layer')?.hidden === true, null, { timeout: 4000 });
+    await page.locator('[data-testid="watch-menu"] .wt-close').click();
+    return `${arcs} arcs`;
+  });
+
 }
 
 function finish() {

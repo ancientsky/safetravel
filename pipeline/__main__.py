@@ -164,6 +164,11 @@ def cmd_arrivals(args) -> int:
     return arrivals.run(args)
 
 
+def cmd_watch(args) -> int:
+    from . import watch
+    return watch.main()
+
+
 def cmd_pending(args) -> int:
     from . import pending
     return pending.main(["--out", args.out, "--chunk", str(args.chunk), "--overview-batch", str(args.overview_batch)])
@@ -208,6 +213,7 @@ def main(argv=None) -> int:
     p.add_argument("--cap", type=int, help="monthly call cap (default env ARRIVALS_MONTHLY_CAP or 4200)")
     p.add_argument("--force", action="store_true", help="skip the minimum-age rule (caps still apply)")
     p.set_defaults(fn=cmd_arrivals)
+    sub.add_parser("watch", help="rebuild web/data/watch.json (outbreak route watch)").set_defaults(fn=cmd_watch)
     p = sub.add_parser("pending", help="export untranslated digests / stale overviews for an external translator")
     p.add_argument("--out", required=True)
     p.add_argument("--chunk", type=int, default=25)

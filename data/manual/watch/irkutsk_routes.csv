@@ -1,0 +1,52 @@
+Country,City_Airport,IATA,Monthly_Flights,City_zh
+Russia,Novosibirsk,OVB,176,新西伯利亞
+Russia,Bodaybo,ODO,127,博代博
+Russia,Moscow Sheremetyevo,SVO,109,莫斯科謝列梅捷沃
+Russia,Krasnoyarsk,KJA,94,克拉斯諾亞爾斯克
+Russia,Chita,HTA,83,赤塔
+Russia,Moscow Domodedovo,DME,81,莫斯科多莫傑多沃
+Russia,Talakan,TLK,59,塔拉坎
+Russia,Ulan-Ude,UUD,54,烏蘭烏德
+Russia,Saint Petersburg,LED,53,聖彼得堡
+Thailand,Bangkok,BKK,50,曼谷
+Russia,Ust-Kut,UKX,49,烏斯季庫特
+Russia,Chara,CZR,40,恰拉
+Kyrgyzstan,Osh,OSS,40,奧什
+Russia,Vladivostok,VVO,40,海參崴
+Russia,Yakutsk,YKS,37,雅庫次克
+Russia,Mirny,MJZ,36,米爾內
+China,Beijing Daxing,PKX,33,北京大興
+China,Beijing,PEK,31,北京首都
+Russia,Bratsk,BTK,29,布拉茨克
+Russia,Khabarovsk,KHV,29,哈巴羅夫斯克
+Russia,Yekaterinburg,SVX,22,葉卡捷琳堡
+Russia,Neryungri,NER,21,涅留恩格里
+Russia,Ufa,UFA,19,烏法
+Uzbekistan,Tashkent,TAS,18,塔什干
+Mongolia,Ulaanbaatar,UBN,18,烏蘭巴托
+Russia,Ust-Ilimsk,UIK,18,烏斯季伊利姆斯克
+Vietnam,Nha Trang,CXR,17,芽莊
+Russia,Kirensk,KCK,16,基廉斯克
+Russia,Lensk,ULK,16,連斯克
+Thailand,Phuket,HKT,16,普吉
+China,Sanya,SYX,14,三亞
+China,Shanghai,PVG,10,上海浦東
+China,Guangzhou,CAN,9,廣州
+Russia,Nizhneangarsk,NZG,9,下安加爾斯克
+Russia,Olyokminsk,OLZ,9,奧廖克明斯克
+Russia,Omsk,OMS,9,鄂木斯克
+Russia,Tomsk,TOF,9,托木斯克
+Russia,Blagoveshchensk,BQS,8,布拉戈維申斯克
+Russia,Taksimo,TKM,8,塔克西莫
+Russia,Erbogachen,ERG,7,葉爾博加琴
+Russia,Kazan,KZN,7,喀山
+China,Harbin,HRB,6,哈爾濱
+Uzbekistan,Fergana,FEG,5,費爾干納
+China,Manzhouli,NZH,5,滿洲里
+Russia,Samara,KUF,5,薩馬拉
+Russia,Yuzhno-Sakhalinsk,UUS,5,南薩哈林斯克
+Uzbekistan,Namangan,NMA,4,納曼干
+Russia,Petropavlovsk-Kamchatsky,PKC,3,堪察加彼得羅巴甫洛夫斯克
+China,Hefei,HFE,2,合肥
+Russia,Tyumen,TJM,2,秋明
+Vietnam,Hanoi,HAN,1,河內

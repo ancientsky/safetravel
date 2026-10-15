@@ -358,6 +358,11 @@ def export_all(conn, out_dir=None) -> dict:
     if flights is not None:
         C.write_json(out_dir / "flights.json", flights)
     C.write_json(out_dir / "meta.json", meta)
+    try:  # outbreak route watch (static, hand-maintained input); never blocks the main export
+        from . import watch
+        watch.build(out_dir)
+    except Exception as e:  # pragma: no cover
+        C.log.warning("watch.json not rebuilt: %s", e)
     C.log.info("exported: %d countries, %d unmapped, %d epidemic items, %d overviews, flights=%s",
                len(alerts["countries"]), len(alerts["unmapped"]), len(epid["items"]), len(epid["overviews"]),
                "kept" if flights is None else f"{len(flights['routes'])} routes")

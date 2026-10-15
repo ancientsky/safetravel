@@ -465,6 +465,40 @@ def check_arrivals(v: V, a):
             v.err(f"{w}.airports.{iata}", f"flights={ap.get('flights')} but {counts.get(iata, 0)} listed")
 
 
+def check_watch(v: V, w):
+    """web/data/watch.json (outbreak route watch), optional."""
+    if not v.keys("watch.json", w, ["sets"]):
+        return
+    if not isinstance(w["sets"], list):
+        v.err("watch.json", "sets should be a list")
+        return
+    for i, s in enumerate(w["sets"]):
+        where = f"watch.json.sets[{i}]"
+        if not v.keys(where, s, ["id", "hub", "routes", "totals", "as_of", "title_zh", "title_en", "reason_zh", "reason_en",
+                                  "source_zh", "source_en", "hub_zh", "hub_en"]):
+            continue
+        h = s["hub"]
+        if v.keys(where + ".hub", h, ["iata", "country", "lat", "lon"]):
+            v.pat(where + ".hub", h["iata"], IATA, "iata")
+            v.typ(where + ".hub", h["lat"], (int, float), "lat")
+            v.typ(where + ".hub", h["lon"], (int, float), "lon")
+        routes = s["routes"] if isinstance(s["routes"], list) else []
+        for j, r in enumerate(routes):
+            rw = f"{where}.routes[{j}]"
+            if not v.keys(rw, r, ["iata", "city_en", "city_zh", "country", "lat", "lon", "monthly"]):
+                continue
+            v.pat(rw, r["iata"], IATA, "iata")
+            if r["country"]:
+                v.pat(rw, r["country"], ISO2, "country")
+            v.typ(rw, r["lat"], (int, float), "lat")
+            v.typ(rw, r["lon"], (int, float), "lon")
+            v.typ(rw, r["monthly"], int, "monthly")
+        t = s["totals"]
+        if isinstance(t, dict) and (t.get("destinations") != len(routes)
+                                    or t.get("monthly") != sum(r.get("monthly", 0) for r in routes if isinstance(r, dict))):
+            v.err(where, "totals do not match routes")
+
+
 def validate_dir(d: Path) -> list[str]:
     d = Path(d)
     v = V()
@@ -483,6 +517,12 @@ def validate_dir(d: Path) -> list[str]:
         check_epidemics(v, data["epidemics"], data.get("alerts"))
     if "flights" in data:
         check_flights(v, data["flights"])
+    wp = d / "watch.json"
+    if wp.exists():
+        try:
+            check_watch(v, json.loads(wp.read_text(encoding="utf-8")))
+        except ValueError as e:
+            v.err("watch.json", f"cannot parse: {e}")
     if "epidemics" in data:
         check_epidemic_details(v, d / "epidemics", data["epidemics"])
     if {"meta", "alerts", "epidemics"} <= set(data) and isinstance(data["meta"], dict):

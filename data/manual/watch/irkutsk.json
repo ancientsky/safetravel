@@ -1,0 +1,22 @@
+{
+  "id": "irkutsk",
+  "hub": "IKT",
+  "hub_zh": "伊爾庫次克",
+  "hub_en": "Irkutsk",
+  "hub_country": "RU",
+  "title_zh": "伊爾庫次克直飛航線",
+  "title_en": "Direct flights from Irkutsk",
+  "reason_zh": "疑似鼠疫疫情",
+  "reason_en": "Suspected plague outbreak",
+  "as_of": "2026-10",
+  "source_zh": "伊爾庫次克（IKT）所有直飛航點與每月航班數（人工整理清單）",
+  "source_en": "All direct destinations from Irkutsk (IKT) with monthly flights (manually curated list)",
+  "routes": "irkutsk_routes.csv",
+  "countries": {"Russia": "RU", "Thailand": "TH", "Kyrgyzstan": "KG", "China": "CN", "Uzbekistan": "UZ", "Mongolia": "MN", "Vietnam": "VN"},
+  "coords": {
+    "CZR": [56.9133, 118.27],
+    "UBN": [47.6469, 106.8197],
+    "NZG": [55.8008, 109.595],
+    "TKM": [56.3617, 114.93]
+  }
+}
