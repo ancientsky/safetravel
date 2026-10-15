@@ -143,6 +143,8 @@ export default {
   footer_disclaimer: '非官方資訊整理，AI 翻譯與摘要可能有誤，出國前請以疾管署最新公告為準。',
   footer_cdc: '疾管署',
   footer_airport: '桃園機場',
+  footer_arrivals: '入境航班資訊：',
+  footer_tdx: '交通部 TDX',
 
   // ---- inbound flights board (quarantine stations) ----
   arr_toggle: '入境航班',

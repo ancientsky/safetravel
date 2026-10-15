@@ -145,6 +145,8 @@ export default {
   footer_disclaimer: 'Unofficial aggregation; AI text may contain errors. Check official Taiwan CDC notices before you travel.',
   footer_cdc: 'Taiwan CDC',
   footer_airport: 'Taoyuan Airport',
+  footer_arrivals: 'Inbound flights: ',
+  footer_tdx: 'MOTC TDX',
 
   // ---- inbound flights board (quarantine stations) ----
   arr_toggle: 'Arrivals',

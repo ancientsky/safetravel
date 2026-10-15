@@ -796,6 +796,7 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 }
 :root[data-theme="light"] .foot { background: linear-gradient(to top, rgba(253, 248, 225, .96), rgba(253, 248, 225, .6)); }
 .foot p { margin: 0; }
+.foot-sep { color: var(--fg-mute); margin: 0 2px 0 4px; }
 .foot a { color: var(--fg-dim); }
 .foot-disclaimer { text-align: right; max-width: 50%; }
 .noscript { position: fixed; inset: 40% 10% auto; text-align: center; font-size: 16px; }
@@ -987,7 +988,7 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 .i18n-pending body { visibility: hidden; animation: i18n-reveal 0s linear 3s forwards; }
 @keyframes i18n-reveal { to { visibility: visible; } }
 /* footer height on phones is known per language: start with it so nothing moves when it is measured */
-@media (max-width: 760px) { :root { --foot-h: 52px; } :root[lang="en"] { --foot-h: 65px; } }
+@media (max-width: 760px) { :root { --foot-h: 52px; } :root[lang="en"] { --foot-h: 78px; } }
 
 /* ---------- sound toggle ---------- */
 .sound-toggle { position: relative; }
