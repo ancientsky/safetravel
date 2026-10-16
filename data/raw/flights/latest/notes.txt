@@ -1,5 +1,5 @@
-# flight fetch 2026-10-15T21:17:33+08:00
+# flight fetch 2026-10-16T11:17:33+08:00
 tdx auth: token ok
-tdx_fids_tpe	https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE?%24format=JSON	200	1552821 bytes	1932 physical flights (all days)
+tdx_fids_tpe	https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE?%24format=JSON	200	1536983 bytes	1959 physical flights (all days)
 tdx_airports	469 airports
-RESULT ok=True source=https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE kind=tdx day=2026-10-15 routes=86 reason=None warn=None
+RESULT ok=True source=https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE kind=tdx day=2026-10-16 routes=85 reason=None warn=None
