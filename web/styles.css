@@ -1256,6 +1256,22 @@ body.arr-open .flights-canvas { opacity: .35; }
 .wt-hub-sub { font-size: 11px; font-family: var(--sans); fill: var(--watch); }
 .wt-tip-n { color: var(--watch); }
 .wt-tip-tpe { color: var(--cyan); }
+/* destinations with a reported (exported) case, and routes listed without scheduled flights */
+.wt-arc.is-noted { stroke: var(--lvl3); stroke-opacity: 1; }
+.wt-arc.is-idle { stroke-dasharray: 1 5; stroke-opacity: .35; animation: none; }
+.wt-note-ring { fill: none; stroke: none; }
+.wt-dest.is-noted .wt-dot { fill: var(--lvl3); }
+.wt-dest.is-noted .wt-note-ring { stroke: var(--lvl3); stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: wt-note 1.6s ease-out infinite; }
+@keyframes wt-note { 0% { transform: scale(.6); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+.wt-dest.is-noted .wt-label { fill: var(--lvl3); font-size: 11px; }
+.wt-dest.is-idle .wt-dot { fill-opacity: .35; }
+.wt-tip-note { color: var(--lvl3); font-weight: 600; }
+.wt-tip-idle { color: var(--fg-mute); }
+.wt-label.wt-alert { color: var(--lvl3); font-weight: 600; }
+.wt-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.wt-notes li { display: flex; flex-direction: column; padding: 4px 8px; border: 1px solid color-mix(in srgb, var(--lvl3) 60%, transparent); border-left: 3px solid var(--lvl3); border-radius: 4px; font-size: 12px; background: color-mix(in srgb, var(--lvl3) 8%, transparent); }
+.wt-notes b .mono { font-size: 10px; color: var(--fg-dim); font-weight: 400; }
+.wt-chips-idle li { opacity: .6; border-style: dashed; }
 body.watch-on .flights-canvas { opacity: .4; }
 
 @media (max-width: 1180px) {

@@ -27,7 +27,7 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 - **焦點輪播**：每 15 秒自動介紹一個國家；可切換「查看完整資訊」自動開啟國家面板，並以閱讀速度自動捲動。
 - **桃園機場航線雷達**：以當日桃園機場（TPE）出入境航點畫出動態航線。
 - **入境航班看板**（給機場檢疫站）：目前時間前後 60 分鐘內抵達的國際客機，可依機場與檢疫站（桃園 A、B＝第一航廈，C、D＝第二航廈）篩選，並顯示出發地國家的建議等級與主要疫病。
-- **疫區航線監測**：在地圖上顯示疫情城市的直飛航線網（目前為伊爾庫次克，疑似鼠疫），並標出與桃園有直航、可能轉機來臺的航點。
+- **疫區航線監測**：在地圖上顯示疫情城市的直飛航線網（目前有伊爾庫次克〔疑似鼠疫〕與金夏沙〔本迪布焦病毒 BDBV 伊波拉疫情〕），標出與桃園有直航、可能轉機來臺的航點，以及已通報輸出病例的航點。
 - **繁中／英文**、**深色（預設）／淺色主題**、可開關的**神秘音效**；資料更新後畫面會**自動重新載入**，適合長時間開著的展示螢幕。
 
 ### 使用說明
@@ -53,7 +53,7 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 - 拖曳標題列可把看板移到任何位置（橫式、直式各自記住），「歸位」按鈕回到預設位置；也可縮小成只剩標題列。
 - 資料約每 10 分鐘更新一次（00:00–04:59 約每 30 分鐘），右上顯示 TDX 更新時間與本月 API 用量；資料延遲時會變成橘色提示。
 
-**疫區航線監測**：按「疫區航線」→ 打開「伊爾庫次克 IKT」開關。地圖會縮放到整個航線網，線越粗代表每月航班越多；**青色**為與桃園有直航的航點（曼谷、北京、上海、廣州、河內）。選單內有航點數、每月航班、各國分布與前五大航點；開啟期間焦點輪播不會移動地圖。
+**疫區航線監測**：按「疫區航線」→ 打開「伊爾庫次克 IKT」或「金夏沙 FIH」開關（可同時開）。地圖會縮放到剛打開的航線網，線越粗代表每月航班越多；**青色**為與桃園有直航的航點（伊爾庫次克：曼谷、北京、上海、廣州、河內；金夏沙：巴黎、阿布達比），**紅色警示圈**為已通報輸出病例的航點（金夏沙→奈洛比），淡色虛線為清單中列出、但目前無定期班次的航線。選單內有航點數、每月航班、各國分布與前五大航點；開啟期間焦點輪播不會移動地圖。
 
 **直接連結（書籤／牆面螢幕用）**
 
@@ -63,7 +63,7 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 | `…/safetravel/?arr=TPE-C` | 開啟入境航班看板：桃園、C 檢疫站（`TPE-A`～`TPE-D`） |
 | `…/safetravel/?arr=KHH` | 其他機場：`TSA` 松山、`KHH` 高雄、`RMQ` 臺中… |
 | `…/safetravel/?arr=TPE-C&big=1` | 同上，大字模式 |
-| `…/safetravel/?watch=irkutsk` | 開啟伊爾庫次克疫區航線圖 |
+| `…/safetravel/?watch=irkutsk` | 開啟伊爾庫次克疫區航線圖（`kinshasa` 金夏沙；兩個都開：`?watch=irkutsk,kinshasa`） |
 
 參數可以合併，例如 `?arr=TPE-C&big=1&watch=irkutsk`。
 
@@ -183,7 +183,7 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 - **Spotlight tour** that presents a country every 15 s, optionally opening the full panel and auto-scrolling it at reading pace.
 - **TPE route radar**: animated routes for today's Taoyuan Airport departures and arrivals.
 - **Inbound flights board** for airport quarantine stations: international passenger flights arriving within ±60 minutes, filtered by airport and checkpoint (Taoyuan A/B = Terminal 1, C/D = Terminal 2), with the origin country's advisory level and main diseases.
-- **Outbreak route watch**: the direct-flight network of an outbreak city (currently Irkutsk, suspected plague), highlighting destinations that also fly to Taoyuan.
+- **Outbreak route watch**: the direct-flight networks of outbreak cities (currently Irkutsk — suspected plague — and Kinshasa — Bundibugyo virus (BDBV) Ebola), highlighting destinations that also fly to Taoyuan and destinations with a reported exported case.
 - Bilingual (zh-Hant default, English), dark (default) and light themes, optional ambient sound, and automatic reload when new data is published — built to run unattended on display screens.
 
 ### How to use
@@ -191,8 +191,8 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 - **Header buttons**: language · **Arrivals** (inbound board, off by default) · **Outbreak routes** (menu with one switch per watched city) · Sound · Theme.
 - **Map**: wheel to zoom, drag to pan, double-click to reset; `/` focuses search, `Esc` closes the panel; level filters top-left; the route radar switch bottom-left.
 - **Inbound board**: pick the airport and checkpoint; click a row to open the origin country; hover to highlight its route. *Auto-scroll* (on by default) glides through the list and pauses for 8 s after the mouse moves or 15 s after a touch/wheel/click — a parked cursor does not stop it. *Large* is for wall screens. Drag the title bar to float the board (position remembered per orientation); *Dock* restores it. Data refreshes every 10 minutes (every 30 minutes from 00:00 to 04:59 Taipei).
-- **Outbreak route watch**: Outbreak routes → switch on *Irkutsk IKT*. Line width shows monthly flights; cyan marks destinations with direct flights to Taoyuan (BKK, PEK, PVG, CAN, HAN). While it is on, the spotlight tour no longer moves the map.
-- **Deep links**: `#/country/CD` (country panel) · `?arr=TPE-C` (board for Taoyuan checkpoint C; `TPE-A`…`TPE-D`, or `TSA`, `KHH`, `RMQ`…) · `&big=1` (large type) · `?watch=irkutsk` (route watch). Parameters combine, e.g. `?arr=TPE-C&big=1&watch=irkutsk`.
+- **Outbreak route watch**: Outbreak routes → switch on *Irkutsk IKT* and/or *Kinshasa FIH*. Line width shows monthly flights; cyan marks destinations with direct flights to Taoyuan; a red warning ring marks a reported exported case (Kinshasa → Nairobi); faint dashed lines are listed routes without scheduled flights this month. While a watch is on, the spotlight tour no longer moves the map.
+- **Deep links**: `#/country/CD` (country panel) · `?arr=TPE-C` (board for Taoyuan checkpoint C; `TPE-A`…`TPE-D`, or `TSA`, `KHH`, `RMQ`…) · `&big=1` (large type) · `?watch=irkutsk`, `?watch=kinshasa` or `?watch=irkutsk,kinshasa` (route watch). Parameters combine, e.g. `?arr=TPE-C&big=1&watch=irkutsk`.
 - **Wall screens**: in landscape the board docks left and the map shifts right, beside the country panel; in portrait it docks on top, the map refits below, the board narrows beside an open panel and spotlight zooms avoid it. New epidemic data reloads the page automatically; after a site code update, reload once by hand.
 
 ### Refresh schedule

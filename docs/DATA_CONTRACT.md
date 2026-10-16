@@ -169,7 +169,9 @@ Inbound international passenger flights per Taiwan airport / quarantine checkpoi
 Direct-flight networks of outbreak cities, drawn on the map when switched on in the header menu 「疫區航線」.
 Built by `python -m pipeline watch` (also at the end of every `export`) from hand-maintained inputs in
 `data/manual/watch/`: one `<id>.json` (hub, titles, reason, source, `as_of`, country-name → ISO map, coordinate
-overrides) plus the routes CSV it names (`Country,City_Airport,IATA,Monthly_Flights,City_zh`). No timestamp, so the
+overrides) plus the routes CSV it names (`Country,City_Airport,IATA,Monthly_Flights,City_zh`; the aliases `City`, `Code`,
+`Flights_Per_Month` are accepted). Optional `notes` `{IATA: {zh, en}}` flag destinations such as one with a reported
+exported case (→ `note_zh` / `note_en` on that route, drawn with a red warning ring). No timestamp, so the
 file only changes when the inputs do.
 
 ```json
@@ -184,7 +186,7 @@ file only changes when the inputs do.
 } ] }
 ```
 
-Rules: `routes` sorted by `monthly` desc; coordinates from `airports.json`, else the set's `coords` override
+Rules: `routes` sorted by `monthly` desc (routes listed with `monthly: 0` are kept and drawn faint); coordinates from `airports.json`, else the set's `coords` override
 (`[lat, lon]`); a route without coordinates is dropped with a warning. To add or retire a watch, add/remove the
 `<id>.json` + CSV pair (or set `"enabled": false`) and run `python -m pipeline watch`. Deep link: `?watch=<id>`.
 

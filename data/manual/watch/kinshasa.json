@@ -1,0 +1,26 @@
+{
+  "id": "kinshasa",
+  "hub": "FIH",
+  "hub_zh": "金夏沙",
+  "hub_en": "Kinshasa",
+  "hub_country": "CD",
+  "title_zh": "金夏沙國際直飛航線",
+  "title_en": "Direct international flights from Kinshasa",
+  "reason_zh": "本迪布焦病毒（BDBV）伊波拉疫情；已有病例輸出至肯亞",
+  "reason_en": "Bundibugyo virus (BDBV) Ebola outbreak; exported case in Kenya",
+  "as_of": "2026-10",
+  "source_zh": "金夏沙（FIH）所有國際直飛航點與每月航班數（人工整理清單）",
+  "source_en": "All direct international destinations from Kinshasa (FIH) with monthly flights (manually curated list)",
+  "routes": "kinshasa_routes.csv",
+  "countries": {
+    "Ethiopia": "ET", "Belgium": "BE", "South Africa": "ZA", "France": "FR", "Togo": "TG", "Uganda": "UG",
+    "Kenya": "KE", "Qatar": "QA", "Tanzania": "TZ", "Republic of the Congo": "CG", "Angola": "AO", "Egypt": "EG",
+    "Côte d’Ivoire": "CI", "Gabon": "GA", "Morocco": "MA", "United Arab Emirates": "AE"
+  },
+  "coords": {
+    "NBJ": [-9.05, 13.5]
+  },
+  "notes": {
+    "NBO": {"zh": "肯亞已通報自剛果民主共和國輸出的病例", "en": "Kenya has reported a case exported from the DRC"}
+  }
+}

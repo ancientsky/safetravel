@@ -485,7 +485,7 @@ def check_watch(v: V, w):
         routes = s["routes"] if isinstance(s["routes"], list) else []
         for j, r in enumerate(routes):
             rw = f"{where}.routes[{j}]"
-            if not v.keys(rw, r, ["iata", "city_en", "city_zh", "country", "lat", "lon", "monthly"]):
+            if not v.keys(rw, r, ["iata", "city_en", "city_zh", "country", "lat", "lon", "monthly"], ["note_zh", "note_en"]):
                 continue
             v.pat(rw, r["iata"], IATA, "iata")
             if r["country"]:

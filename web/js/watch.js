@@ -41,6 +41,7 @@ export function createWatch({ button, menu, map }) {
   const tpeLinked = () => new Set((state.data.flights?.routes || []).map((r) => r.iata));
   const city = (r) => (isEn() ? r.city_en : r.city_zh) || r.iata;
   const hubName = (s) => (isEn() ? s.hub_en : s.hub_zh) || s.hub.iata;
+  const note = (r) => (isEn() ? r.note_en || r.note_zh : r.note_zh || r.note_en) || '';
 
   // ---------------------------------------------------------------- menu card
   function setDetails(s) {
@@ -49,19 +50,25 @@ export function createWatch({ button, menu, map }) {
     const byCountry = new Map();
     for (const r of s.routes) byCountry.set(r.country, (byCountry.get(r.country) || 0) + r.monthly);
     const countries = [...byCountry.entries()].sort((a, b) => b[1] - a[1]);
-    const top = s.routes.slice(0, 5);
+    const top = s.routes.filter((r) => r.monthly > 0).slice(0, 5);
+    const noted = s.routes.filter((r) => r.note_zh || r.note_en);
+    const idle = s.routes.filter((r) => r.monthly === 0);
     return `<div class="wt-detail">
       <dl class="wt-stats">
         <div><dt>${esc(t('watch_dest'))}</dt><dd class="mono">${fmtNum(s.totals.destinations)}</dd></div>
         <div><dt>${esc(t('watch_monthly'))}</dt><dd class="mono">${fmtNum(s.totals.monthly)}</dd></div>
         <div><dt>${esc(t('watch_countries'))}</dt><dd class="mono">${fmtNum(s.totals.countries)}</dd></div>
       </dl>
+      ${noted.length ? `<p class="wt-label wt-alert">${esc(t('watch_noted'))}</p>
+      <ul class="wt-notes">${noted.map((r) => `<li><b>${esc(city(r))} <span class="mono">${esc(r.iata)}</span></b><span>${esc(note(r))}</span></li>`).join('')}</ul>` : ''}
       <p class="wt-label">${esc(t('watch_by_country'))}</p>
       <ul class="wt-chips">${countries.map(([c, n]) => `<li><span>${esc(c ? countryName(c) : '—')}</span><b class="mono">${fmtNum(n)}</b></li>`).join('')}</ul>
       ${viaTpe.length ? `<p class="wt-label wt-tpe">${esc(t('watch_tpe_link'))}</p>
       <ul class="wt-chips wt-chips-tpe">${viaTpe.map((r) => `<li><span>${esc(city(r))}</span><b class="mono">${esc(r.iata)}</b></li>`).join('')}</ul>` : ''}
       <p class="wt-label">${esc(t('watch_top'))}</p>
       <ol class="wt-top">${top.map((r) => `<li><span>${esc(city(r))} <i class="mono">${esc(r.iata)}</i></span><b class="mono">${esc(t('watch_per_month', { n: fmtNum(r.monthly) }))}</b></li>`).join('')}</ol>
+      ${idle.length ? `<p class="wt-label">${esc(t('watch_idle'))}</p>
+      <ul class="wt-chips wt-chips-idle">${idle.map((r) => `<li><span>${esc(city(r))}</span><b class="mono">${esc(r.iata)}</b></li>`).join('')}</ul>` : ''}
       <div class="wt-foot">
         <button type="button" class="wt-fit" data-fit="${esc(s.id)}">${esc(t('watch_fit'))}</button>
         <span class="wt-src">${esc(isEn() ? s.source_en : s.source_zh)} · ${esc(s.as_of)}</span>
@@ -106,7 +113,7 @@ export function createWatch({ button, menu, map }) {
   }
 
   // ---------------------------------------------------------------- toggling
-  function apply({ fit = false } = {}) {
+  function apply({ fit = null } = {}) {
     storageSet(KEY, JSON.stringify([...on]));
     const any = on.size > 0 && active().length > 0;
     button.classList.toggle('is-active', on.size > 0);
@@ -114,12 +121,12 @@ export function createWatch({ button, menu, map }) {
     state.mapPinned = any; // the spotlight tour stops moving the map while a watch layer is shown
     layer.update();
     renderMenu();
-    if (fit && any) fitTo(active());
+    if (fit && any) fitTo(fit === true ? active() : active().filter((s) => s.id === fit));
     emit('watch:change', [...on]);
   }
   function toggle(id) {
     if (on.has(id)) on.delete(id); else on.add(id);
-    apply({ fit: on.has(id) });
+    apply({ fit: on.has(id) ? id : null }); // zoom to the city just switched on
   }
   function fitTo(list) {
     const pts = list.flatMap((s) => [[s.hub.lon, s.hub.lat], ...s.routes.map((r) => [r.lon, r.lat])]);
@@ -161,21 +168,26 @@ export function createWatch({ button, menu, map }) {
       const [w, h] = map.size();
       svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
       const linked = tpeLinked();
-      const rows = list.flatMap((s) => s.routes.map((r) => ({ s, r, key: `${s.id}|${r.iata}`, tpe: linked.has(r.iata) })));
+      const rows = list.flatMap((s) => s.routes.map((r) => ({
+        s, r, key: `${s.id}|${r.iata}`, tpe: linked.has(r.iata), noted: !!(r.note_zh || r.note_en), idle: r.monthly === 0,
+      })));
       const width = (m) => 0.8 + Math.sqrt(m) / 4;
       gArcs.selectAll('path').data(rows, (d) => d.key).join('path')
-        .attr('class', (d) => `wt-arc${d.tpe ? ' is-tpe' : ''}`)
+        .attr('class', (d) => `wt-arc${d.tpe ? ' is-tpe' : ''}${d.noted ? ' is-noted' : ''}${d.idle ? ' is-idle' : ''}`)
         .attr('d', (d) => arcPath([d.s.hub.lon, d.s.hub.lat], [d.r.lon, d.r.lat]))
         .style('stroke-width', (d) => width(d.r.monthly));
       const labelled = new Set(list.flatMap((s) => s.routes.slice(0, LABEL_TOP).map((r) => `${s.id}|${r.iata}`)));
       gDots.selectAll('g.wt-dest').data(rows, (d) => d.key).join((en) => {
         const g = en.append('g').attr('class', 'wt-dest');
         g.append('circle').attr('class', 'wt-tpe-ring');
+        g.append('circle').attr('class', 'wt-note-ring');
         g.append('circle').attr('class', 'wt-dot');
         g.append('text').attr('class', 'wt-label');
         return g;
       })
         .classed('is-tpe', (d) => d.tpe)
+        .classed('is-noted', (d) => d.noted)
+        .classed('is-idle', (d) => d.idle)
         .each(function (d) {
           const [x, y] = map.projection([d.r.lon, d.r.lat]);
           this.dataset.x = x;
@@ -183,13 +195,16 @@ export function createWatch({ button, menu, map }) {
           const rad = 2 + Math.sqrt(d.r.monthly) * 0.45;
           this.querySelector('.wt-dot').setAttribute('r', rad);
           this.querySelector('.wt-tpe-ring').setAttribute('r', rad + 4);
+          this.querySelector('.wt-note-ring').setAttribute('r', rad + 7);
           const label = this.querySelector('.wt-label');
-          label.textContent = labelled.has(d.key) || d.tpe ? d.r.iata : '';
+          label.textContent = d.noted ? `⚠ ${d.r.iata}` : labelled.has(d.key) || d.tpe ? d.r.iata : '';
           label.setAttribute('x', rad + 3);
           label.setAttribute('y', 3.5);
         })
         .on('pointerenter', (ev, d) => {
-          const tpe = d.tpe ? `<div class="tip-row wt-tip-tpe">${esc(t('watch_tip_tpe'))}</div>` : '';
+          const tpe = (d.tpe ? `<div class="tip-row wt-tip-tpe">${esc(t('watch_tip_tpe'))}</div>` : '')
+            + (d.noted ? `<div class="tip-row wt-tip-note">⚠ ${esc(note(d.r))}</div>` : '')
+            + (d.idle ? `<div class="tip-row wt-tip-idle">${esc(t('watch_tip_idle'))}</div>` : '');
           showTip(`<div class="tip-head"><span class="tip-iata">${esc(d.r.iata)}</span><span class="tip-iso">${esc(d.r.country)}</span></div>
             <div class="tip-name">${esc(city(d.r))}</div><div class="tip-alt">${esc(isEn() ? d.r.city_zh : d.r.city_en)} · ${esc(countryName(d.r.country))}</div>
             <div class="tip-grid"><span>${esc(t('watch_tip_flights', { hub: d.s.hub.iata }))}</span><b class="wt-tip-n">${esc(fmtNum(d.r.monthly))}</b></div>${tpe}`,
@@ -210,7 +225,8 @@ export function createWatch({ button, menu, map }) {
         this.dataset.x = x;
         this.dataset.y = y;
         this.querySelector('.wt-hub-label').textContent = `${hubName(s)} ${s.hub.iata}`;
-        this.querySelector('.wt-hub-sub').textContent = isEn() ? s.reason_en : s.reason_zh;
+        // map label: first clause only (the menu shows the full text)
+        this.querySelector('.wt-hub-sub').textContent = ((isEn() ? s.reason_en : s.reason_zh) || '').split(/[；;]/)[0].trim();
       });
       scale();
     }
