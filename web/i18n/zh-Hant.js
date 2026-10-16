@@ -145,6 +145,7 @@ export default {
   footer_airport: '桃園機場',
   footer_arrivals: '入境航班資訊：',
   footer_tdx: '交通部 TDX',
+  footer_watch: '疫區航線：',
 
   // ---- inbound flights board (quarantine stations) ----
   arr_toggle: '入境航班',
@@ -217,6 +218,7 @@ export default {
   watch_noted: '已通報病例的航點',
   watch_idle: '清單中列出、但目前每月無定期班次',
   watch_tip_idle: '目前每月無定期班次（季節性或暫停）',
+  watch_source: '資料來源：',
   watch_fit: '聚焦地圖',
   watch_tip_flights: ({ hub }) => `自 ${hub} 每月直飛`,
   watch_tip_tpe: '此航點與桃園有直航',

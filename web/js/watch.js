@@ -7,6 +7,15 @@ import { esc, storageGet, storageSet } from './util.js';
 
 const d3 = window.d3;
 const KEY = 'safetravel.watch';
+// route-list sources that may be linked from the menu (https only)
+const SOURCE_HOSTS = ['flightconnections.com'];
+function sourceUrl(u) {
+  try {
+    const x = new URL(String(u || ''));
+    const host = x.hostname.toLowerCase();
+    return x.protocol === 'https:' && SOURCE_HOSTS.some((h) => host === h || host.endsWith(`.${h}`)) ? x.href : '';
+  } catch { return ''; }
+}
 const LABEL_TOP = 6; // always label the busiest destinations (plus every one with a direct TPE link)
 
 function readOn() {
@@ -71,7 +80,9 @@ export function createWatch({ button, menu, map }) {
       <ul class="wt-chips wt-chips-idle">${idle.map((r) => `<li><span>${esc(city(r))}</span><b class="mono">${esc(r.iata)}</b></li>`).join('')}</ul>` : ''}
       <div class="wt-foot">
         <button type="button" class="wt-fit" data-fit="${esc(s.id)}">${esc(t('watch_fit'))}</button>
-        <span class="wt-src">${esc(isEn() ? s.source_en : s.source_zh)} · ${esc(s.as_of)}</span>
+        <span class="wt-src">${esc(t('watch_source'))}${sourceUrl(s.source_url)
+          ? `<a href="${esc(sourceUrl(s.source_url))}" target="_blank" rel="noopener noreferrer">${esc(isEn() ? s.source_en : s.source_zh)}</a>`
+          : esc(isEn() ? s.source_en : s.source_zh)} · ${esc(s.as_of)}</span>
       </div>
     </div>`;
   }

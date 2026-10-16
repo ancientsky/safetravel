@@ -91,7 +91,7 @@ flowchart LR
     A[疾管署 旅遊建議等級 CSV]
     B[疾管署 國際疫情資訊 CSV]
     T[交通部 TDX FIDS<br/>TPE 航班 · 全台入境航班]
-    M[人工整理<br/>疫區直飛航線]
+    M[FlightConnections<br/>疫區直飛航線]
   end
   CJ[cron-job.org] -->|workflow_dispatch| U
   CJ -->|每 10 分鐘| R
@@ -122,7 +122,7 @@ flowchart LR
 | 國際旅遊疫情建議等級（全歷史） | 疾管署 `CountryEpidLevel/ExportCSV`（完整網址見 [ARCHITECTURE.md](docs/ARCHITECTURE.md#data-sources)） |
 | 國際重要疫情資訊（約兩年） | 疾管署 `TravelEpidemic/ExportCSV` |
 | 桃園機場航線、全台入境航班 | [交通部 TDX 運輸資料流通服務](https://tdx.transportdata.tw/) FIDS API（`/v2/Air/FIDS/Airport/TPE`、`/v2/Air/FIDS/Airport/Arrival`） |
-| 疫區直飛航線（伊爾庫次克） | 人工整理清單：`data/manual/watch/`（2026-10） |
+| 疫區直飛航線（伊爾庫次克、金夏沙） | [FlightConnections](https://www.flightconnections.com/)：直飛航點與每月航班數，整理於 `data/manual/watch/`（2026-10） |
 | 機場座標 | [OpenFlights `airports.dat`](https://openflights.org/data.html) |
 | 世界地圖、國家代碼與名稱 | [world-atlas](https://github.com/topojson/world-atlas)（50m／110m）、[world-countries](https://github.com/mledoze/countries) |
 | 前端函式庫 | [D3 v7](https://d3js.org/)、[topojson-client](https://github.com/topojson/topojson-client) |
@@ -211,7 +211,7 @@ See the diagram above: `pipeline/` (Python) fetches the sources, keeps history a
 
 ### Data sources
 
-TCDC travel advisory levels (`CountryEpidLevel/ExportCSV`) and international epidemic digests (`TravelEpidemic/ExportCSV`); [MOTC TDX](https://tdx.transportdata.tw/) FIDS API for TPE routes and Taiwan inbound flights; a manually curated direct-flight list for the outbreak route watch (`data/manual/watch/`); [OpenFlights](https://openflights.org/data.html) airport coordinates; [world-atlas](https://github.com/topojson/world-atlas) and [world-countries](https://github.com/mledoze/countries) geometry and names; [D3 v7](https://d3js.org/) and [topojson-client](https://github.com/topojson/topojson-client).
+TCDC travel advisory levels (`CountryEpidLevel/ExportCSV`) and international epidemic digests (`TravelEpidemic/ExportCSV`); [MOTC TDX](https://tdx.transportdata.tw/) FIDS API for TPE routes and Taiwan inbound flights; [FlightConnections](https://www.flightconnections.com/) direct destinations and monthly flights for the outbreak route watch (curated in `data/manual/watch/`); [OpenFlights](https://openflights.org/data.html) airport coordinates; [world-atlas](https://github.com/topojson/world-atlas) and [world-countries](https://github.com/mledoze/countries) geometry and names; [D3 v7](https://d3js.org/) and [topojson-client](https://github.com/topojson/topojson-client).
 
 ### How advisory levels are computed
 

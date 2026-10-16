@@ -475,8 +475,10 @@ def check_watch(v: V, w):
     for i, s in enumerate(w["sets"]):
         where = f"watch.json.sets[{i}]"
         if not v.keys(where, s, ["id", "hub", "routes", "totals", "as_of", "title_zh", "title_en", "reason_zh", "reason_en",
-                                  "source_zh", "source_en", "hub_zh", "hub_en"]):
+                                  "source_zh", "source_en", "hub_zh", "hub_en"], ["source_url"]):
             continue
+        if "source_url" in s and not str(s["source_url"]).startswith("https://"):
+            v.err(where, "source_url must be an https:// URL")
         h = s["hub"]
         if v.keys(where + ".hub", h, ["iata", "country", "lat", "lon"]):
             v.pat(where + ".hub", h["iata"], IATA, "iata")

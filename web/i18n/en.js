@@ -147,6 +147,7 @@ export default {
   footer_airport: 'Taoyuan Airport',
   footer_arrivals: 'Inbound flights: ',
   footer_tdx: 'MOTC TDX',
+  footer_watch: 'Outbreak routes: ',
 
   // ---- inbound flights board (quarantine stations) ----
   arr_toggle: 'Arrivals',
@@ -219,6 +220,7 @@ export default {
   watch_noted: 'Destinations with reported cases',
   watch_idle: 'Listed, but no scheduled flights this month',
   watch_tip_idle: 'No scheduled flights this month (seasonal or suspended)',
+  watch_source: 'Source: ',
   watch_fit: 'Focus map',
   watch_tip_flights: ({ hub }) => `Direct flights from ${hub} per month`,
   watch_tip_tpe: 'This airport also has direct flights to Taoyuan',

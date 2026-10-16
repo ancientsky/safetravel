@@ -9,8 +9,9 @@
   "reason_zh": "疑似鼠疫疫情",
   "reason_en": "Suspected plague outbreak",
   "as_of": "2026-10",
-  "source_zh": "伊爾庫次克（IKT）所有直飛航點與每月航班數（人工整理清單）",
-  "source_en": "All direct destinations from Irkutsk (IKT) with monthly flights (manually curated list)",
+  "source_zh": "FlightConnections（伊爾庫次克 IKT 所有直飛航點與每月航班數）",
+  "source_en": "FlightConnections (all direct destinations from Irkutsk IKT with monthly flights)",
+  "source_url": "https://www.flightconnections.com/",
   "routes": "irkutsk_routes.csv",
   "countries": {"Russia": "RU", "Thailand": "TH", "Kyrgyzstan": "KG", "China": "CN", "Uzbekistan": "UZ", "Mongolia": "MN", "Vietnam": "VN"},
   "coords": {

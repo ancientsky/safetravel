@@ -66,7 +66,9 @@ def build_set(spec: dict, base: Path, airports: dict) -> dict:
     routes, missing = _routes(base / spec["routes"], spec.get("countries") or {}, coords, airports, notes)
     if missing:
         C.log.warning("watch %s: no coordinates for %s (dropped)", spec["id"], ", ".join(missing))
+    url = str(spec.get("source_url") or "")
     doc = {"id": spec["id"], **{k: C.nfkc(spec.get(k, "")) for k in TEXT_KEYS}, "as_of": spec.get("as_of", ""),
+           **({"source_url": url} if url.startswith("https://") else {}),
            "hub": {"iata": hub, "country": spec.get("hub_country") or ap.get("country", ""),
                    "lat": round(float(hlat), 4), "lon": round(float(hlon), 4)},
            "routes": routes,

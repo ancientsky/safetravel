@@ -178,7 +178,7 @@ file only changes when the inputs do.
 { "sets": [ {
   "id": "irkutsk", "hub_zh": "伊爾庫次克", "hub_en": "Irkutsk",
   "title_zh": "…", "title_en": "…", "reason_zh": "疑似鼠疫疫情", "reason_en": "Suspected plague outbreak",
-  "source_zh": "…", "source_en": "…", "as_of": "2026-10",
+  "source_zh": "FlightConnections（…）", "source_en": "FlightConnections (…)", "source_url": "https://www.flightconnections.com/", "as_of": "2026-10",
   "hub": { "iata": "IKT", "country": "RU", "lat": 52.268, "lon": 104.389 },
   "routes": [ { "iata": "OVB", "city_en": "Novosibirsk", "city_zh": "新西伯利亞", "country": "RU",
                 "lat": 55.0126, "lon": 82.6507, "monthly": 176 } ],
@@ -186,7 +186,8 @@ file only changes when the inputs do.
 } ] }
 ```
 
-Rules: `routes` sorted by `monthly` desc (routes listed with `monthly: 0` are kept and drawn faint); coordinates from `airports.json`, else the set's `coords` override
+Route lists come from FlightConnections (<https://www.flightconnections.com/>); `source_url` (optional, https only) is
+shown as a link in the menu. Rules: `routes` sorted by `monthly` desc (routes listed with `monthly: 0` are kept and drawn faint); coordinates from `airports.json`, else the set's `coords` override
 (`[lat, lon]`); a route without coordinates is dropped with a warning. To add or retire a watch, add/remove the
 `<id>.json` + CSV pair (or set `"enabled": false`) and run `python -m pipeline watch`. Deep link: `?watch=<id>`.
 

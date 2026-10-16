@@ -9,8 +9,9 @@
   "reason_zh": "本迪布焦病毒（BDBV）伊波拉疫情；已有病例輸出至肯亞",
   "reason_en": "Bundibugyo virus (BDBV) Ebola outbreak; exported case in Kenya",
   "as_of": "2026-10",
-  "source_zh": "金夏沙（FIH）所有國際直飛航點與每月航班數（人工整理清單）",
-  "source_en": "All direct international destinations from Kinshasa (FIH) with monthly flights (manually curated list)",
+  "source_zh": "FlightConnections（金夏沙 FIH 所有國際直飛航點與每月航班數）",
+  "source_en": "FlightConnections (all direct international destinations from Kinshasa FIH with monthly flights)",
+  "source_url": "https://www.flightconnections.com/",
   "routes": "kinshasa_routes.csv",
   "countries": {
     "Ethiopia": "ET", "Belgium": "BE", "South Africa": "ZA", "France": "FR", "Togo": "TG", "Uganda": "UG",

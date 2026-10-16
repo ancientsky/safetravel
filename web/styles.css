@@ -988,7 +988,7 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 .i18n-pending body { visibility: hidden; animation: i18n-reveal 0s linear 3s forwards; }
 @keyframes i18n-reveal { to { visibility: visible; } }
 /* footer height on phones is known per language: start with it so nothing moves when it is measured */
-@media (max-width: 760px) { :root { --foot-h: 52px; } :root[lang="en"] { --foot-h: 78px; } }
+@media (max-width: 760px) { :root { --foot-h: 65px; } :root[lang="en"] { --foot-h: 78px; } }
 
 /* ---------- sound toggle ---------- */
 .sound-toggle { position: relative; }
@@ -1280,3 +1280,4 @@ body.watch-on .flights-canvas { opacity: .4; }
 @media (max-width: 760px) {
   .watch-menu { left: 8px !important; right: 8px; width: auto !important; max-height: 70vh; }
 }
+.wt-src a { color: var(--fg-dim); }
