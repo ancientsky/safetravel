@@ -21,6 +21,7 @@ jobs:
           mkdir -p data/raw/boca data/raw/mac
           UA='Mozilla/5.0 (compatible; SafeTravelTW/1.0; +https://ancientsky.github.io/safetravel/)'
           curl -sSL -m 60 -A "$UA" -o data/raw/boca/sp-trwa-rss-1.xml -w "boca %{http_code} %{size_download}\n" "https://www.boca.gov.tw/sp-trwa-rss-1.xml"
+          curl -sSL -m 60 -A "$UA" -o data/raw/boca/sp-trwa-list-1.html -w "boca list %{http_code} %{size_download}\n" "https://www.boca.gov.tw/sp-trwa-list-1.html"
           curl -sSL -m 60 -A "$UA" -o data/raw/mac/news.html -w "mac %{http_code} %{size_download} %{url_effective}\n" "https://www.mac.gov.tw/News.aspx?n=E0243AD02975213D&sms=EF1DC35EB9749B36"
           python3 - <<'PY'
           import re, html, urllib.parse
@@ -53,6 +54,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git add data/raw/boca data/raw/mac
-          git commit -m "data: raw BOCA travel-warning RSS and MAC travel-warning pages (fixtures)" || exit 0
+          git commit -m "data: raw BOCA travel-warning list page (fixture)" || exit 0
           for i in 1 2 3; do git push origin HEAD:main && exit 0; git pull --rebase origin main; done
           exit 1
