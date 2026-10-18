@@ -9,6 +9,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: RSS structure
+        run: |
+          curl -sS -m 60 -A 'Mozilla/5.0 SafeTravelTW-probe' -o rss.xml "https://www.boca.gov.tw/sp-trwa-rss-1.xml"
+          python3 - <<'PY'
+          import collections, re, html
+          import xml.etree.ElementTree as ET
+          ch = ET.parse('rss.xml').getroot().find('channel')
+          items = ch.findall('item')
+          print('items', len(items), 'item fields', collections.Counter(c.tag for it in items for c in it))
+          lv = collections.Counter(); parts = collections.Counter(); multi = collections.defaultdict(list)
+          for it in items:
+              t = (it.findtext('title') or '').strip()
+              p = [x.strip() for x in t.split(' - ')]
+              parts[len(p)] += 1
+              lv[p[0]] += 1
+              multi[p[1] if len(p) > 1 else t].append(t)
+          print('levels', lv.most_common())
+          print('title parts', parts)
+          sub = {k: v for k, v in multi.items() if len(v) > 1}
+          print('countries with >1 item', len(sub))
+          for k, v in list(sub.items())[:12]: print('  MULTI', v)
+          for it in items[:3] + items[100:103] + items[-3:]:
+              d = re.sub(r'<[^>]+>', ' ', html.unescape(it.findtext('description') or ''))
+              print('ITEM', repr(it.findtext('title')), it.findtext('pubDate'), it.findtext('link'), 'desc_len', len(d), '|', re.sub(r'\s+', ' ', d)[:160])
+          odd = [it.findtext('title') for it in items if len((it.findtext('title') or '').split(' - ')) != 3][:15]
+          print('odd titles', odd)
+          dates = sorted(filter(None, (it.findtext('pubDate') for it in items)))
+          print('pubDate present', len(dates), 'sample', dates[:2], dates[-2:])
+          PY
       - name: Dataset metadata (data.gov.tw API)
         run: |
           set +e
