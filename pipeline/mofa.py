@@ -54,10 +54,29 @@ def _text(fragment: str) -> str:
     return re.sub(r"\s+", " ", C.nfkc(html.unescape(re.sub(r"<[^>]+>", " ", fragment or "")))).strip()
 
 
+_CJK = re.compile(r"[\u3400-\u9fff\uf900-\ufaff]")
+
+
 def split_zh_en(t: str) -> tuple[str, str]:
-    """'柬埔寨 Cambodia' -> ('柬埔寨', 'Cambodia'); text without Latin letters -> (text, '')."""
-    m = re.search(r"[A-Za-z]", t)
-    return (t[:m.start()].strip(" -"), t[m.start():].strip()) if m else (t.strip(), "")
+    """'柬埔寨 Cambodia' -> ('柬埔寨', 'Cambodia'); text without Latin letters -> (text, '').
+
+    The Chinese part runs to the last CJK ideograph, plus a Latin gloss in parentheses right after it
+    ('泰國烏汶府(Ubon Ratchathani)、…尖竹汶府(Chanthaburi) Ubon Ratchathani、…'); the rest is the English name.
+    A trailing update date ('蒙古 Mongolia (2026-10-14)') is dropped.
+    """
+    t = re.sub(r"\s*\(\d{4}-\d{2}-\d{2}\)\s*$", "", t.strip())
+    last = None
+    for last in _CJK.finditer(t):
+        pass
+    if not last:
+        m = re.search(r"[A-Za-z]", t)
+        return ("", t) if m and m.start() == 0 else (t, "")
+    end = last.end()
+    gloss = re.match(r"[)）]+|\s*\([^()]*\)", t[end:])  # closes '(包括Bakassi半島)' or adds a '(Latin)' gloss
+    if gloss:
+        end += gloss.end()
+    zh, en = t[:end].strip(" -、"), t[end:].strip(" -、")
+    return (zh, en) if re.search(r"[A-Za-z]", en) else (t, "")
 
 
 # ---------------------------------------------------------------- parsing
@@ -163,7 +182,7 @@ def name_resolver(conn):
 
 # ---------------------------------------------------------------- build
 def build(rows: list[dict], rss: dict[str, dict], resolve, mac: dict | None = None, names: dict | None = None) -> dict:
-    """-> {"countries": {...}, "unmapped": [...], "texts": {id: text}, "snapshot": {key: level}}
+    """-> {"countries": {...}, "unmapped": [...], "texts": {id: text}, "snapshot": {key: level}, "urls": {key: url}}
     `names` ({ISO: {zh, en}}, countries.json) names countries that have only regional items."""
     by_iso: dict[str, list[dict]] = defaultdict(list)
     unmapped, texts = [], {}
@@ -181,7 +200,7 @@ def build(rows: list[dict], rss: dict[str, dict], resolve, mac: dict | None = No
             by_iso[r["iso"]].append(r)
         else:
             unmapped.append({"title": f'{r["country"]} · {r["area"]}', "level": r["level"], "url": r["url"]})
-    countries, snapshot = {}, {}
+    countries, snapshot, urls = {}, {}, {}
     for iso, rs in by_iso.items():
         for r in rs:
             azh, aen = split_zh_en(r["area"])
@@ -200,6 +219,7 @@ def build(rows: list[dict], rss: dict[str, dict], resolve, mac: dict | None = No
             areas.append({"area_zh": azh or r["area"], "area_en": aen, "level": r["level"], "date": r["date"],
                           "id": r["id"], "url": r["url"], "summary_zh": summary(r["text"])})
             snapshot[f"{iso}|{azh or r['area']}"] = r["level"]
+            urls[f"{iso}|{azh or r['area']}"] = r["url"]
         areas.sort(key=lambda a: (-a["level"], a["area_zh"]))
         first = n or rs[0]
         levels = [r["level"] for r in rs]
@@ -214,12 +234,13 @@ def build(rows: list[dict], rss: dict[str, dict], resolve, mac: dict | None = No
         countries[iso] = c
         if n:
             snapshot[f"{iso}|"] = n["level"]
+            urls[f"{iso}|"] = n["url"]
     for iso, m in ((mac or {}).get("countries") or {}).items():
         countries[iso] = {"source": "mac", "region": "AsiaPacific", "name_zh": m.get("name_zh") or "", "name_en": m.get("name_en") or "",
                           "level": m["level"], "max_level": m["level"], "date": m.get("since", ""),
                           "confirmed": (mac or {}).get("confirmed", ""), "id": "", "url": (mac or {}).get("source_url", ""),
                           "summary_zh": m.get("summary_zh", ""), "summary_en": m.get("summary_en", ""), "areas": []}
-    return {"countries": dict(sorted(countries.items())), "unmapped": unmapped, "texts": texts, "snapshot": snapshot}
+    return {"countries": dict(sorted(countries.items())), "unmapped": unmapped, "texts": texts, "snapshot": snapshot, "urls": urls}
 
 
 def _mac() -> dict:
@@ -266,14 +287,48 @@ def fetch(session=None) -> dict:
 
 
 # ---------------------------------------------------------------- history
-def record(conn, snapshot: dict[str, int], today: str | None = None) -> int:
-    """Compare a snapshot with mofa_levels; append changes. First run = baseline only. -> number of changes."""
+def _renamed(key: str, url: str, gone: dict[str, dict]) -> str | None:
+    """Old key of the same warning under a new area name: same BOCA page, or (rows stored before urls were kept)
+    an area text that is a prefix of the other, e.g. a name cut at '(' by an older parser."""
+    iso, area = key.split("|", 1)
+    if not area:
+        return None
+    for old, row in gone.items():
+        oiso, oarea = old.split("|", 1)
+        if oiso != iso or not oarea:
+            continue
+        if url and row["url"] == url:
+            return old
+        stem = oarea.rstrip("(（ -")
+        if not row["url"] and stem and (area.startswith(stem) or stem.startswith(area)):
+            return old
+    return None
+
+
+def record(conn, snapshot: dict[str, int], today: str | None = None, urls: dict[str, str] | None = None) -> int:
+    """Compare a snapshot with mofa_levels; append changes. First run = baseline only. -> number of changes.
+
+    An area whose name changed but whose BOCA page is the same keeps its history (renamed, not withdrawn + new)."""
     today = today or C.today().isoformat()
-    prev = {r["key"]: r["level"] for r in conn.execute("SELECT key, level FROM mofa_levels")}
-    baseline = not prev
+    urls = urls or {}
+    rows = {r["key"]: dict(r) for r in conn.execute("SELECT key, level, url FROM mofa_levels")}
+    baseline = not rows
+    gone = {k: r for k, r in rows.items() if k not in snapshot and r["level"] is not None}
+    for key in snapshot:
+        if key in rows:
+            continue
+        old = _renamed(key, urls.get(key, ""), gone)
+        if old:
+            iso, area = key.split("|", 1)
+            conn.execute("UPDATE mofa_levels SET key=?, area_zh=? WHERE key=?", (key, area, old))
+            rows[key] = rows.pop(old)
+            del gone[old]
+    prev = {k: r["level"] for k, r in rows.items()}
     changes = 0
     for key, lvl in snapshot.items():
         iso, area = key.split("|", 1)
+        if urls.get(key):
+            conn.execute("UPDATE mofa_levels SET url=? WHERE key=?", (urls[key], key))
         if key in prev:
             if prev[key] != lvl:
                 conn.execute("INSERT INTO mofa_changes(date, iso, area_zh, from_level, to_level) VALUES(?,?,?,?,?)",
@@ -285,8 +340,8 @@ def record(conn, snapshot: dict[str, int], today: str | None = None) -> int:
                 conn.execute("INSERT INTO mofa_changes(date, iso, area_zh, from_level, to_level) VALUES(?,?,?,?,?)",
                              (today, iso, area, None, lvl))
                 changes += 1
-            conn.execute("INSERT INTO mofa_levels(key, iso, area_zh, level, first_seen, last_seen) VALUES(?,?,?,?,?,?)",
-                         (key, iso, area, lvl, today, today))
+            conn.execute("INSERT INTO mofa_levels(key, iso, area_zh, level, url, first_seen, last_seen) VALUES(?,?,?,?,?,?,?)",
+                         (key, iso, area, lvl, urls.get(key) or None, today, today))
     for key, lvl in prev.items():
         if key not in snapshot and lvl is not None:
             iso, area = key.split("|", 1)
@@ -305,7 +360,7 @@ def load(conn) -> dict:
         return {"ok": False}
     rows, rss = raw
     b = build(rows, rss, name_resolver(conn), _mac(), C.load_json(C.web_data() / "countries.json", {}))
-    n = record(conn, b["snapshot"])
+    n = record(conn, b["snapshot"], urls=b["urls"])
     C.log.info("travel warnings: %d countries, %d unmapped, %d level changes", len(b["countries"]), len(b["unmapped"]), n)
     return {"ok": True, "countries": len(b["countries"]), "unmapped": len(b["unmapped"]), "changes": n}
 

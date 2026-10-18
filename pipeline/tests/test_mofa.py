@@ -80,3 +80,24 @@ def test_validate_warnings(tmp_path):
     doc["countries"]["KH"]["level"] = 7
     VAL.check_warnings(v, doc)
     assert v.errors
+
+
+def test_split_zh_en_mixed_area_names():
+    assert M.split_zh_en("蒙古 Mongolia (2026-10-14)") == ("蒙古", "Mongolia")
+    assert M.split_zh_en("泰國烏汶府(Ubon Ratchathani)及尖竹汶府(Chanthaburi) Ubon Ratchathani、Chanthaburi") == (
+        "泰國烏汶府(Ubon Ratchathani)及尖竹汶府(Chanthaburi)", "Ubon Ratchathani、Chanthaburi")
+    assert M.split_zh_en("西南省(包括Bakassi半島) Republic of Cameroon - Sud") == ("西南省(包括Bakassi半島)", "Republic of Cameroon - Sud")
+    assert M.split_zh_en("Cabo Delgado省 Cabo Delgado province") == ("Cabo Delgado省", "Cabo Delgado province")
+    assert M.split_zh_en("坦尚尼亞(Tanzania)南部三省區") == ("坦尚尼亞(Tanzania)南部三省區", "")
+
+
+def test_history_keeps_renamed_areas():
+    conn = _conn()
+    M.record(conn, {"TH|": 1, "TH|泰國烏汶府(": 3}, "2026-10-01")  # legacy rows: no url, name cut at '('
+    assert M.record(conn, {"TH|": 1, "TH|泰國烏汶府(Ubon)": 3}, "2026-10-02",
+                    urls={"TH|": "u0", "TH|泰國烏汶府(Ubon)": "u1"}) == 0
+    # same BOCA page, area text edited: still a rename; a level change on it is one change
+    assert M.record(conn, {"TH|": 1, "TH|烏汶府等七府": 4}, "2026-10-03",
+                    urls={"TH|": "u0", "TH|烏汶府等七府": "u1"}) == 1
+    rows = conn.execute("SELECT area_zh, from_level, to_level FROM mofa_changes").fetchall()
+    assert [tuple(r) for r in rows] == [("烏汶府等七府", 3, 4)]

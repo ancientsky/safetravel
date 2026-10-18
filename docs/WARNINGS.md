@@ -36,6 +36,8 @@ Names → ISO 3166-1 alpha-2, first match wins: `data/manual/boca_names.json` ov
 (`ISO|area` — area empty for the whole country). Each run compares the new snapshot: a different level appends
 `mofa_changes(date, iso, area_zh, from_level, to_level)`. The very first run only records a baseline (no changes).
 Keys that disappear are recorded as a change to `null` (warning withdrawn).
+An area whose name text changes but whose BOCA page (url) is the same is **renamed** in `mofa_levels`, not recorded as
+withdrawn + new (rows stored before the `url` column existed match when one area text is a prefix of the other).
 
 ## `web/data/warnings.json`
 

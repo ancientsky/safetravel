@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS airports_tdx (
 );
 
 CREATE TABLE IF NOT EXISTS mofa_levels (
-  key TEXT PRIMARY KEY, iso TEXT, area_zh TEXT, level INTEGER, first_seen TEXT, last_seen TEXT
+  key TEXT PRIMARY KEY, iso TEXT, area_zh TEXT, level INTEGER, url TEXT, first_seen TEXT, last_seen TEXT
 );
 
 CREATE TABLE IF NOT EXISTS mofa_changes (
@@ -95,6 +95,10 @@ def connect(path: Path | str | None = None) -> sqlite3.Connection:
     conn = sqlite3.connect(str(p))
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    # columns added after the first release of a table
+    if "url" not in {r["name"] for r in conn.execute("PRAGMA table_info(mofa_levels)")}:
+        conn.execute("ALTER TABLE mofa_levels ADD COLUMN url TEXT")
+        conn.commit()
     return conn
 
 
