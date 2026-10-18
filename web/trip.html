@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-41M+yJSuQlisk2d/KtCwIon0w9VNGtINUdo+cQsYY3o='; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>出國前旅遊安全查詢 · SafeTravel TW</title>
+  <meta name="description" content="出國前一次查清楚：外交部／陸委會旅遊警示與疾管署旅遊疫情建議並列顯示。MOFA / MAC travel warnings and Taiwan CDC travel health notices, side by side.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <!-- theme / language before first paint: external file, so the CSP needs no extra hash -->
+  <script src="js/trip-boot.js"></script>
+  <link rel="stylesheet" href="trip.css">
+  <script src="vendor/d3.min.js" defer></script>
+  <script src="vendor/topojson-client.min.js" defer></script>
+  <script type="module" src="js/trip.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#q" data-i18n="skip_to_search">跳至搜尋</a>
+
+  <header class="top">
+    <div class="wrap bar">
+      <a class="back" href="index.html" data-i18n-attr="title:back_to_radar_title">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        <span data-i18n="back_to_radar">全球旅遊疫情情報板</span>
+      </a>
+      <div class="toggles">
+        <button type="button" class="btn btn-tg lang-toggle" data-testid="lang-toggle" lang="en" data-i18n-attr="aria-label:lang_toggle_label;title:lang_toggle_label">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg>
+          <span class="lang-text" data-i18n="lang_toggle">EN</span>
+        </button>
+        <button type="button" class="btn btn-tg theme-toggle" data-testid="theme-toggle">
+          <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>
+          <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <span class="theme-text"></span>
+        </button>
+      </div>
+    </div>
+    <div class="wrap hero">
+      <p class="kicker" data-i18n="kicker">SafeTravel TW · 出發前檢查</p>
+      <h1 data-i18n="title">出國前旅遊安全查詢</h1>
+      <p class="lede" data-i18n="lede"></p>
+      <div class="pair" aria-hidden="true">
+        <span class="pair-item"><i class="pair-sw m"></i><span data-i18n="card_mofa_kicker"></span></span>
+        <span class="pair-vs">≠</span>
+        <span class="pair-item"><i class="pair-sw c"></i><span data-i18n="card_cdc_kicker"></span></span>
+      </div>
+
+      <div id="search" class="search" role="search">
+        <label class="search-label" for="q" data-i18n="search_label">查詢目的地</label>
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+          <input id="q" type="search" autocomplete="off" spellcheck="false" data-testid="search"
+                 role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="q-list" aria-describedby="q-hint"
+                 data-i18n-attr="placeholder:search_placeholder">
+          <ul id="q-list" class="search-list" role="listbox" data-i18n-attr="aria-label:search_label" hidden></ul>
+        </div>
+        <p id="q-hint" class="search-hint" data-i18n="search_hint">可輸入中文、英文或兩碼國碼</p>
+        <p id="q-status" class="sr-only" role="status" aria-live="polite"></p>
+      </div>
+
+      <dl id="stamps" class="stamps"></dl>
+      <nav class="jump" data-i18n-attr="aria-label:nav_label">
+        <a href="#map-sec" data-i18n="nav_map">地圖</a>
+        <a href="#changes" data-i18n="nav_changes">近期變動</a>
+        <a href="#all" data-i18n="nav_all">全部目的地</a>
+      </nav>
+    </div>
+  </header>
+
+  <div id="notices" class="wrap notices" role="alert"></div>
+
+  <main>
+    <section id="map-sec" class="wrap sec" aria-labelledby="map-h">
+      <div class="sec-head">
+        <h2 id="map-h" data-i18n="map_h">世界地圖</h2>
+        <div class="tabs" role="tablist" data-i18n-attr="aria-label:tabs_label">
+          <button type="button" role="tab" id="tab-mofa" class="tab" data-tab="mofa" aria-selected="true" aria-controls="map-panel" data-testid="tab-mofa">
+            <i class="tab-sw m" aria-hidden="true"></i><span data-i18n="tab_mofa">旅遊警示（外交部／陸委會）</span>
+          </button>
+          <button type="button" role="tab" id="tab-cdc" class="tab" data-tab="cdc" aria-selected="false" aria-controls="map-panel" tabindex="-1" data-testid="tab-cdc">
+            <i class="tab-sw c" aria-hidden="true"></i><span data-i18n="tab_cdc">疫情建議（疾管署）</span>
+          </button>
+        </div>
+      </div>
+      <div id="map-panel" role="tabpanel" aria-labelledby="tab-mofa">
+        <div id="map-box" class="map-box" data-tab="mofa" data-testid="map">
+          <svg id="tmap" class="tmap" role="img"></svg>
+          <p class="map-loading" data-i18n="map_loading">地圖載入中…</p>
+          <div id="tip" class="tip" role="tooltip" hidden></div>
+          <div class="zoom" role="group">
+            <button type="button" class="btn btn-icon z-in" data-i18n-attr="aria-label:zoom_in;title:zoom_in"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            <button type="button" class="btn btn-icon z-out" data-i18n-attr="aria-label:zoom_out;title:zoom_out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+            <button type="button" class="btn btn-icon z-reset" data-i18n-attr="aria-label:zoom_reset;title:zoom_reset"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+          </div>
+        </div>
+        <ul id="legend" class="legend" data-i18n-attr="aria-label:legend_label"></ul>
+        <p class="map-hint"><span data-i18n="map_hint"></span> <span class="hint-cdc" data-i18n="map_hint_cdc"></span></p>
+      </div>
+    </section>
+
+    <section id="card" class="wrap sec card" data-testid="card" aria-labelledby="card-title" hidden></section>
+
+    <section id="changes" class="wrap sec" aria-labelledby="chg-h">
+      <div class="sec-head">
+        <div>
+          <h2 id="chg-h" data-i18n="changes_h">近期變動</h2>
+          <p class="sec-sub" data-i18n="changes_sub"></p>
+        </div>
+      </div>
+      <div class="chg-grid">
+        <div class="chg-col">
+          <h3 data-i18n="changes_mofa_h">外交部燈號變動</h3>
+          <div class="chg-mofa"></div>
+        </div>
+        <div class="chg-col">
+          <h3 data-i18n="changes_recent_h">最近更新的警示</h3>
+          <p class="chg-col-sub" data-i18n="changes_recent_sub"></p>
+          <div class="chg-recent"></div>
+        </div>
+        <div class="chg-col">
+          <h3 data-i18n="changes_cdc_h">疾管署建議變動</h3>
+          <div class="chg-cdc"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="all" class="wrap sec" aria-labelledby="all-h" data-testid="table-section">
+      <div class="sec-head">
+        <div>
+          <h2 id="all-h" data-i18n="all_h">全部目的地一覽</h2>
+          <p class="sec-sub" data-i18n="all_sub"></p>
+        </div>
+        <div class="t-tools">
+          <button type="button" class="btn t-export" data-testid="export-csv">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg><span data-i18n="export_csv">匯出 CSV</span>
+          </button>
+          <button type="button" class="btn t-print">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M7 14h10v6H7z"/></svg><span data-i18n="print_table">列印</span>
+          </button>
+        </div>
+      </div>
+      <div class="filters"></div>
+      <p class="t-count" role="status" aria-live="polite"></p>
+      <div class="t-wrap">
+        <table class="dest-table" data-testid="dest-table" aria-labelledby="all-h">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+        <p class="t-empty muted" data-i18n="table_empty" hidden></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <h2 class="foot-h" data-i18n="foot_sources">資料來源</h2>
+      <ul class="foot-list">
+        <li><a href="https://www.boca.gov.tw/sp-trwa-list-1.html" target="_blank" rel="noopener noreferrer" data-i18n="foot_boca">外交部領事事務局 國外旅遊警示分級表</a></li>
+        <li><span class="foot-mac"></span><span class="foot-mac-note"></span></li>
+        <li><a href="https://www.cdc.gov.tw/" target="_blank" rel="noopener noreferrer" data-i18n="foot_cdc">衛生福利部疾病管制署 國際旅遊疫情建議</a></li>
+      </ul>
+      <p class="foot-disc" data-i18n="foot_disclaimer">非官方整理，請以各機關最新公告為準。</p>
+      <p><a href="index.html" data-i18n="foot_radar">回到全球旅遊疫情情報板</a></p>
+    </div>
+  </footer>
+  <noscript><p class="noscript">本頁需要啟用 JavaScript。This page needs JavaScript.</p></noscript>
+</body>
+</html>

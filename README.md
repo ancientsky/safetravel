@@ -27,6 +27,8 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 - **焦點輪播**：每 15 秒自動介紹一個國家；可切換「查看完整資訊」自動開啟國家面板，並以閱讀速度自動捲動。
 - **桃園機場航線雷達**：以當日桃園機場（TPE）出入境航點畫出動態航線。
 - **入境航班看板**（給機場檢疫站）：目前時間前後 60 分鐘內抵達的國際客機，可依機場與檢疫站（桃園 A、B＝第一航廈，C、D＝第二航廈）篩選，並顯示出發地國家的建議等級與主要疫病。
+- **旅遊警示圖層**：地圖可切換為外交部領事事務局「國外旅遊警示分級」（灰、黃、橙、紅；中國大陸、香港、澳門為陸委會燈號），評估治安、衝突、災害等整體安全，與疾管署的疫情建議分開呈現、不合併成單一分數；部分地區較高的國家以虛線標示。
+- **出國前旅遊安全查詢**（[`trip.html`](https://ancientsky.github.io/safetravel/trip.html)，給民眾與旅行社）：查詢目的地即可並列兩種官方分級、各地區警示與近期疫情；另有雙圖層世界地圖、近期變動、全部目的地表格（篩選、排序、匯出 CSV、列印）。預設淺色主題。
 - **疫區航線監測**：在地圖上顯示疫情城市的直飛航線網（目前有伊爾庫次克〔疑似鼠疫〕與金夏沙〔本迪布焦病毒 BDBV 伊波拉疫情〕），標出與桃園有直航、可能轉機來臺的航點，以及已通報輸出病例的航點。
 - **繁中／英文**、**深色（預設）／淺色主題**、可開關的**神秘音效**；資料更新後畫面會**自動重新載入**，適合長時間開著的展示螢幕。
 
@@ -38,11 +40,12 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 |---|---|
 | EN／中 | 切換語言 |
 | 入境航班 | 開關入境航班看板（預設關閉） |
+| 出國查詢 | 前往出國前旅遊安全查詢頁（`trip.html`） |
 | 疫區航線 | 開啟監測選單，用開關顯示／隱藏疫區直飛航線圖 |
 | 音效 | 開關音效（預設關閉；瀏覽器擋自動播放時，按鈕會出現提示點，點一下即可開啟） |
 | 月亮／太陽 | 切換深色／淺色主題 |
 
-**地圖操作**：滾輪縮放、拖曳平移、雙擊重設；按 `/` 跳到搜尋框，`Esc` 關閉國家面板。左上可依等級篩選；左下圖例旁的「航線」開關可關閉 TPE 航線動畫。
+**地圖操作**：滾輪縮放、拖曳平移、雙擊重設；按 `/` 跳到搜尋框，`Esc` 關閉國家面板。左上可切換「疫情建議・疾管署／旅遊警示・外交部」圖層並依等級篩選；左下圖例旁的「航線」開關可關閉 TPE 航線動畫。滑鼠提示與國家面板一律並列兩種分級；國家面板的「外交部旅遊警示」區塊可展開全文並連回領事事務局原文。
 
 **入境航班看板**
 
@@ -64,6 +67,8 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 | `…/safetravel/?arr=KHH` | 其他機場：`TSA` 松山、`KHH` 高雄、`RMQ` 臺中… |
 | `…/safetravel/?arr=TPE-C&big=1` | 同上，大字模式 |
 | `…/safetravel/?watch=irkutsk` | 開啟伊爾庫次克疫區航線圖（`kinshasa` 金夏沙；兩個都開：`?watch=irkutsk,kinshasa`） |
+| `…/safetravel/?layer=mofa` | 以外交部旅遊警示圖層開啟地圖（`cdc` 為疫情建議） |
+| `…/safetravel/trip.html#KH` | 出國前查詢頁，直接開啟某目的地資訊卡 |
 
 參數可以合併，例如 `?arr=TPE-C&big=1&watch=irkutsk`。
 
@@ -122,6 +127,8 @@ flowchart LR
 | 國際旅遊疫情建議等級（全歷史） | 疾管署 `CountryEpidLevel/ExportCSV`（完整網址見 [ARCHITECTURE.md](docs/ARCHITECTURE.md#data-sources)） |
 | 國際重要疫情資訊（約兩年） | 疾管署 `TravelEpidemic/ExportCSV` |
 | 桃園機場航線、全台入境航班 | [交通部 TDX 運輸資料流通服務](https://tdx.transportdata.tw/) FIDS API（`/v2/Air/FIDS/Airport/TPE`、`/v2/Air/FIDS/Airport/Arrival`） |
+| 國外旅遊警示分級 | [外交部領事事務局](https://www.boca.gov.tw/sp-trwa-list-1.html)列表頁與 RSS（每日兩次，見 [WARNINGS.md](docs/WARNINGS.md)） |
+| 中國大陸、香港、澳門旅遊警示 | [陸委會](https://www.mac.gov.tw/News.aspx?n=E0243AD02975213D&sms=EF1DC35EB9749B36)：網站有 Cloudflare 驗證，燈號以人工維護於 `data/manual/mac_warnings.json` |
 | 疫區直飛航線（伊爾庫次克、金夏沙） | [FlightConnections](https://www.flightconnections.com/)：直飛航點與每月航班數，整理於 `data/manual/watch/`（2026-10） |
 | 機場座標 | [OpenFlights `airports.dat`](https://openflights.org/data.html) |
 | 世界地圖、國家代碼與名稱 | [world-atlas](https://github.com/topojson/world-atlas)（50m／110m）、[world-countries](https://github.com/mledoze/countries) |
@@ -183,16 +190,18 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 - **Spotlight tour** that presents a country every 15 s, optionally opening the full panel and auto-scrolling it at reading pace.
 - **TPE route radar**: animated routes for today's Taoyuan Airport departures and arrivals.
 - **Inbound flights board** for airport quarantine stations: international passenger flights arriving within ±60 minutes, filtered by airport and checkpoint (Taoyuan A/B = Terminal 1, C/D = Terminal 2), with the origin country's advisory level and main diseases.
+- **Travel-warning layer**: switch the map to the MOFA (BOCA) travel warning levels (grey, yellow, orange, red; mainland China, Hong Kong and Macau use the MAC rating). They rate overall safety — crime, conflict, disasters — and are shown beside, never merged with, the CDC health advisories; countries rated higher in some areas get a dashed outline.
+- **Pre-trip safety check** ([`trip.html`](https://ancientsky.github.io/safetravel/trip.html), for travellers and travel agencies): search a destination to see both official ratings side by side, regional warnings and recent epidemic news; plus a two-layer world map, recent changes and an all-destinations table (filter, sort, CSV export, print). Light theme by default.
 - **Outbreak route watch**: the direct-flight networks of outbreak cities (currently Irkutsk — suspected plague — and Kinshasa — Bundibugyo virus (BDBV) Ebola), highlighting destinations that also fly to Taoyuan and destinations with a reported exported case.
 - Bilingual (zh-Hant default, English), dark (default) and light themes, optional ambient sound, and automatic reload when new data is published — built to run unattended on display screens.
 
 ### How to use
 
-- **Header buttons**: language · **Arrivals** (inbound board, off by default) · **Outbreak routes** (menu with one switch per watched city) · Sound · Theme.
-- **Map**: wheel to zoom, drag to pan, double-click to reset; `/` focuses search, `Esc` closes the panel; level filters top-left; the route radar switch bottom-left.
+- **Header buttons**: language · **Arrivals** (inbound board, off by default) · **Trip check** (`trip.html`) · **Outbreak routes** (menu with one switch per watched city) · Sound · Theme.
+- **Map**: wheel to zoom, drag to pan, double-click to reset; `/` focuses search, `Esc` closes the panel; layer switch (CDC health / MOFA safety) and level filters top-left; tooltips and the panel always show both ratings; the route radar switch bottom-left.
 - **Inbound board**: pick the airport and checkpoint; click a row to open the origin country; hover to highlight its route. *Auto-scroll* (on by default) glides through the list and pauses for 8 s after the mouse moves or 15 s after a touch/wheel/click — a parked cursor does not stop it. *Large* is for wall screens. Drag the title bar to float the board (position remembered per orientation); *Dock* restores it. Data refreshes every 10 minutes (every 30 minutes from 00:00 to 04:59 Taipei).
 - **Outbreak route watch**: Outbreak routes → switch on *Irkutsk IKT* and/or *Kinshasa FIH*. Line width shows monthly flights; cyan marks destinations with direct flights to Taoyuan; a red warning ring marks a reported exported case (Kinshasa → Nairobi); faint dashed lines are listed routes without scheduled flights this month. While a watch is on, the spotlight tour no longer moves the map.
-- **Deep links**: `#/country/CD` (country panel) · `?arr=TPE-C` (board for Taoyuan checkpoint C; `TPE-A`…`TPE-D`, or `TSA`, `KHH`, `RMQ`…) · `&big=1` (large type) · `?watch=irkutsk`, `?watch=kinshasa` or `?watch=irkutsk,kinshasa` (route watch). Parameters combine, e.g. `?arr=TPE-C&big=1&watch=irkutsk`.
+- **Deep links**: `#/country/CD` (country panel) · `?arr=TPE-C` (board for Taoyuan checkpoint C; `TPE-A`…`TPE-D`, or `TSA`, `KHH`, `RMQ`…) · `&big=1` (large type) · `?watch=irkutsk`, `?watch=kinshasa` or `?watch=irkutsk,kinshasa` (route watch) · `?layer=mofa` (travel-warning layer) · `trip.html#KH` (pre-trip page with a destination card). Parameters combine, e.g. `?arr=TPE-C&big=1&watch=irkutsk`.
 - **Wall screens**: in landscape the board docks left and the map shifts right, beside the country panel; in portrait it docks on top, the map refits below, the board narrows beside an open panel and spotlight zooms avoid it. New epidemic data reloads the page automatically; after a site code update, reload once by hand.
 
 ### Refresh schedule
@@ -211,7 +220,7 @@ See the diagram above: `pipeline/` (Python) fetches the sources, keeps history a
 
 ### Data sources
 
-TCDC travel advisory levels (`CountryEpidLevel/ExportCSV`) and international epidemic digests (`TravelEpidemic/ExportCSV`); [MOTC TDX](https://tdx.transportdata.tw/) FIDS API for TPE routes and Taiwan inbound flights; [FlightConnections](https://www.flightconnections.com/) direct destinations and monthly flights for the outbreak route watch (curated in `data/manual/watch/`); [OpenFlights](https://openflights.org/data.html) airport coordinates; [world-atlas](https://github.com/topojson/world-atlas) and [world-countries](https://github.com/mledoze/countries) geometry and names; [D3 v7](https://d3js.org/) and [topojson-client](https://github.com/topojson/topojson-client).
+TCDC travel advisory levels (`CountryEpidLevel/ExportCSV`) and international epidemic digests (`TravelEpidemic/ExportCSV`); [MOTC TDX](https://tdx.transportdata.tw/) FIDS API for TPE routes and Taiwan inbound flights; MOFA [BOCA travel warnings](https://www.boca.gov.tw/sp-trwa-list-1.html) (list page + RSS, twice a day; [WARNINGS.md](docs/WARNINGS.md)) and the [MAC](https://www.mac.gov.tw/News.aspx?n=E0243AD02975213D&sms=EF1DC35EB9749B36) rating for mainland China, Hong Kong and Macau (hand-maintained in `data/manual/mac_warnings.json`; the MAC site sits behind a Cloudflare challenge); [FlightConnections](https://www.flightconnections.com/) direct destinations and monthly flights for the outbreak route watch (curated in `data/manual/watch/`); [OpenFlights](https://openflights.org/data.html) airport coordinates; [world-atlas](https://github.com/topojson/world-atlas) and [world-countries](https://github.com/mledoze/countries) geometry and names; [D3 v7](https://d3js.org/) and [topojson-client](https://github.com/topojson/topojson-client).
 
 ### How advisory levels are computed
 

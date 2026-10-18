@@ -284,4 +284,6 @@ export default {
   footer_warnings: 'Travel warnings: ',
   footer_boca: 'MOFA BOCA',
   footer_mac: 'MAC',
+  trip_link: 'Trip check',
+  trip_link_title: 'Pre-trip safety check: MOFA travel warnings and CDC health advisories side by side',
 };

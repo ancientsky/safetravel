@@ -1275,7 +1275,7 @@ body.arr-open .flights-canvas { opacity: .35; }
 body.watch-on .flights-canvas { opacity: .4; }
 
 @media (max-width: 1180px) {
-  .watch-toggle span[data-i18n], .arr-toggle span[data-i18n] { display: none; }
+  .watch-toggle span[data-i18n], .arr-toggle span[data-i18n], .trip-link span[data-i18n] { display: none; }
 }
 @media (max-width: 760px) {
   .watch-menu { left: 8px !important; right: 8px; width: auto !important; max-height: 70vh; }
@@ -1436,3 +1436,7 @@ body.watch-on .flights-canvas { opacity: .4; }
   .seg-sub { display: none; }
   .toolbar .chips { flex: 1; min-width: 0; width: auto; }
 }
+
+/* link to the public pre-trip page (trip.html) */
+.trip-link { color: var(--fg); text-decoration: none; }
+@media (max-width: 1440px) { .trip-link span[data-i18n] { display: none; } } /* icon only: keeps the title row from wrapping */
