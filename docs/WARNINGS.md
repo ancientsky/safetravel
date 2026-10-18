@@ -91,3 +91,17 @@ Rules:
   lifted → `to: 0`), excluding global advisories, newest first.
 - `web/data/warnings-text.json`: `{ "<id>": "full plain text" }` for every BOCA item — lazy-loaded when a reader
   expands a warning. English UI shows the Chinese original with a note (BOCA publishes these in Chinese only).
+
+## On the map (`index.html`)
+
+- A **layer switch** in the toolbar (疫情建議 · 疾管署 / 旅遊警示 · 外交部) re-colours the map, the level chips, the legend
+  and the search badges. The choice is stored in `localStorage` (`safetravel.layer`); `?layer=mofa` (or `cdc`) deep-links it.
+  `warnings.json` is not critical: the CDC map renders without it and the switch stays disabled if it fails to load.
+- MOFA layer colours: `wl-1` grey · `wl-2` yellow · `wl-3` orange · `wl-4` red (CSS `--wl1..4`, both themes); the colour is
+  the **whole-country** level. A higher regional level (`max_level > level`) adds a dashed outline in that level's colour
+  (legend row 部分地區較高). The breathing danger outline follows the top level of the active layer (CDC L3 / MOFA red).
+- Tooltip and panel head always show **both** ratings side by side (active layer first), never a merged score.
+- The panel gets a travel-warning section (外交部旅遊警示 or 陸委會旅遊警示): level, update date, summary, every regional area
+  with its own level, a 「展開全文」 toggle that lazy-loads `warnings-text.json` once, the BOCA/MAC link (only `https`
+  `www.boca.gov.tw` / `www.mac.gov.tw` become links) and the reference-only note. MAC entries show the hand-check date.
+  In the MOFA layer this section comes first.

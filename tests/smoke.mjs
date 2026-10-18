@@ -264,6 +264,24 @@ async function run(browser) {
     return `${arcs} arcs`;
   });
 
+  // 11. Map layer switch: MOFA/MAC travel warnings re-colour the map and add a panel section
+  await check('travel-warning layer switch (MOFA/MAC)', async () => {
+    const mofa = page.locator('[data-testid="layer-switch"] .seg-mofa');
+    await page.waitForFunction(() => !document.querySelector('[data-testid="layer-switch"] .seg-mofa')?.disabled, null, { timeout: 8000, polling: 250 });
+    await mofa.click();
+    await page.waitForFunction(() => document.querySelectorAll('path.country.wl-4').length > 5, null, { timeout: 5000, polling: 250 });
+    const red = await page.locator('path.country.wl-4').count();
+    await page.evaluate(() => window.__safetravel.openCountry('CN'));
+    await page.waitForSelector('#panel .psec-wl', { timeout: 5000 });
+    const text = await page.locator('#panel .psec-wl').innerText();
+    if (!/陸委會|MAC/.test(text)) throw new Error('MAC section missing for CN');
+    await shot(page, '07-warnings.png');
+    await page.evaluate(() => window.__safetravel.closePanel());
+    await page.locator('[data-testid="layer-switch"] .seg-cdc').click();
+    await page.waitForFunction(() => !document.querySelector('path.country.wl-4'), null, { timeout: 4000 });
+    return `${red} red countries`;
+  });
+
 }
 
 function finish() {

@@ -1,6 +1,10 @@
 // Header HUD (clock, stat tiles, freshness), legend, and flight HUD.
-import { state, levelOf } from './state.js';
-import { t, fmtNum, fmtDateTime, fmtRelative, fmtDay, levelShort, getLang } from './i18n.js';
+import {
+  state, levelOf, warnLevel, warnPartial, mofaMode,
+} from './state.js';
+import {
+  t, fmtNum, fmtDateTime, fmtRelative, fmtDay, levelShort, getLang, wLevelShort,
+} from './i18n.js';
 import {
   esc, reducedMotion, todayTaipei, parseDay, finiteNum, $,
 } from './util.js';
@@ -107,8 +111,41 @@ export function renderFreshness(node) {
   node.title = gen ? fmtDateTime(gen) : '';
 }
 
+function flightLegend() {
+  return state.data.flights?.routes?.length ? `<ul class="legend-list legend-flights">
+      <li><span class="swatch-line out" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_out'))}</span></li>
+      <li><span class="swatch-line in" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_in'))}</span></li>
+    </ul>` : '';
+}
+
+function renderWarnLegend(node) {
+  const w = state.data.warnings?.countries || {};
+  const counts = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
+  let partial = 0;
+  for (const iso of Object.keys(w)) {
+    if (warnLevel(iso)) counts[warnLevel(iso)]++;
+    if (warnPartial(iso)) partial++;
+  }
+  const geoIds = Array.from(state.data.worldNames.keys()).filter((id) => /^[A-Z]{2}$/.test(id) && id !== 'TW');
+  counts[0] = geoIds.filter((id) => !warnLevel(id)).length;
+  const rows = [4, 3, 2, 1, 0].map((l) => `
+    <li><span class="swatch wl-${l}" aria-hidden="true"></span><span class="lg-name">${esc(l ? wLevelShort(l) : t('wl_legend_none'))}</span><b class="mono">${fmtNum(counts[l])}</b></li>`).join('');
+  node.innerHTML = `
+    <h2 class="legend-title">${esc(t('wl_legend_title'))}</h2>
+    <ul class="legend-list">${rows}
+      <li><span class="swatch swatch-part" aria-hidden="true"></span><span class="lg-name">${esc(t('wl_legend_partial'))}</span><b class="mono">${fmtNum(partial)}</b></li>
+      <li><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>
+    </ul>
+    ${flightLegend()}
+    <p class="legend-note">${esc(t('wl_legend_mac'))}</p>
+    <p class="legend-note">${esc(t('wl_legend_note'))}</p>
+    <p class="legend-hint">${esc(t('map_hint'))}</p>`;
+}
+
 export function renderLegend(node) {
   node.classList.remove('is-pending');
+  node.classList.toggle('is-mofa', mofaMode());
+  if (mofaMode()) { renderWarnLegend(node); return; }
   const c = state.data.alerts?.countries || {};
   const counts = { 0: 0, 1: 0, 2: 0, 3: 0 };
   for (const v of Object.values(c)) counts[v.max_level || 0]++;
@@ -122,10 +159,7 @@ export function renderLegend(node) {
     <ul class="legend-list">${rows}
       <li><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>
     </ul>
-    ${state.data.flights?.routes?.length ? `<ul class="legend-list legend-flights">
-      <li><span class="swatch-line out" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_out'))}</span></li>
-      <li><span class="swatch-line in" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_in'))}</span></li>
-    </ul>` : ''}
+    ${flightLegend()}
     ${unmapped ? `<p class="legend-note">${esc(t('legend_unmapped', { n: unmapped }))}</p>` : ''}
     <p class="legend-hint">${esc(t('map_hint'))}</p>`;
 }

@@ -1,8 +1,10 @@
-// Country detail panel: advisories, AI overview (typewriter), epidemic timeline.
-import { state, emit, levelOf, alertsOf, routesTo, groupAlerts } from './state.js';
+// Country detail panel: advisories, MOFA/MAC travel warning, AI overview (typewriter), epidemic timeline.
+import {
+  state, emit, levelOf, alertsOf, routesTo, groupAlerts, warningOf, warnLevel, warnPartial, mofaMode,
+} from './state.js';
 import {
   t, isEn, countryName, countryAltName, diseaseName, levelFull, levelShort, levelInstruction,
-  badge, fmtDay, fmtAge, fmtNum, pick,
+  badge, fmtDay, fmtAge, fmtNum, pick, wLevelShort, wLevelFull, wbadge,
 } from './i18n.js';
 import {
   esc, clean, reducedMotion, safeUrl, levelNum, $,
@@ -45,6 +47,40 @@ export function createPanel({ root, map }) {
       })
       .finally(() => { if (code === iso) fillDetails(); });
   }
+
+  // ---- lazy BOCA warning texts: data/warnings-text.json = { "<content id>": "full text" } (~370 KB) ----
+  let wtext = { status: 'idle', data: null };
+  function loadWarnText() {
+    if (wtext.status !== 'idle') return;
+    wtext = { status: 'loading', data: null };
+    fetch('data/warnings-text.json', { cache: 'no-cache' })
+      .then((res) => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+      .then((data) => { wtext = { status: 'ready', data: data || {} }; })
+      .catch(() => {
+        wtext = { status: 'error', data: null };
+        toast(t('error_load', { file: 'warnings-text.json' }));
+      })
+      .finally(fillWarnText);
+  }
+  function warnTextHtml(id) {
+    if (wtext.status === 'loading' || wtext.status === 'idle') return `<span class="tl-loading mono">${esc(t('panel_full_loading'))}</span>`;
+    const txt = wtext.data?.[id];
+    if (!txt) return `<p class="empty">—</p>`;
+    // paragraphs are newline-separated; render them as separate blocks
+    return `${isEn() ? `<p class="wl-zh-note">${esc(t('panel_wl_zh_only'))}</p>` : ''}<div class="wl-text" lang="zh-Hant">${String(txt).split(/\n+/).filter(Boolean).map((l) => `<p>${esc(l)}</p>`).join('')}</div>`;
+  }
+  function fillWarnText() {
+    body.querySelectorAll('details.wl-full[open] .wl-full-body[data-id]').forEach((el) => {
+      el.innerHTML = warnTextHtml(el.dataset.id);
+    });
+  }
+  // <details> toggle does not bubble: listen in the capture phase
+  body.addEventListener('toggle', (ev) => {
+    const d = ev.target;
+    if (!(d instanceof HTMLDetailsElement) || !d.classList.contains('wl-full') || !d.open) return;
+    if (wtext.status === 'idle') loadWarnText();
+    else fillWarnText();
+  }, true);
 
   /** Abort an in-flight full-text fetch when the panel switches to another country. */
   function abortOtherDetails(code) {
@@ -105,22 +141,46 @@ export function createPanel({ root, map }) {
       : `<span class="chip chip-auto">${esc(t('panel_auto_chip'))}</span>`;
   }
 
+  /** Both official ratings side by side (never merged): CDC health advisory | MOFA/MAC travel warning. */
+  function renderRates() {
+    if (!state.data.warnings) return '';
+    const lvl = levelNum(levelOf(iso));
+    const w = warningOf(iso);
+    const mac = w?.source === 'mac';
+    const wl = warnLevel(iso);
+    const part = warnPartial(iso);
+    const cdc = `<div class="rate${mofaMode() ? '' : ' is-active'}"><span class="rate-src">${esc(t('panel_cdc_head'))}</span>${badge(lvl, lvl ? levelShort(lvl) : t('level_short_0'), 'badge-sm')}</div>`;
+    const mofa = `<div class="rate${mofaMode() ? ' is-active' : ''}"><span class="rate-src">${esc(t('panel_wl_head', { src: t(mac ? 'tip_mac' : 'tip_mofa') }))}</span>${wbadge(wl, wLevelShort(wl, mac), 'badge-sm')}${part ? `<span class="rate-part">${esc(t('tip_wl_partial', { l: '' }))}${wbadge(part, wLevelShort(part), 'badge-xs')}</span>` : ''}</div>`;
+    return `<div class="panel-rates">${mofaMode() ? mofa + cdc : cdc + mofa}</div>`;
+  }
+
   function renderHead() {
     const lvl = levelNum(levelOf(iso));
     const flights = routesTo(iso);
     const dep = flights.reduce((s, r) => s + (r.departures || 0), 0);
     const items = state.byCountry.get(iso);
-    head.className = `panel-head lvl-${lvl}`;
+    const mofa = mofaMode();
+    const w = warningOf(iso);
+    const mac = w?.source === 'mac';
+    const wl = warnLevel(iso);
+    head.className = mofa ? `panel-head wl-${wl}` : `panel-head lvl-${lvl}`;
+    const big = mofa
+      ? wbadge(wl, wLevelShort(wl, mac), 'badge-lg')
+      : badge(lvl, lvl ? levelShort(lvl) : t('level_short_0'), 'badge-lg');
+    let instr = '';
+    if (mofa && wl) instr = `<p class="panel-instr wl-text-${wl}">${esc(wLevelFull(wl, mac))}</p>`;
+    else if (!mofa && lvl) instr = `<p class="panel-instr lvl-text-${lvl}">${esc(levelFull(lvl))} — ${esc(levelInstruction(lvl))}</p>`;
     head.innerHTML = `
-      <div class="panel-kicker"><span class="mono">ISO ${esc(iso)}</span><span class="sep">//</span><span>${esc(t('panel_max_level'))}</span></div>
+      <div class="panel-kicker"><span class="mono">ISO ${esc(iso)}</span><span class="sep">//</span><span>${esc(mofa ? t('wl_legend_title') : t('panel_max_level'))}</span></div>
       <div class="panel-title-row">
-        ${badge(lvl, lvl ? levelShort(lvl) : t('level_short_0'), 'badge-lg')}
+        ${big}
         <div class="panel-names">
           <h2 id="panel-title" tabindex="-1">${esc(countryName(iso))}</h2>
           <p class="panel-alt">${esc(countryAltName(iso))}</p>
         </div>
       </div>
-      ${lvl ? `<p class="panel-instr lvl-text-${lvl}">${esc(levelFull(lvl))} — ${esc(levelInstruction(lvl))}</p>` : ''}
+      ${instr}
+      ${renderRates()}
       <dl class="panel-stats">
         <div><dt>${esc(t('panel_stat_advisories'))}</dt><dd class="mono">${fmtNum(alertsOf(iso).length)}</dd></div>
         <div><dt>${esc(t('panel_stat_epidemics'))}</dt><dd class="mono">${items ? fmtNum(items.length) : state.epidemicsStatus === 'loading' ? '…' : state.epidemicsStatus === 'ready' ? '0' : '—'}</dd></div>
@@ -161,7 +221,9 @@ export function createPanel({ root, map }) {
         </li>`;
   }
 
-  function renderAdvisories() {
+  const secHead = (idx, key, extra = '') => `<h3 id="psec-${idx.toLowerCase()}"><span class="psec-idx mono">${idx}</span>${esc(t(key))}${extra}</h3>`;
+
+  function renderAdvisories(idx) {
     const list = alertsOf(iso);
     const groups = groupAlerts(iso);
     // global advisories applied to every country are already listed in section A; only unapplied ones need a note
@@ -176,15 +238,63 @@ export function createPanel({ root, map }) {
       }))}</p>`
       : '';
     return `
-      <section class="psec" aria-labelledby="psec-a">
-        <h3 id="psec-a"><span class="psec-idx mono">A</span>${esc(t('panel_sec_advisories'))}<span class="count mono">${fmtNum(groups.length)}</span></h3>
+      <section class="psec" aria-labelledby="psec-${idx.toLowerCase()}">
+        ${secHead(idx, 'panel_sec_advisories', `<span class="count mono">${fmtNum(groups.length)}</span>`)}
         ${list.length ? `<ol class="adv-list">${items}</ol>` : `<p class="empty">${esc(t('panel_no_advisory'))}</p>`}
         ${hidden ? `<button type="button" class="btn show-all-groups">${esc(t('panel_show_all', { n: groups.length }))}</button>` : ''}
         ${globalNote}
       </section>`;
   }
 
-  function renderAI() {
+  function wlArea(a) {
+    const name = clean(isEn() ? a.area_en || a.area_zh : a.area_zh);
+    const href = safeUrl(a.url, ['www.boca.gov.tw']);
+    return `
+          <li class="wl-area wl-${[1, 2, 3, 4].includes(+a.level) ? +a.level : 0}">
+            <div class="adv-top">${wbadge(a.level, wLevelShort(a.level))}${a.date ? `<time class="adv-age mono" datetime="${esc(a.date)}">${esc(fmtDay(a.date, 'short'))}</time>` : ''}</div>
+            <div class="wl-area-name"${isEn() && !a.area_en ? ' lang="zh-Hant"' : ''}>${esc(name)}</div>
+            ${a.summary_zh ? `<p class="wl-sum" lang="zh-Hant">${esc(clean(a.summary_zh))}</p>` : ''}
+            ${a.id ? `<details class="wl-full"><summary>${esc(t('panel_full_text'))}</summary><div class="wl-full-body" data-id="${esc(a.id)}"></div></details>` : ''}
+            ${href ? `<a class="tl-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(t('panel_wl_source'))} ↗</a>` : ''}
+          </li>`;
+  }
+
+  function renderWarning(idx) {
+    const w = warningOf(iso);
+    const mac = w?.source === 'mac';
+    const key = mac ? 'panel_sec_warning_mac' : 'panel_sec_warning';
+    if (!w) {
+      return `
+      <section class="psec psec-wl" aria-labelledby="psec-${idx.toLowerCase()}">
+        ${secHead(idx, key)}
+        <p class="empty">${esc(t('panel_wl_none'))}</p>
+        <p class="wl-note">${esc(t('panel_wl_note'))}</p>
+      </section>`;
+    }
+    const wl = warnLevel(iso);
+    const national = w.level != null;
+    const href = mac ? safeUrl(w.url, ['www.mac.gov.tw']) : safeUrl(w.url, ['www.boca.gov.tw']);
+    const sum = mac ? clean(isEn() ? w.summary_en || w.summary_zh : w.summary_zh) : clean(w.summary_zh);
+    const sumZh = !mac || !isEn() || !w.summary_en;
+    const areas = w.areas || [];
+    const main = national ? `
+        <div class="wl-main wl-${wl}">
+          <div class="adv-top">${wbadge(wl, wLevelFull(wl, mac))}${w.date ? `<span class="adv-meta">${esc(t(mac ? 'panel_wl_since' : 'panel_wl_updated', { date: fmtDay(w.date, 'short') }))}${mac ? '' : ` <time class="mono" datetime="${esc(w.date)}">${esc(fmtDay(w.date, 'short'))}</time>`}</span>` : ''}</div>
+          ${sum ? `<p class="wl-sum"${sumZh && isEn() ? ' lang="zh-Hant"' : ''}>${esc(sum)}</p>` : ''}
+          ${!mac && w.id ? `<details class="wl-full"><summary>${esc(t('panel_full_text'))}</summary><div class="wl-full-body" data-id="${esc(w.id)}"></div></details>` : ''}
+          ${href ? `<a class="tl-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(t(mac ? 'panel_wl_source_mac' : 'panel_wl_source'))} ↗</a>` : ''}
+          ${mac && w.confirmed ? `<p class="wl-confirmed mono">${esc(t('panel_wl_confirmed', { date: fmtDay(w.confirmed, 'short') }))}</p>` : ''}
+        </div>` : `<p class="empty">${esc(t('panel_wl_only_areas'))}</p>`;
+    return `
+      <section class="psec psec-wl" aria-labelledby="psec-${idx.toLowerCase()}">
+        ${secHead(idx, key, areas.length ? `<span class="count mono">${esc(t('panel_wl_areas', { n: areas.length }))}</span>` : '')}
+        ${main}
+        ${areas.length ? `<ol class="wl-areas">${areas.map(wlArea).join('')}</ol>` : ''}
+        <p class="wl-note">${esc(t('panel_wl_note'))}</p>
+      </section>`;
+  }
+
+  function renderAI(idx) {
     let inner;
     let chip = '';
     if (state.epidemicsStatus !== 'ready') {
@@ -202,8 +312,8 @@ export function createPanel({ root, map }) {
       }
     }
     return `
-      <section class="psec psec-ai" aria-labelledby="psec-b">
-        <h3 id="psec-b"><span class="psec-idx mono">B</span>${esc(t('panel_sec_ai'))}${chip}</h3>
+      <section class="psec psec-ai" aria-labelledby="psec-${idx.toLowerCase()}">
+        ${secHead(idx, 'panel_sec_ai', chip)}
         ${inner}
       </section>`;
   }
@@ -233,7 +343,7 @@ export function createPanel({ root, map }) {
     }).join('');
   }
 
-  function renderTimeline() {
+  function renderTimeline(idx) {
     let inner;
     if (state.epidemicsStatus !== 'ready') {
       inner = state.epidemicsStatus === 'error'
@@ -247,8 +357,8 @@ export function createPanel({ root, map }) {
     }
     const n = state.epidemicsStatus === 'ready' ? timelineItems().length : null;
     return `
-      <section class="psec psec-tl" aria-labelledby="psec-c">
-        <h3 id="psec-c"><span class="psec-idx mono">C</span>${esc(t('panel_sec_timeline'))}${n != null ? `<span class="count mono">${esc(t('panel_timeline_count', { n }))}</span>` : ''}</h3>
+      <section class="psec psec-tl" aria-labelledby="psec-${idx.toLowerCase()}">
+        ${secHead(idx, 'panel_sec_timeline', n != null ? `<span class="count mono">${esc(t('panel_timeline_count', { n }))}</span>` : '')}
         ${inner}
       </section>`;
   }
@@ -286,7 +396,11 @@ export function createPanel({ root, map }) {
       loadDetails(iso); // memoised per country; fills the "full text" toggles when it arrives
     }
     renderHead();
-    body.innerHTML = renderAdvisories() + renderAI() + renderTimeline();
+    // the active map layer's section comes first; letters follow the order
+    const secs = [renderAdvisories, renderAI, renderTimeline];
+    if (state.data.warnings) secs.splice(mofaMode() ? 0 : 1, 0, renderWarning);
+    body.innerHTML = secs.map((fn, i) => fn('ABCDE'[i])).join('');
+    if (wtext.status !== 'idle') fillWarnText();
     startTypewriter();
     const more = $('.more-btn', body);
     if (more) more.addEventListener('click', onMore);

@@ -14,7 +14,7 @@ import { createPanel } from './js/panel.js';
 import { createSpotlight } from './js/spotlight.js';
 import { createArrivals } from './js/arrivals.js';
 import { createWatch } from './js/watch.js';
-import { createSearch, renderFilterChips } from './js/search.js';
+import { createSearch, renderFilterChips, renderLayerSwitch } from './js/search.js';
 import {
   startClock, renderTiles, renderFreshness, renderLegend, renderFlightHud,
 } from './js/hud.js';
@@ -22,6 +22,14 @@ import {
 const LANG_KEY = 'safetravel.lang';
 const THEME_KEY = 'safetravel.theme';
 const FLIGHTS_KEY = 'safetravel.flights';
+const LAYER_KEY = 'safetravel.layer';
+
+/** Initial map layer: ?layer=mofa|cdc deep link, else the stored choice, else CDC. */
+function initialLayer() {
+  const q = new URLSearchParams(location.search).get('layer');
+  if (q === 'mofa' || q === 'cdc') return q;
+  return storageGet(LAYER_KEY) === 'mofa' ? 'mofa' : 'cdc';
+}
 
 /** epidemics.json via a worker (parse off the main thread, items streamed in batches). */
 function loadEpidemicsData() {
@@ -115,6 +123,7 @@ async function main() {
   state.lang = setLang(storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant');
   applyTheme(initialTheme());
   state.flightsOn = storageGet(FLIGHTS_KEY) !== 'off';
+  state.layer = initialLayer();
   bindData(state.data);
   applyStatic();
   document.documentElement.classList.remove('i18n-pending'); // see the inline script in index.html
@@ -141,6 +150,12 @@ async function main() {
   // tiny click for the UI toggles (language, theme, filters, routes, spotlight switches)
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-testid="lang-toggle"], [data-testid="theme-toggle"], .chip-filter, .fh-toggle, .switch, .arr-toggle, .arr-cp, .arr-big, .watch-toggle')) sound.play('click');
+  });
+
+  // MOFA/MAC travel warnings: not critical (the map works without them); fetched alongside.
+  const warningsP = getJSON('warnings.json').then((w) => { state.data.warnings = w; }, (err) => {
+    state.errors.push(String(err?.message || err));
+    if (state.layer === 'mofa') toast(t('error_load', { file: 'warnings.json' }));
   });
 
   // ---- critical data first ----
@@ -188,11 +203,35 @@ async function main() {
   renderLegend($('#legend'));
   renderFlightHud($('#flight-hud'));
   const chipsNode = $('#level-chips');
+  const layerNode = $('#layer-switch');
   const onFilter = () => {
     map.applyFilter();
     renderFilterChips(chipsNode, onFilter);
   };
   renderFilterChips(chipsNode, onFilter);
+  // Layer switch (CDC health advisories ↔ MOFA/MAC travel warnings): re-colours map, chips, legend, panel.
+  let search = null;
+  const applyLayer = () => {
+    document.documentElement.dataset.layer = state.layer;
+    renderLayerSwitch(layerNode, setLayer);
+    renderFilterChips(chipsNode, onFilter);
+    renderLegend($('#legend'));
+    if (state.data.world) map.applyLayer();
+    search?.refresh();
+    panel.refresh();
+  };
+  function setLayer(layer) {
+    state.layer = layer === 'mofa' ? 'mofa' : 'cdc';
+    storageSet(LAYER_KEY, state.layer);
+    const u = new URL(location.href);
+    if (u.searchParams.has('layer')) { // keep a shared ?layer= link in sync with the switch
+      u.searchParams.set('layer', state.layer);
+      history.replaceState(null, '', u);
+    }
+    applyLayer();
+  }
+  renderLayerSwitch(layerNode, setLayer);
+  window.__safetravel.setLayer = setLayer;
 
   // Let the HUD paint first; the map (one long d3 task) renders in the next frame on clean layout.
   await afterPaint();
@@ -208,7 +247,7 @@ async function main() {
     renderLegend($('#legend')); // level-0 count needs the world geometries
   }
 
-  const search = createSearch({ root: $('#search'), onPick: (iso) => openCountry(iso) });
+  search = createSearch({ root: $('#search'), onPick: (iso) => openCountry(iso) });
 
   // Inbound flights board for quarantine stations (off by default; ?arr=TPE-C deep link).
   const relayout = () => {
@@ -226,6 +265,12 @@ async function main() {
   const watch = createWatch({ button: $('[data-testid="watch-toggle"]'), menu: $('#watch-menu'), map });
   if (state.data.world) watch.init();
   window.__safetravel.watch = watch.debug;
+
+  // travel warnings arrive after (or with) the critical data: switch the layer on when they do
+  warningsP.then(() => {
+    if (state.data.warnings) applyLayer();
+    else renderLayerSwitch(layerNode, setLayer); // keeps the MOFA button disabled with a note
+  });
 
   if (state.data.world) {
     map.setDotsVisible(state.flightsOn);
@@ -256,6 +301,7 @@ async function main() {
     renderLegend($('#legend'));
     renderFlightHud($('#flight-hud'));
     renderFilterChips(chipsNode, onFilter);
+    renderLayerSwitch(layerNode, setLayer);
     map.relabel();
     search.refresh();
     panel.refresh();

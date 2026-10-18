@@ -1,6 +1,10 @@
-// SVG world map: advisory-level choropleth, hover/selection effects, zoom & fly-to.
-import { state, emit, levelOf, alertsOf, routesTo, groupAlerts } from './state.js';
-import { t, countryName, countryAltName, levelShort, badge, fmtNum } from './i18n.js';
+// SVG world map: advisory-level (or MOFA travel-warning) choropleth, hover/selection effects, zoom & fly-to.
+import {
+  state, emit, levelOf, alertsOf, routesTo, groupAlerts, warningOf, warnLevel, warnPartial, mofaMode,
+} from './state.js';
+import {
+  t, countryName, countryAltName, levelShort, badge, fmtNum, wLevelShort, wbadge,
+} from './i18n.js';
 import { showTip, moveTip, hideTip } from './tooltip.js';
 import { esc, clamp, reducedMotion } from './util.js';
 
@@ -96,9 +100,9 @@ export function createMap({ svgEl, onOpen, getInsets }) {
       state.data.worldNames.set(id, feature.properties?.name || id);
       out.push(feature);
     }
-    // Advisory countries without a polygon (small overseas territories) get a marker disc.
-    const alerts = state.data.alerts?.countries || {};
-    for (const iso of Object.keys(alerts)) {
+    // Advisory / travel-warning countries without a polygon (small overseas territories) get a marker disc.
+    const isos = new Set([...Object.keys(state.data.alerts?.countries || {}), ...Object.keys(state.data.warnings?.countries || {})]);
+    for (const iso of isos) {
       if (groups.has(iso)) continue;
       const c = state.data.countries?.[iso];
       if (!c || c.lat == null) continue;
@@ -112,20 +116,38 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     return out;
   }
 
+  /** Travel-warning label: "外交部 橙色避免前往" (+ "部分地區 紅色儘速離境"). */
+  function warnText(iso) {
+    const w = warningOf(iso);
+    if (!w) return '';
+    const mac = w.source === 'mac';
+    const part = warnPartial(iso);
+    return `${t(mac ? 'tip_mac' : 'tip_mofa')} ${wLevelShort(warnLevel(iso), mac)}${part ? ` · ${t('tip_wl_partial', { l: wLevelShort(part) })}` : ''}`;
+  }
+
   function labelFor(d) {
     const lvl = levelOf(d.id);
     const rows = alertsOf(d.id).length;
     const n = rows ? groupAlerts(d.id).length : 0;
-    return `${countryName(d.id)} — ${levelShort(lvl)}${n ? ` — ${t('tooltip_advisories', { n, rows })}` : ''}`;
+    const cdc = `${levelShort(lvl)}${n ? ` — ${t('tooltip_advisories', { n, rows })}` : ''}`;
+    const w = warnText(d.id);
+    return `${countryName(d.id)} — ${mofaMode() && w ? `${w} — ${t('tip_cdc')} ${cdc}` : `${cdc}${w ? ` — ${w}` : ''}`}`;
   }
 
+  /** Level of the active layer: CDC 0..3, or MOFA whole-country 0..4. */
+  const layerLevel = (iso) => (mofaMode() ? warnLevel(iso) : levelOf(iso));
+
   function classFor(d) {
-    const lvl = levelOf(d.id);
-    let c = `country lvl-${lvl}`;
+    const mofa = mofaMode();
+    const lvl = layerLevel(d.id);
+    const filter = mofa ? state.wfilter : state.filter;
+    let c = mofa ? `country wl-${lvl}` : `country lvl-${lvl}`;
+    const part = mofa ? warnPartial(d.id) : 0;
+    if (part) c += ` wl-part wl-part-${part}`;
     if (d.id === 'TW') c += ' home';
     if (d.marker) c += ' marker';
-    if (state.filter.size && !state.filter.has(lvl)) c += ' dim';
-    if (state.filter.size && state.filter.has(lvl)) c += ' lit';
+    if (filter.size && !filter.has(lvl)) c += ' dim';
+    if (filter.size && filter.has(lvl)) c += ' lit';
     if (d.id === selIso || d.id === spotIso) c += ' focus';
     return c;
   }
@@ -188,7 +210,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
       .attr('data-iso', (d) => d.id)
       .attr('class', classFor)
       .attr('role', 'button')
-      .attr('tabindex', (d) => (levelOf(d.id) > 0 || d.id === 'TW' ? 0 : -1))
+      .attr('tabindex', tabFor)
       .attr('aria-label', labelFor)
       .on('pointerenter', (ev, d) => hover(d, ev))
       .on('pointermove', (ev) => moveTip(ev.clientX, ev.clientY))
@@ -208,20 +230,42 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     redraw();
   }
 
+  function tabFor(d) {
+    return layerLevel(d.id) > 0 || warnPartial(d.id) || d.id === 'TW' ? 0 : -1;
+  }
+
+  /** Tooltip rows with both official ratings side by side (active layer first). */
+  function ratingRows(iso, n, rows) {
+    const lvl = levelOf(iso);
+    const cdc = `<div class="tip-rate"><span class="tip-src">${esc(t('tip_cdc'))}</span>${badge(lvl, lvl ? levelShort(lvl) : t('level_short_0'), 'badge-sm')}<span class="tip-rate-x">${esc(t('tooltip_advisories', { n, rows }))}</span></div>`;
+    const w = warningOf(iso);
+    let mofa = '';
+    if (w) {
+      const mac = w.source === 'mac';
+      const part = warnPartial(iso);
+      mofa = `<div class="tip-rate"><span class="tip-src">${esc(t(mac ? 'tip_mac' : 'tip_mofa'))}</span>${wbadge(warnLevel(iso), wLevelShort(warnLevel(iso), mac), 'badge-sm')}${part ? `<span class="tip-rate-x">${esc(t('tip_wl_partial', { l: '' }))}${wbadge(part, wLevelShort(part), 'badge-xs')}</span>` : ''}</div>`;
+    }
+    return mofaMode() ? mofa + cdc : cdc + mofa;
+  }
+
   function hover(d, ev) {
     const lvl = levelOf(d.id);
-    hoverOutline.attr('d', d._d).attr('class', `outline hover-outline lvl-${lvl}${d.id === 'TW' ? ' home' : ''}`).classed('on', true);
+    const hl = mofaMode() ? `wl-${warnLevel(d.id)}` : `lvl-${lvl}`;
+    hoverOutline.attr('d', d._d).attr('class', `outline hover-outline ${hl}${d.id === 'TW' ? ' home' : ''}`).classed('on', true);
     const rows = alertsOf(d.id).length;
     const n = rows ? groupAlerts(d.id).length : 0;
     const flights = routesTo(d.id);
     const dep = d3.sum(flights, (r) => r.departures);
     const arr = d3.sum(flights, (r) => r.arrivals);
     const home = d.id === 'TW';
+    const head = mofaMode() && warningOf(d.id)
+      ? wbadge(warnLevel(d.id), wLevelShort(warnLevel(d.id), warningOf(d.id).source === 'mac'))
+      : badge(lvl);
     showTip(`
-      <div class="tip-head">${badge(lvl)}<span class="tip-iso">${esc(d.id.length === 2 ? d.id : '')}</span></div>
+      <div class="tip-head">${head}<span class="tip-iso">${esc(d.id.length === 2 ? d.id : '')}</span></div>
       <div class="tip-name">${esc(countryName(d.id))}</div>
       <div class="tip-alt">${esc(countryAltName(d.id))}</div>
-      <div class="tip-row">${home ? esc(t('tooltip_home')) : esc(t('tooltip_advisories', { n, rows }))}</div>
+      ${home ? `<div class="tip-row">${esc(t('tooltip_home'))}</div>` : ratingRows(d.id, n, rows)}
       ${flights.length ? `<div class="tip-row tip-flights">✈ ${esc(t('tooltip_flights', { d: dep, a: arr }))}</div>` : ''}
       ${!home ? `<div class="tip-hint">${esc(t('tooltip_click'))}</div>` : ''}`, ev.clientX, ev.clientY);
     emit('map:hover', d.id);
@@ -232,8 +276,11 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     emit('map:hover', null);
   }
 
+  // Breathing outline on the top level of the active layer (CDC L3 / MOFA red).
   function renderDanger() {
-    const l3 = features.filter((f) => levelOf(f.id) === 3);
+    const mofa = mofaMode();
+    fxLayer.classList.toggle('is-mofa', mofa);
+    const l3 = features.filter((f) => (mofa ? warnLevel(f.id) === 4 : levelOf(f.id) === 3));
     const rows = l3.flatMap((f) => [{ f, halo: true }, { f, halo: false }]);
     dangerG.selectAll('path').data(rows).join('path')
       .attr('class', (r) => (r.halo ? 'halo' : null))
@@ -450,8 +497,22 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     if (countrySel) countrySel.attr('class', classFor);
   }
 
+  /** Re-colour after a layer switch or when the travel warnings arrive. */
+  function applyLayer() {
+    if (!countrySel) return;
+    // first arrival of warnings.json may add marker discs for small territories
+    const known = new Set(features.map((f) => f.id));
+    if (Object.keys(state.data.warnings?.countries || {}).some((iso) => !known.has(iso) && state.data.countries?.[iso]?.lat != null)) {
+      render();
+      return;
+    }
+    countrySel.attr('class', classFor).attr('tabindex', tabFor).attr('aria-label', labelFor);
+    svg.attr('aria-label', t(mofaMode() ? 'map_label_mofa' : 'map_label'));
+    renderDanger();
+  }
+
   function relabel() {
-    svg.attr('aria-label', t('map_label'));
+    svg.attr('aria-label', t(mofaMode() ? 'map_label_mofa' : 'map_label'));
     homeLabel.textContent = t('home_label');
     if (countrySel) countrySel.attr('aria-label', labelFor);
   }
@@ -480,6 +541,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     setSelected,
     setSpotlight,
     applyFilter,
+    applyLayer,
     relabel,
     renderDots,
     centroid,

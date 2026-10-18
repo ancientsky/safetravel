@@ -133,3 +133,24 @@ export function pick(item, base) {
   const env = clean(item[`${base}_en`]);
   return { text: env || zhv, fallback: !env || env === zhv };
 }
+
+// ---- MOFA / MAC travel warnings (separate 0..4 scale: grey, yellow, orange, red) ----
+const wlNum = (l) => { const n = Number(l); return Number.isInteger(n) && n >= 0 && n <= 4 ? n : 0; };
+/** Short name of a travel-warning level ("橙色避免前往" / "Orange"); MAC uses the colour only. */
+export function wLevelShort(level, mac = false) {
+  const n = wlNum(level);
+  if (mac && n) return t(`wl_mac_${n}`);
+  const L = data.warnings?.levels?.[n];
+  if (L) return lang === 'en' ? L.short_en : L.short_zh;
+  return t(`wl_short_${n}`);
+}
+export function wLevelFull(level, mac = false) {
+  const n = wlNum(level);
+  if (mac && n) return t(`wl_mac_full_${n}`);
+  const L = data.warnings?.levels?.[n];
+  if (L) return lang === 'en' ? L.en : L.zh;
+  return t(`wl_full_${n}`);
+}
+export function wbadge(level, text = wLevelShort(level), extra = '') {
+  return `<span class="badge wl-${wlNum(level)} ${esc(extra)}"><i aria-hidden="true"></i>${esc(text)}</span>`;
+}

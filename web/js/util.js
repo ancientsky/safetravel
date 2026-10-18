@@ -84,12 +84,14 @@ export function truncate(text, n) {
   return s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s;
 }
 
-/** Data-sourced links: only https Taiwan CDC pages may become an href; anything else → ''. */
-export function safeUrl(u) {
+/** Data-sourced links: only https Taiwan CDC pages (or exactly the given `hosts`) may become an href; anything else → ''. */
+export function safeUrl(u, hosts = null) {
   try {
     const x = new URL(String(u));
     const host = x.hostname.toLowerCase();
-    if (x.protocol === 'https:' && (host === 'cdc.gov.tw' || host.endsWith('.cdc.gov.tw'))) return x.href;
+    if (x.protocol !== 'https:') return '';
+    if (hosts) return hosts.includes(host) ? x.href : ''; // exact host allow-list (BOCA / MAC links)
+    if (host === 'cdc.gov.tw' || host.endsWith('.cdc.gov.tw')) return x.href;
   } catch { /* not a URL */ }
   return '';
 }

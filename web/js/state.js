@@ -6,12 +6,15 @@ export const state = {
   theme: 'dark',
   data: {
     alerts: null, meta: null, flights: null, world: null, countries: null, epidemics: null,
+    warnings: null, // MOFA (BOCA) / MAC travel warnings, loaded after the critical data
     worldNames: new Map(),
   },
   epidemicsStatus: 'idle', // idle | loading | ready | error
   byCountry: new Map(), // iso -> epidemic items (date desc)
   selected: null,
-  filter: new Set(), // levels to highlight; empty = all
+  filter: new Set(), // CDC levels to highlight; empty = all
+  layer: 'cdc', // map colouring: 'cdc' (CDC health advisories) | 'mofa' (MOFA/MAC travel warnings)
+  wfilter: new Set(), // travel-warning levels to highlight (MOFA layer); empty = all
   flightsOn: true,
   spotlight: { iso: null, playing: true },
   mapPinned: false, // true while an overlay owns the map view (outbreak route watch): the tour does not move the map
@@ -32,6 +35,22 @@ export function emit(type, detail) {
 export function levelOf(iso) {
   return levelNum(state.data.alerts?.countries?.[iso]?.max_level); // always 0..3
 }
+/** MOFA/MAC travel-warning entry of a country (null when none is published). */
+export function warningOf(iso) {
+  return state.data.warnings?.countries?.[iso] || null;
+}
+/** Whole-country travel-warning level, always 0..4 (0 = none issued / regional only). */
+export function warnLevel(iso) {
+  const l = Number(warningOf(iso)?.level);
+  return Number.isInteger(l) && l >= 0 && l <= 4 ? l : 0;
+}
+/** Highest level of a regional warning when it is above the whole-country level, else 0. */
+export function warnPartial(iso) {
+  const l = Number(warningOf(iso)?.max_level);
+  return Number.isInteger(l) && l > warnLevel(iso) && l <= 4 ? l : 0;
+}
+export const mofaMode = () => state.layer === 'mofa' && !!state.data.warnings;
+
 export function alertsOf(iso) {
   return state.data.alerts?.countries?.[iso]?.alerts || [];
 }
