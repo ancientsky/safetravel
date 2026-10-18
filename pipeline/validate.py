@@ -501,6 +501,37 @@ def check_watch(v: V, w):
             v.err(where, "totals do not match routes")
 
 
+def check_warnings(v: V, w):
+    """web/data/warnings.json (MOFA/MAC travel warnings, docs/WARNINGS.md), optional."""
+    if not v.keys("warnings.json", w, ["generated_at", "sources", "levels", "regions", "countries", "unmapped", "changes"]):
+        return
+    lv_ok = lambda x: x is None or (isinstance(x, int) and not isinstance(x, bool) and 0 <= x <= 4)
+    for iso, c in (w["countries"] or {}).items():
+        where = f"warnings.json.countries.{iso}"
+        v.pat(where, iso, ISO2, "country key")
+        if not v.keys(where, c, ["source", "region", "name_zh", "name_en", "level", "max_level", "date", "id", "url",
+                                 "summary_zh", "areas"], ["confirmed", "summary_en"]):
+            continue
+        if c["source"] not in ("mofa", "mac"):
+            v.err(where, f"source {c['source']!r}")
+        if not lv_ok(c["level"]) or not lv_ok(c["max_level"]):
+            v.err(where, f"level {c['level']!r} / max_level {c['max_level']!r} out of range")
+        elif c["level"] is not None and c["max_level"] is not None and c["level"] > c["max_level"]:
+            v.err(where, "level above max_level")
+        if c["url"] and not re.match(r"^https://www\.(boca|mac)\.gov\.tw/", c["url"]):
+            v.err(where, "url must point to boca.gov.tw or mac.gov.tw")
+        for j, a in enumerate(c["areas"] if isinstance(c["areas"], list) else []):
+            aw = f"{where}.areas[{j}]"
+            if v.keys(aw, a, ["area_zh", "area_en", "level", "date", "id", "url", "summary_zh"]) and not lv_ok(a["level"]):
+                v.err(aw, f"level {a['level']!r} out of range")
+    ch = w["changes"]
+    if v.keys("warnings.json.changes", ch, ["mofa", "cdc"]):
+        for k in ("mofa", "cdc"):
+            for j, x in enumerate(ch[k] if isinstance(ch[k], list) else []):
+                if not (isinstance(x, dict) and DATE.match(str(x.get("date", ""))) and lv_ok(x.get("from")) and lv_ok(x.get("to"))):
+                    v.err(f"warnings.json.changes.{k}[{j}]", "bad change entry")
+
+
 def validate_dir(d: Path) -> list[str]:
     d = Path(d)
     v = V()
@@ -519,6 +550,12 @@ def validate_dir(d: Path) -> list[str]:
         check_epidemics(v, data["epidemics"], data.get("alerts"))
     if "flights" in data:
         check_flights(v, data["flights"])
+    wn = d / "warnings.json"
+    if wn.exists():
+        try:
+            check_warnings(v, json.loads(wn.read_text(encoding="utf-8")))
+        except ValueError as e:
+            v.err("warnings.json", f"cannot parse: {e}")
     wp = d / "watch.json"
     if wp.exists():
         try:

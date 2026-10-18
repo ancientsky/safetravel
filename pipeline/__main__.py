@@ -59,6 +59,14 @@ def do_fetch(conn, only: str | None = None) -> dict:
                 db.set_source_state(conn, name, url=st["url"], fetched_at=st["fetched_at"], ok=1, reason=None)
             else:
                 db.set_source_state(conn, name, url=st["url"], ok=0, reason=st["reason"])
+    if only in (None, "boca"):
+        from . import mofa
+        st = mofa.fetch()
+        out["boca"] = st
+        if st["ok"]:
+            db.set_source_state(conn, "boca", url=st["url"], fetched_at=st["fetched_at"], ok=1, reason=None)
+        else:
+            db.set_source_state(conn, "boca", url=st["url"], ok=0, reason=st["reason"])
     if only in (None, "flights"):
         try:
             res = fetch.fetch_flights(cached_names=db.get_airport_names(conn))
@@ -169,6 +177,11 @@ def cmd_watch(args) -> int:
     return watch.main()
 
 
+def cmd_warnings(args) -> int:
+    from . import mofa
+    return mofa.main()
+
+
 def cmd_pending(args) -> int:
     from . import pending
     return pending.main(["--out", args.out, "--chunk", str(args.chunk), "--overview-batch", str(args.overview_batch)])
@@ -189,7 +202,7 @@ def main(argv=None) -> int:
     ai_args(p)
     p.set_defaults(fn=cmd_run)
     p = sub.add_parser("fetch")
-    p.add_argument("--only", choices=["cdc", "flights"])
+    p.add_argument("--only", choices=["cdc", "flights", "boca"])
     p.set_defaults(fn=cmd_fetch)
     sub.add_parser("load").set_defaults(fn=cmd_load)
     p = sub.add_parser("enrich")
@@ -213,6 +226,7 @@ def main(argv=None) -> int:
     p.add_argument("--cap", type=int, help="monthly call cap (default env ARRIVALS_MONTHLY_CAP or 4200)")
     p.add_argument("--force", action="store_true", help="skip the minimum-age rule (caps still apply)")
     p.set_defaults(fn=cmd_arrivals)
+    sub.add_parser("warnings", help="load + export MOFA/MAC travel warnings from data/raw/boca").set_defaults(fn=cmd_warnings)
     sub.add_parser("watch", help="rebuild web/data/watch.json (outbreak route watch)").set_defaults(fn=cmd_watch)
     p = sub.add_parser("pending", help="export untranslated digests / stale overviews for an external translator")
     p.add_argument("--out", required=True)

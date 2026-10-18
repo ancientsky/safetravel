@@ -1,0 +1,11 @@
+{
+  "_comment": "BOCA travel-warning country names that the automatic matching (countries.json, CDC CSV, country_names.json) does not resolve. Keys are the zh or English name printed in the BOCA list; values ISO 3166-1 alpha-2. Somaliland stays unmapped (no ISO code), as in the CDC data.",
+  "北馬利安納群島邦": "MP",
+  "諾埃羅共和國": "NR",
+  "巴勒斯坦": "PS",
+  "留尼旺": "RE",
+  "古拉索": "CW",
+  "荷屬沙巴": "BQ",
+  "荷屬聖佑達修斯": "BQ",
+  "聖巴瑟米": "BL"
+}

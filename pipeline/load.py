@@ -119,4 +119,9 @@ def load_all(conn) -> dict:
         out["epidemics"] = load_epidemics(conn, e)
     else:
         C.log.warning("missing %s", e)
+    try:  # MOFA/MAC travel warnings (docs/WARNINGS.md); never blocks the CDC data
+        from . import mofa
+        out["warnings"] = mofa.load(conn)
+    except Exception as ex:  # pragma: no cover
+        C.log.exception("travel warnings not loaded: %s", ex)
     return out

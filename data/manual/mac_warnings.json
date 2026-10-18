@@ -1,0 +1,25 @@
+{
+  "_comment": "Mainland China / Hong Kong / Macau travel warnings are issued by the Mainland Affairs Council (MAC), not by MOFA/BOCA. The MAC site sits behind a Cloudflare JavaScript challenge, so these entries are maintained by hand: update level, since, confirmed and the summaries when MAC announces a change.",
+  "source_url": "https://www.mac.gov.tw/News.aspx?n=E0243AD02975213D&sms=EF1DC35EB9749B36",
+  "confirmed": "2026-02-02",
+  "countries": {
+    "CN": {
+      "level": 3,
+      "since": "2024-06-27",
+      "summary_zh": "陸委會自 2024 年 6 月 27 日起將中國大陸旅遊警示調升為「橙色」燈號，建議國人避免非必要旅行（中共發布「懲獨 22 條」意見，嚴重威脅國人赴陸人身安全）。",
+      "summary_en": "Since 27 June 2024 the Mainland Affairs Council has rated mainland China Orange: avoid non-essential travel (following Beijing's \"22 guidelines\" on punishing Taiwan independence)."
+    },
+    "HK": {
+      "level": 3,
+      "since": "2024-06-27",
+      "summary_zh": "陸委會自 2024 年 6 月 27 日起將香港旅遊警示調升為「橙色」燈號；2026 年 2 月 2 日表示考量當地情勢、法令及執法趨勢，仍維持橙色，建議國人避免非必要旅行。",
+      "summary_en": "Orange since 27 June 2024; on 2 February 2026 the Mainland Affairs Council said Hong Kong remains Orange given local laws and enforcement trends: avoid non-essential travel."
+    },
+    "MO": {
+      "level": 3,
+      "since": "2024-06-27",
+      "summary_zh": "陸委會自 2024 年 6 月 27 日起將澳門旅遊警示調升為「橙色」燈號；2026 年 2 月 2 日表示仍維持橙色，建議國人避免非必要旅行。",
+      "summary_en": "Orange since 27 June 2024; on 2 February 2026 the Mainland Affairs Council said Macau remains Orange: avoid non-essential travel."
+    }
+  }
+}

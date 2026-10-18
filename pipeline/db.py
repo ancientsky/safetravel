@@ -63,6 +63,14 @@ CREATE TABLE IF NOT EXISTS airports_tdx (
   iata TEXT PRIMARY KEY, zh TEXT, en TEXT, country TEXT, updated TEXT
 );
 
+CREATE TABLE IF NOT EXISTS mofa_levels (
+  key TEXT PRIMARY KEY, iso TEXT, area_zh TEXT, level INTEGER, first_seen TEXT, last_seen TEXT
+);
+
+CREATE TABLE IF NOT EXISTS mofa_changes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, iso TEXT, area_zh TEXT, from_level INTEGER, to_level INTEGER
+);
+
 CREATE TABLE IF NOT EXISTS source_state (
   name TEXT PRIMARY KEY,                -- alerts | epidemics | flights
   url TEXT, fetched_at TEXT, rows INTEGER, date TEXT, ok INTEGER, reason TEXT

@@ -358,6 +358,11 @@ def export_all(conn, out_dir=None) -> dict:
     if flights is not None:
         C.write_json(out_dir / "flights.json", flights)
     C.write_json(out_dir / "meta.json", meta)
+    try:  # MOFA/MAC travel warnings (docs/WARNINGS.md); never blocks the main export
+        from . import mofa
+        mofa.export(conn, out_dir)
+    except Exception as e:  # pragma: no cover
+        C.log.exception("warnings.json not rebuilt: %s", e)
     try:  # outbreak route watch (static, hand-maintained input); never blocks the main export
         from . import watch
         watch.build(out_dir)
