@@ -18,34 +18,11 @@ jobs:
       - name: Download
         run: |
           set +e
-          mkdir -p data/raw/boca data/raw/mac
+          mkdir -p data/raw/boca
           UA='Mozilla/5.0 (compatible; SafeTravelTW/1.0; +https://ancientsky.github.io/safetravel/)'
           curl -sSL -m 60 -A "$UA" -o data/raw/boca/sp-trwa-rss-1.xml -w "boca %{http_code} %{size_download}\n" "https://www.boca.gov.tw/sp-trwa-rss-1.xml"
           curl -sSL -m 60 -A "$UA" -o data/raw/boca/sp-trwa-list-1.html -w "boca list %{http_code} %{size_download}\n" "https://www.boca.gov.tw/sp-trwa-list-1.html"
-          curl -sSL -m 60 -A "$UA" -o data/raw/mac/news.html -w "mac %{http_code} %{size_download} %{url_effective}\n" "https://www.mac.gov.tw/News.aspx?n=E0243AD02975213D&sms=EF1DC35EB9749B36"
-          python3 - <<'PY'
-          import re, html, urllib.parse
-          s = open('data/raw/mac/news.html', encoding='utf-8', errors='replace').read()
-          txt = html.unescape(re.sub(r'<[^>]+>', ' ', re.sub(r'<script.*?</script>|<style.*?</style>', ' ', s, flags=re.S)))
-          txt = re.sub(r'\s+', ' ', txt)
-          for kw in ('燈號', '旅遊警示', '紅色', '橙色', '黃色', '灰色'):
-              i = txt.find(kw); print('KW', kw, i, txt[max(0, i - 300): i + 700] if i >= 0 else '')
-          links = re.findall(r'href="([^"]*News_Content[^"]*)"[^>]*>(.*?)</a>', s, re.S)
-          print('content links', len(links))
-          seen = []
-          for href, label in links:
-              lab = re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', '', label))).strip()
-              u = urllib.parse.urljoin('https://www.mac.gov.tw/', html.unescape(href))
-              print('LINK', lab[:80], u)
-              if u not in seen: seen.append(u)
-          open('mac_links.txt', 'w').write('\n'.join(seen[:6]))
-          PY
-          n=0
-          while read -r u; do
-            [ -z "$u" ] && continue; n=$((n+1))
-            curl -sSL -m 60 -A "$UA" -o "data/raw/mac/item_$n.html" -w "mac item $n %{http_code} %{size_download}\n" "$u"
-          done < mac_links.txt
-          ls -la data/raw/boca data/raw/mac
+          ls -la data/raw/boca
       - name: Commit raw files
         env:
           GH_TOKEN: ${{ github.token }}
@@ -53,7 +30,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git add data/raw/boca data/raw/mac
+          git add data/raw/boca
           git commit -m "data: raw BOCA travel-warning list page (fixture)" || exit 0
           for i in 1 2 3; do git push origin HEAD:main && exit 0; git pull --rebase origin main; done
           exit 1
