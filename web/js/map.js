@@ -14,10 +14,29 @@ const topojson = window.topojson;
 // Pacific-centred so every TPE route draws without crossing the map edge.
 const ROTATE = [-155, 0];
 
+// Start-up work is cut into slices of about this many ms so no single task blocks input for long
+// (Lighthouse's mobile profile multiplies task times by 4: 4 × 10 ms stays under the 50 ms long-task line).
+const SLICE_MS = 10;
+const yieldTask = () => new Promise((resolve) => setTimeout(resolve, 0));
+/** Run fn over items, yielding to the event loop whenever a slice exceeds SLICE_MS. */
+async function sliced(items, fn) {
+  let t0 = performance.now();
+  for (const it of items) {
+    fn(it);
+    if (performance.now() - t0 > SLICE_MS) {
+      await yieldTask();
+      t0 = performance.now();
+    }
+  }
+}
+
 export function createMap({ svgEl, onOpen, getInsets }) {
   const svg = d3.select(svgEl);
   const projection = d3.geoNaturalEarth1().rotate(ROTATE).precision(0.3);
   const path = d3.geoPath(projection);
+  // Same projection at d3's fit reference (scale 150, translate 0): each feature's bounds there are measured once,
+  // so fitting the map to the window (start-up, every resize) no longer re-projects the whole world.
+  const fitPath = d3.geoPath(d3.geoNaturalEarth1().rotate(ROTATE).precision(0.3).scale(150).translate([0, 0]));
   let width = 0;
   let height = 0;
   let transform = d3.zoomIdentity;
@@ -85,11 +104,11 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   let spotIso = null;
   let selIso = null;
 
-  function buildFeatures(world) {
+  async function buildFeatures(world) {
     const geoms = world.objects.countries.geometries;
     const groups = d3.group(geoms, (g) => String(g.id));
     const out = [];
-    for (const [id, list] of groups) {
+    await sliced(groups, ([id, list]) => {
       let feature;
       if (list.length === 1) {
         feature = topojson.feature(world, list[0]);
@@ -99,11 +118,17 @@ export function createMap({ svgEl, onOpen, getInsets }) {
       feature.id = id;
       state.data.worldNames.set(id, feature.properties?.name || id);
       out.push(feature);
-    }
-    // Advisory / travel-warning countries without a polygon (small overseas territories) get a marker disc.
+    });
+    out.push(...markerFeatures(new Set(groups.keys())));
+    return out;
+  }
+
+  /** Advisory / travel-warning countries without a polygon (small overseas territories) get a marker disc. */
+  function markerFeatures(skip) {
     const isos = new Set([...Object.keys(state.data.alerts?.countries || {}), ...Object.keys(state.data.warnings?.countries || {})]);
+    const out = [];
     for (const iso of isos) {
-      if (groups.has(iso)) continue;
+      if (skip.has(iso)) continue;
       const c = state.data.countries?.[iso];
       if (!c || c.lat == null) continue;
       out.push({
@@ -111,9 +136,30 @@ export function createMap({ svgEl, onOpen, getInsets }) {
         geometry: d3.geoCircle().center([c.lon, c.lat]).radius(0.9)(),
       });
     }
-    // Draw markers last so they sit on top of neighbouring land.
-    out.sort((a, b) => (a.marker ? 1 : 0) - (b.marker ? 1 : 0));
-    return out;
+    return out; // appended after the polygons so markers sit on top of neighbouring land
+  }
+
+  /** Bounds of the land at the fit reference projection; per-feature bounds are cached on the feature. */
+  function landBounds() {
+    let x0 = Infinity; let y0 = Infinity; let x1 = -Infinity; let y1 = -Infinity;
+    for (const f of features) {
+      if (f.id === 'AQ') continue;
+      const b = f._b150 || (f._b150 = fitPath.bounds(f));
+      if (b[0][0] < x0) x0 = b[0][0];
+      if (b[0][1] < y0) y0 = b[0][1];
+      if (b[1][0] > x1) x1 = b[1][0];
+      if (b[1][1] > y1) y1 = b[1][1];
+    }
+    return [[x0, y0], [x1, y1]];
+  }
+
+  /** = projection.fitExtent(extent, land), from the cached reference bounds (d3-geo fit.js arithmetic). */
+  function fitExtent([[ex0, ey0], [ex1, ey1]]) {
+    const b = landBounds();
+    const w = ex1 - ex0;
+    const h = ey1 - ey0;
+    const k = Math.min(w / (b[1][0] - b[0][0]), h / (b[1][1] - b[0][1]));
+    projection.scale(150 * k).translate([ex0 + (w - k * (b[1][0] + b[0][0])) / 2, ey0 + (h - k * (b[1][1] + b[0][1])) / 2]);
   }
 
   /** Travel-warning label: "外交部 橙色避免前往" (+ "部分地區 紅色儘速離境"). */
@@ -165,12 +211,11 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     fxSvgs.forEach((s) => s.setAttribute('viewBox', `0 0 ${width} ${height}`));
     const narrow = width < 760;
     const ins = getInsets?.() || null;
-    const land = { type: 'FeatureCollection', features: features.filter((f) => f.id !== 'AQ') };
     if (narrow && ins) {
       // Portrait phones: fill the free band between overlays; the map is wider than the screen and pans.
       const top = Math.min(ins.top, height * 0.45);
       const bottom = Math.min(ins.bottom, height * 0.4);
-      projection.fitExtent([[-width * 0.7, top], [width * 1.7, Math.max(top + 160, height - bottom)]], land);
+      fitExtent([[-width * 0.7, top], [width * 1.7, Math.max(top + 160, height - bottom)]]);
       const home = projection([121, 23.7]);
       const [tx, ty] = projection.translate();
       projection.translate([tx + (width * 0.5 - home[0]), ty]); // centre on Taiwan
@@ -178,16 +223,16 @@ export function createMap({ svgEl, onOpen, getInsets }) {
       // wide screens: an optional docked overlay (arrivals board) reserves the left or top band
       const top = Math.max(Math.min(150, height * 0.17), Math.min(ins?.top || 0, height * 0.6));
       const left = 18 + Math.min(ins?.left || 0, width * 0.45);
-      projection.fitExtent([[left, top], [width - 18, height - 46]], land);
+      fitExtent([[left, top], [width - 18, height - 46]]);
     }
     centroidCache.clear();
     boundsCache.clear();
   }
 
-  function redraw() {
+  function redraw({ pathsReady = false } = {}) {
     sphere.attr('d', path);
     graticule.attr('d', path);
-    if (countrySel) countrySel.attr('d', (d) => (d._d = path(d)));
+    if (countrySel) countrySel.attr('d', (d) => (pathsReady && d._d != null ? d._d : (d._d = path(d))));
     homeXY = centroid('TW');
     homePin.hidden = !homeXY;
     const tw = byIso.get('TW');
@@ -199,19 +244,22 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     updateScaled();
   }
 
-  function render() {
-    features = buildFeatures(state.data.world);
-    features.forEach((f) => byIso.set(f.id, f));
-    fit();
+  /** Create the country paths (only new features get elements and handlers; attributes are set for all). */
+  function bindCountries() {
     countrySel = gCountries.selectAll('path.country')
       .data(features, (d) => d.id)
-      .join('path')
+      .join((enter) => enter.append('path').call(setupCountry))
+      .attr('class', classFor)
+      .attr('tabindex', tabFor)
+      .attr('aria-label', labelFor);
+  }
+
+  function setupCountry(sel) {
+    sel
       .attr('id', (d) => `c-${d.id}`)
       .attr('data-iso', (d) => d.id)
-      .attr('class', classFor)
+      .attr('d', (d) => d._d)
       .attr('role', 'button')
-      .attr('tabindex', tabFor)
-      .attr('aria-label', labelFor)
       .on('pointerenter', (ev, d) => hover(d, ev))
       .on('pointermove', (ev) => moveTip(ev.clientX, ev.clientY))
       .on('pointerleave', () => unhover())
@@ -227,7 +275,29 @@ export function createMap({ svgEl, onOpen, getInsets }) {
           onOpen(d.id);
         }
       });
-    redraw();
+  }
+
+  /** First render, cut into short tasks: features, reference bounds, fit, paths, then one DOM pass. */
+  async function render() {
+    features = await buildFeatures(state.data.world);
+    features.forEach((f) => byIso.set(f.id, f));
+    await sliced(features, (f) => { if (f.id !== 'AQ') f._b150 = fitPath.bounds(f); });
+    fit();
+    await sliced(features, (f) => { f._d = path(f); });
+    bindCountries();
+    redraw({ pathsReady: true });
+  }
+
+  /** Marker discs for countries that appear only in data loaded after the first render (travel warnings). */
+  function syncMarkers() {
+    const extra = markerFeatures(new Set(byIso.keys()));
+    if (!extra.length) return;
+    for (const f of extra) {
+      f._d = path(f);
+      features.push(f);
+      byIso.set(f.id, f);
+    }
+    bindCountries();
   }
 
   function tabFor(d) {
@@ -500,12 +570,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   /** Re-colour after a layer switch or when the travel warnings arrive. */
   function applyLayer() {
     if (!countrySel) return;
-    // first arrival of warnings.json may add marker discs for small territories
-    const known = new Set(features.map((f) => f.id));
-    if (Object.keys(state.data.warnings?.countries || {}).some((iso) => !known.has(iso) && state.data.countries?.[iso]?.lat != null)) {
-      render();
-      return;
-    }
+    syncMarkers(); // warnings.json arriving after the first render may add marker discs for small territories
     countrySel.attr('class', classFor).attr('tabindex', tabFor).attr('aria-label', labelFor);
     svg.attr('aria-label', t(mofaMode() ? 'map_label_mofa' : 'map_label'));
     renderDanger();
@@ -526,8 +591,8 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     resizeListeners.forEach((fn) => fn());
   }
 
-  function init() {
-    render();
+  async function init() {
+    await render();
     setExtent();
   }
 

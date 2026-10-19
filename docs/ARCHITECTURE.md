@@ -28,7 +28,7 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
 | `data/safetravel.db` | pipeline | SQLite. Source of truth for history + Gemini cache. Committed. |
 | `web/` | frontend | The static site served by GitHub Pages (root = `web/`) |
 | `web/data/` | pipeline export | JSON consumed by the browser. Overwritten every run. `epidemics.json` is a slim index; full texts are lazy-loaded from `web/data/epidemics/<ISO2>.json` (+ `_global.json`). `world.json` (50m) and `world-110m.json` (narrow screens) are built by `build_geo.py`. |
-| `web/vendor/` | npm (vendored) | `d3.min.js`, `topojson-client.min.js` — no CDN at runtime |
+| `web/vendor/` | npm (vendored, `npm run vendor`) | `d3.min.js` (only the d3 functions listed in `scripts/d3-entry.mjs`, bundled by esbuild; the Pages deploy runs `scripts/check-d3.mjs` and fails if `web/` calls a d3 function outside that list), `topojson-client.min.js` — no CDN at runtime |
 | `.github/workflows/` | ops | `update-data.yml` (cron) · `deploy-pages.yml` (on push to main, web/**) · `arrivals.yml` (arrivals board, external trigger) |
 | `docs/` | — | This file + `DATA_CONTRACT.md` + `ARRIVALS.md` (arrivals board spec) + `ARRIVALS_SETUP.md` (owner setup, zh-Hant) |
 

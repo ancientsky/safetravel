@@ -35,6 +35,8 @@ jobs:
         run: pip install --require-hashes -r pipeline/requirements.lock
       - name: Validate web/data before publishing
         run: python -m pipeline validate
+      - name: Check the vendored d3 subset covers every d3 call
+        run: node scripts/check-d3.mjs
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
         id: pages
         with:

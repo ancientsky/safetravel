@@ -453,7 +453,7 @@ export function createFlights({ canvas, map }) {
     sizeCanvas();
     readColors();
     build();
-    start();
+    setTimeout(start, 0); // first frame in its own task, not appended to the set-up work
   }
 
   return {

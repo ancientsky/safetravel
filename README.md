@@ -117,7 +117,7 @@ flowchart LR
 ```
 
 - **pipeline/**（Python）：`fetch` 抓資料 → `load` 寫入 SQLite（歷史與翻譯快取）→ `enrich`（選用 Gemini）→ `export` 輸出 `web/data/*.json`；`arrivals` 產生入境航班；`watch` 產生疫區航線；`validate` 依資料合約檢查所有輸出。
-- **web/**：無建置步驟的 ES modules，D3 v7 與 topojson-client 已 vendor 於 `web/vendor/`，以相對路徑部署在 `/safetravel/` 子路徑，CSP 限制只連自身網域。
+- **web/**：無建置步驟的 ES modules，D3 v7（只打包用到的函式，清單見 `scripts/d3-entry.mjs`）與 topojson-client 已 vendor 於 `web/vendor/`，以相對路徑部署在 `/safetravel/` 子路徑，CSP 限制只連自身網域。
 - 詳細設計：[ARCHITECTURE](docs/ARCHITECTURE.md) · 資料合約：[DATA_CONTRACT](docs/DATA_CONTRACT.md) · 入境航班設計：[ARRIVALS](docs/ARRIVALS.md) · 設定步驟：[ARRIVALS_SETUP](docs/ARRIVALS_SETUP.md) · 翻譯排程：[TRANSLATION_GUIDE](docs/TRANSLATION_GUIDE.md) · 維運：[OPERATIONS](docs/OPERATIONS.md)
 
 ### 資料來源
@@ -216,7 +216,7 @@ GitHub's own cron started runs 4.5–8.5 h late on this repository, so it was re
 
 ### Architecture
 
-See the diagram above: `pipeline/` (Python) fetches the sources, keeps history and the translation cache in SQLite (`data/safetravel.db`), exports `web/data/*.json` and validates them against [DATA_CONTRACT](docs/DATA_CONTRACT.md); `arrivals` and `watch` produce the inbound board and route-watch data. `web/` is build-free ES modules with D3 v7 and topojson-client vendored, served from the `/safetravel/` sub-path under a strict CSP. Details: [ARCHITECTURE](docs/ARCHITECTURE.md) · [ARRIVALS](docs/ARRIVALS.md) · [OPERATIONS](docs/OPERATIONS.md).
+See the diagram above: `pipeline/` (Python) fetches the sources, keeps history and the translation cache in SQLite (`data/safetravel.db`), exports `web/data/*.json` and validates them against [DATA_CONTRACT](docs/DATA_CONTRACT.md); `arrivals` and `watch` produce the inbound board and route-watch data. `web/` is build-free ES modules with D3 v7 (only the functions listed in `scripts/d3-entry.mjs`) and topojson-client vendored, served from the `/safetravel/` sub-path under a strict CSP. Details: [ARCHITECTURE](docs/ARCHITECTURE.md) · [ARRIVALS](docs/ARRIVALS.md) · [OPERATIONS](docs/OPERATIONS.md).
 
 ### Data sources
 

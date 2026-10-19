@@ -45,7 +45,9 @@ function loadEpidemicsData() {
     let data = null;
     worker.onmessage = ({ data: msg }) => {
       if (msg.type === 'meta') {
-        data = { ...msg.rest, items: [] };
+        data = { ...msg.rest, items: [], overviews: {} };
+      } else if (msg.type === 'overviews') {
+        for (const [iso, ov] of msg.overviews) data.overviews[iso] = ov;
       } else if (msg.type === 'items') {
         data.items.push(...msg.items);
       } else if (msg.type === 'done') {
@@ -242,7 +244,7 @@ async function main() {
     $('#map-error').textContent = t('error_map');
     toast(t('error_map'));
   } else {
-    map.init();
+    await map.init(); // sliced into short tasks (see map.js)
     mapRoot.classList.add('is-ready');
     renderLegend($('#legend')); // level-0 count needs the world geometries
   }
