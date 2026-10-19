@@ -1440,3 +1440,7 @@ body.watch-on .flights-canvas { opacity: .4; }
 /* link to the public pre-trip page (trip.html) */
 .trip-link { color: var(--fg); text-decoration: none; }
 @media (max-width: 1440px) { .trip-link span[data-i18n] { display: none; } } /* icon only: keeps the title row from wrapping */
+/* long English level names ("Level 4: Red – leave as soon as possible") + the date: wrap instead of overflowing */
+.psec-wl .adv-top { flex-wrap: wrap; row-gap: 4px; }
+.psec-wl .adv-top .adv-meta, .psec-wl .adv-top .adv-age { margin-left: auto; }
+.psec-wl .adv-top .badge { white-space: normal; max-width: 100%; }
