@@ -286,4 +286,5 @@ export default {
   footer_mac: 'MAC',
   trip_link: 'Trip check',
   trip_link_title: 'Pre-trip safety check: MOFA travel warnings and CDC health advisories side by side',
+  panel_wl_tr_note: 'BOCA publishes travel warnings in Chinese only; the English summaries here are unofficial AI translations. The full text is the Chinese original.',
 };

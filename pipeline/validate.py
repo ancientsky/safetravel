@@ -522,7 +522,7 @@ def check_warnings(v: V, w):
             v.err(where, "url must point to boca.gov.tw or mac.gov.tw")
         for j, a in enumerate(c["areas"] if isinstance(c["areas"], list) else []):
             aw = f"{where}.areas[{j}]"
-            if v.keys(aw, a, ["area_zh", "area_en", "level", "date", "id", "url", "summary_zh"]) and not lv_ok(a["level"]):
+            if v.keys(aw, a, ["area_zh", "area_en", "level", "date", "id", "url", "summary_zh"], ["summary_en"]) and not lv_ok(a["level"]):
                 v.err(aw, f"level {a['level']!r} out of range")
     ch = w["changes"]
     if v.keys("warnings.json.changes", ch, ["mofa", "cdc"]):

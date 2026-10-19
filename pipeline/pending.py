@@ -6,6 +6,7 @@ Writes:
   DIR/translations/in/chunk_NNN.json   untranslated epidemic digests (hash, id, date, headline, description, ...)
   DIR/overviews/in/countries_NN.json   countries whose 2-year item set changed since their stored overview
   DIR/diseases/in/names.json           disease names (zh) with no English name in the dictionary or the DB
+  DIR/warnings/in/chunk_NNN.json       MOFA (BOCA) travel-warning summaries / area names with no English yet
   DIR/README.txt                       the expected output format (what import_translations.py consumes)
 
 Exits 0 and prints JSON counts. The translator writes DIR/translations/out/*.json and DIR/overviews/out/*.json,
@@ -32,6 +33,9 @@ overviews/out/all.json : JSON object {ISO2: {"zh": str (2-3 sentences, <=120 cha
   covering every country listed in overviews/in/*.json.
 
 diseases/out/names.json : JSON object {zh: en} for every name in diseases/in/names.json (standard WHO English name).
+
+warnings/out/chunk_NNN.json : JSON list, one object per input item in the same order:
+  {"hash": <copied>, "kind": <copied>, "zh": <copied unchanged>, "en": str (English, no Chinese characters)}
 """
 
 
@@ -60,6 +64,11 @@ def pending_overviews(conn) -> list[dict]:
 def pending_diseases(conn) -> list[str]:
     from . import gemini
     return gemini.missing_diseases(conn, retry_limit=False)
+
+
+def pending_warnings(conn) -> list[dict]:
+    from . import mofa
+    return mofa.pending(conn)
 
 
 def main(argv=None) -> int:
@@ -95,10 +104,19 @@ def main(argv=None) -> int:
     if dis:
         (ddir / "names.json").write_text(json.dumps(dis, ensure_ascii=False, indent=0), encoding="utf-8")
 
+    warns = pending_warnings(conn)
+    wdir = out / "warnings" / "in"
+    wdir.mkdir(parents=True, exist_ok=True)
+    (out / "warnings" / "out").mkdir(parents=True, exist_ok=True)
+    for k in range(0, len(warns), a.chunk):
+        (wdir / f"chunk_{k // a.chunk:03d}.json").write_text(
+            json.dumps(warns[k:k + a.chunk], ensure_ascii=False, indent=0), encoding="utf-8")
+
     (out / "README.txt").write_text(README, encoding="utf-8")
     counts = {"translations": len(items), "translation_chunks": -(-len(items) // a.chunk) if items else 0,
               "overviews": len(ovs), "overview_files": -(-len(ovs) // a.overview_batch) if ovs else 0,
-              "diseases": len(dis)}
+              "diseases": len(dis),
+              "warnings": len(warns), "warning_chunks": -(-len(warns) // a.chunk) if warns else 0}
     print(json.dumps(counts))
     return 0
 

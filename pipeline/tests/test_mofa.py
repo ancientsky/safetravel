@@ -101,3 +101,21 @@ def test_history_keeps_renamed_areas():
                     urls={"TH|": "u0", "TH|烏汶府等七府": "u1"}) == 1
     rows = conn.execute("SELECT area_zh, from_level, to_level FROM mofa_changes").fetchall()
     assert [tuple(r) for r in rows] == [("烏汶府等七府", 3, 4)]
+
+
+def test_translations_fill_english_and_skip_bad_items():
+    conn = _conn()
+    countries = {"KH": {"source": "mofa", "summary_zh": "外交部提醒國人避免前往柬泰邊境。", "areas": [
+        {"area_zh": "柏威夏省", "area_en": "", "summary_zh": "邊境衝突。"}]},
+        "CN": {"source": "mac", "summary_zh": "陸委會燈號", "summary_en": "MAC rating", "areas": []}}
+    items = [{"hash": M.text_hash(zh), "kind": k, "zh": zh, "en": en} for k, zh, en in (
+        ("summary", "外交部提醒國人避免前往柬泰邊境。", "MOFA advises avoiding the Cambodia-Thailand border."),
+        ("area", "柏威夏省", "Preah Vihear Province"))]
+    items.append({"hash": M.text_hash("邊境衝突。"), "kind": "summary", "zh": "邊境衝突。", "en": "邊境 conflict"})  # CJK in en
+    items.append({"hash": "0" * 20, "kind": "summary", "zh": "不符", "en": "Mismatched hash"})
+    assert M.import_translations(conn, items, "test") == (2, 2)
+    assert M.apply_translations(conn, countries) == 1  # the area summary is still untranslated
+    kh = countries["KH"]
+    assert kh["summary_en"].startswith("MOFA advises")
+    assert kh["areas"][0]["area_en"] == "Preah Vihear Province" and "summary_en" not in kh["areas"][0]
+    assert countries["CN"]["summary_en"] == "MAC rating"  # MAC entries keep their own English

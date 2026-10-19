@@ -203,4 +203,5 @@ export default {
   foot_cdc: '衛生福利部疾病管制署 國際旅遊疫情建議',
   foot_disclaimer: '非官方整理，請以各機關最新公告為準。',
   foot_radar: '回到全球旅遊疫情情報板',
+  card_tr_label: '英文翻譯（非官方）',
 };

@@ -284,4 +284,5 @@ export default {
   footer_mac: '陸委會',
   trip_link: '出國查詢',
   trip_link_title: '出國前旅遊安全查詢：並列外交部旅遊警示與疾管署疫情建議（給民眾與旅行社）',
+  panel_wl_tr_note: '',
 };

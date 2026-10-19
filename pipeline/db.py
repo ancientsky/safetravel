@@ -67,6 +67,10 @@ CREATE TABLE IF NOT EXISTS mofa_levels (
   key TEXT PRIMARY KEY, iso TEXT, area_zh TEXT, level INTEGER, url TEXT, first_seen TEXT, last_seen TEXT
 );
 
+CREATE TABLE IF NOT EXISTS mofa_translations (  -- English for BOCA summaries / area names, keyed by sha1 of the zh text
+  hash TEXT PRIMARY KEY, kind TEXT, zh TEXT, en TEXT, model TEXT, created_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS mofa_changes (
   id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, iso TEXT, area_zh TEXT, from_level INTEGER, to_level INTEGER
 );

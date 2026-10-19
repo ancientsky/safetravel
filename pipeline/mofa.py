@@ -395,12 +395,82 @@ def cdc_changes(conn, since: date) -> list[dict]:
     return out
 
 
+# ---------------------------------------------------------------- English (BOCA publishes in Chinese only)
+def text_hash(zh: str) -> str:
+    return C.sha1("mofa", C.nfkc(zh))[:20]
+
+
+def _texts(countries: dict):
+    """(kind, zh, entry, field) for every BOCA text the English UI needs: summaries and area names without English."""
+    for c in countries.values():
+        if c.get("source") != "mofa":
+            continue
+        if c.get("summary_zh"):
+            yield "summary", c["summary_zh"], c, "summary_en", c
+        for a in c.get("areas") or []:
+            if a.get("summary_zh"):
+                yield "summary", a["summary_zh"], a, "summary_en", c
+            if a.get("area_zh") and not a.get("area_en"):
+                yield "area", a["area_zh"], a, "area_en", c
+
+
+def apply_translations(conn, countries: dict) -> int:
+    """Fill summary_en / area_en from mofa_translations; returns how many texts still lack English."""
+    tr = {r["hash"]: r["en"] for r in conn.execute("SELECT hash, en FROM mofa_translations")} if conn is not None else {}
+    missing = 0
+    for _kind, zh, entry, field, _c in _texts(countries):
+        en = tr.get(text_hash(zh))
+        if en:
+            entry[field] = en
+        else:
+            missing += 1
+    return missing
+
+
+def pending(conn) -> list[dict]:
+    """BOCA texts with no English yet, for the translation routine (python -m pipeline pending)."""
+    raw = read_raw()
+    if raw is None:
+        return []
+    rows, rss = raw
+    b = build(rows, rss, name_resolver(conn), _mac(), C.load_json(C.web_data() / "countries.json", {}))
+    done = {r["hash"] for r in conn.execute("SELECT hash FROM mofa_translations")}
+    out, seen = [], set()
+    for kind, zh, _entry, _field, c in _texts(b["countries"]):
+        h = text_hash(zh)
+        if h in done or h in seen:
+            continue
+        seen.add(h)
+        out.append({"hash": h, "kind": kind, "country_zh": c["name_zh"], "country_en": c["name_en"], "zh": zh})
+    return out
+
+
+def import_translations(conn, items: list[dict], model: str) -> tuple[int, int]:
+    """[{hash, kind, zh, en}] -> mofa_translations (en must contain no CJK; zh must hash to `hash`)."""
+    ok = skipped = 0
+    now = C.iso_ts()
+    for it in items:
+        zh, en = C.nfkc(it.get("zh")), C.nfkc(it.get("en"))
+        if not zh or not en or _CJK.search(en) or text_hash(zh) != it.get("hash"):
+            skipped += 1
+            continue
+        conn.execute("INSERT INTO mofa_translations(hash, kind, zh, en, model, created_at) VALUES(?,?,?,?,?,?)"
+                     " ON CONFLICT(hash) DO UPDATE SET en=excluded.en, model=excluded.model, created_at=excluded.created_at",
+                     (it["hash"], it.get("kind") or "", zh, en, model, now))
+        ok += 1
+    conn.commit()
+    return ok, skipped
+
+
 def export(conn, out_dir) -> dict | None:
     raw = read_raw()
     if raw is None:
         return None
     rows, rss = raw
     b = build(rows, rss, name_resolver(conn), _mac(), C.load_json(C.web_data() / "countries.json", {}))
+    untranslated = apply_translations(conn, b["countries"])
+    if untranslated:
+        C.log.info("travel warnings: %d BOCA texts without English yet (python -m pipeline pending)", untranslated)
     st = {r["name"]: dict(r) for r in conn.execute("SELECT * FROM source_state")} if conn is not None else {}
     since = C.today() - timedelta(days=CHANGE_DAYS)
     mofa_changes = [{"date": r["date"], "iso": r["iso"], "area_zh": r["area_zh"] or "", "from": r["from_level"], "to": r["to_level"]}

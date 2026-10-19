@@ -7,7 +7,7 @@ import {
 import { loadWarningsText, loadEpidemics, safeHref, mofaLv, cdcLv, dayAgo } from './trip-data.js';
 import { clean } from './util.js';
 
-const CDC_COUNTRY_URL = 'https://www.cdc.gov.tw/CountryEpidLevel/Index/NlUwZUNXcFVyb3BGa2tENHNYZXYxdz09';
+const CDC_COUNTRY_URL = 'https://www.cdc.gov.tw/InternationalEpidemicLevel/Index/NlUwZUNvckRWQ09CbDJkRVFjaExjUT09';
 const HAS_CJK = /[　-鿿＀-￯]/;
 const ZH = 'zh-Hant';
 
@@ -26,6 +26,17 @@ function zhText(text, cls = 'rate-sum') {
   return h('div', { class: cls },
     isEn() ? h('span', { class: 'zh-label', text: t('card_zh_only') }) : null,
     h('p', { lang: ZH, text }));
+}
+
+/** BOCA summary: English UI shows the translation (labelled unofficial) when there is one, else the Chinese original. */
+function bocaText(zh, en, cls = 'rate-sum') {
+  const e = clean(en);
+  if (isEn() && e && !HAS_CJK.test(e)) {
+    return h('div', { class: cls },
+      h('span', { class: 'zh-label', text: t('card_tr_label') }),
+      h('p', { text: e }));
+  }
+  return zh ? zhText(clean(zh), cls) : null;
 }
 
 /** <details> that lazy-loads the full BOCA text for item `id`. */
@@ -86,7 +97,7 @@ function mofaBlock(d, model) {
     else if (w.summary_zh) block.append(zhText(clean(w.summary_zh)));
     block.append(h('p', { class: 'rate-note', text: t('card_mac_manual') }));
   } else if (w.summary_zh) {
-    block.append(zhText(clean(w.summary_zh)));
+    block.append(bocaText(w.summary_zh, w.summary_en));
   }
   const more = fullText(w.id);
   if (more) block.append(more);
@@ -101,7 +112,7 @@ function mofaBlock(d, model) {
           mofaChip(alv ?? 0, { size: 'sm', full: true }),
           h('span', { class: 'area-name', lang: name.lang, text: name.text }),
           fmtDay(a.date) ? h('span', { class: 'area-date', text: fmtDay(a.date) }) : null),
-        a.summary_zh ? zhText(clean(a.summary_zh), 'area-sum') : null,
+        bocaText(a.summary_zh, a.summary_en, 'area-sum'),
         h('div', { class: 'area-links' }, fullText(a.id), safeHref(a.url) ? extLink(a.url, t('card_link_mofa')) : null)));
     }
     block.append(h('h4', { class: 'areas-h', text: t('card_area_n', { n: d.areas.length }) }), ul);

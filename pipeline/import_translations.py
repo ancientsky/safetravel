@@ -4,12 +4,15 @@ Usage:
   python pipeline/import_translations.py translations <dir-or-file.json> [--model NAME]
   python pipeline/import_translations.py overviews <file.json> [--model NAME]
   python pipeline/import_translations.py diseases <file.json> [--model NAME]
+  python pipeline/import_translations.py warnings <dir-or-file.json> [--model NAME]
 
 translations: JSON list (or a directory of JSON lists) of
   {"hash": <epidemics.content_hash>, "headline_en", "description_en", "summary_zh", "summary_en"}
 overviews: JSON object {ISO2: {"zh": ..., "en": ...}}; items_hash is computed from the current 2-year window
   exactly like the exporter does, so the pipeline will not regenerate them until the country's items change.
 diseases: JSON object {zh: en} stored in the disease_names table (data/manual/diseases.json still takes precedence).
+warnings: JSON list (or a directory of JSON lists) of {"hash", "kind", "zh", "en"} for MOFA (BOCA) travel-warning
+  summaries and area names (from `python -m pipeline pending`), stored in mofa_translations.
 """
 from __future__ import annotations
 
@@ -22,6 +25,8 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# run as a script, Python puts pipeline/ first on sys.path, where pipeline/http.py would shadow the stdlib `http`
+sys.path = [p for p in sys.path if Path(p or ".").resolve() != ROOT / "pipeline"]
 sys.path.insert(0, str(ROOT))
 
 from pipeline import common as C  # noqa: E402
@@ -107,7 +112,7 @@ def import_diseases(conn: sqlite3.Connection, data: dict, model: str) -> tuple[i
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("kind", choices=["translations", "overviews", "diseases"])
+    ap.add_argument("kind", choices=["translations", "overviews", "diseases", "warnings"])
     ap.add_argument("path")
     ap.add_argument("--model", default="batch-import")
     ap.add_argument("--db", default=str(ROOT / "data" / "safetravel.db"))
@@ -115,6 +120,10 @@ def main() -> None:
     conn = sqlite3.connect(a.db)
     if a.kind == "translations":
         ok, skipped = import_translations(conn, load_items(Path(a.path)), a.model)
+    elif a.kind == "warnings":
+        from pipeline import mofa
+        conn = db.connect(a.db)  # creates mofa_translations on databases older than the table
+        ok, skipped = mofa.import_translations(conn, load_items(Path(a.path)), a.model)
     elif a.kind == "diseases":
         ok, skipped = import_diseases(conn, json.loads(Path(a.path).read_text(encoding="utf-8")), a.model)
     else:

@@ -203,4 +203,5 @@ export default {
   foot_cdc: 'Taiwan Centers for Disease Control: international travel health notices',
   foot_disclaimer: 'Unofficial compilation; the latest notices of each agency prevail.',
   foot_radar: 'Back to the global travel health radar',
+  card_tr_label: 'Unofficial English translation · BOCA publishes in Chinese',
 };

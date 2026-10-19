@@ -246,6 +246,13 @@ export function createPanel({ root, map }) {
       </section>`;
   }
 
+  /** BOCA summary in the UI language: English translation when there is one, else the Chinese original. */
+  function wlSum(zh, en) {
+    const e = clean(en);
+    if (isEn() && e) return `<p class="wl-sum">${esc(e)}</p>`;
+    return zh ? `<p class="wl-sum" lang="zh-Hant">${esc(clean(zh))}</p>` : '';
+  }
+
   function wlArea(a) {
     const name = clean(isEn() ? a.area_en || a.area_zh : a.area_zh);
     const href = safeUrl(a.url, ['www.boca.gov.tw']);
@@ -253,7 +260,7 @@ export function createPanel({ root, map }) {
           <li class="wl-area wl-${[1, 2, 3, 4].includes(+a.level) ? +a.level : 0}">
             <div class="adv-top">${wbadge(a.level, wLevelShort(a.level))}${a.date ? `<time class="adv-age mono" datetime="${esc(a.date)}">${esc(fmtDay(a.date, 'short'))}</time>` : ''}</div>
             <div class="wl-area-name"${isEn() && !a.area_en ? ' lang="zh-Hant"' : ''}>${esc(name)}</div>
-            ${a.summary_zh ? `<p class="wl-sum" lang="zh-Hant">${esc(clean(a.summary_zh))}</p>` : ''}
+            ${wlSum(a.summary_zh, a.summary_en)}
             ${a.id ? `<details class="wl-full"><summary>${esc(t('panel_full_text'))}</summary><div class="wl-full-body" data-id="${esc(a.id)}"></div></details>` : ''}
             ${href ? `<a class="tl-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(t('panel_wl_source'))} ↗</a>` : ''}
           </li>`;
@@ -274,13 +281,11 @@ export function createPanel({ root, map }) {
     const wl = warnLevel(iso);
     const national = w.level != null;
     const href = mac ? safeUrl(w.url, ['www.mac.gov.tw']) : safeUrl(w.url, ['www.boca.gov.tw']);
-    const sum = mac ? clean(isEn() ? w.summary_en || w.summary_zh : w.summary_zh) : clean(w.summary_zh);
-    const sumZh = !mac || !isEn() || !w.summary_en;
     const areas = w.areas || [];
     const main = national ? `
         <div class="wl-main wl-${wl}">
           <div class="adv-top">${wbadge(wl, wLevelFull(wl, mac))}${w.date ? `<span class="adv-meta">${esc(t(mac ? 'panel_wl_since' : 'panel_wl_updated', { date: fmtDay(w.date, 'short') }))}${mac ? '' : ` <time class="mono" datetime="${esc(w.date)}">${esc(fmtDay(w.date, 'short'))}</time>`}</span>` : ''}</div>
-          ${sum ? `<p class="wl-sum"${sumZh && isEn() ? ' lang="zh-Hant"' : ''}>${esc(sum)}</p>` : ''}
+          ${wlSum(w.summary_zh, w.summary_en)}
           ${!mac && w.id ? `<details class="wl-full"><summary>${esc(t('panel_full_text'))}</summary><div class="wl-full-body" data-id="${esc(w.id)}"></div></details>` : ''}
           ${href ? `<a class="tl-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(t(mac ? 'panel_wl_source_mac' : 'panel_wl_source'))} ↗</a>` : ''}
           ${mac && w.confirmed ? `<p class="wl-confirmed mono">${esc(t('panel_wl_confirmed', { date: fmtDay(w.confirmed, 'short') }))}</p>` : ''}
@@ -290,6 +295,7 @@ export function createPanel({ root, map }) {
         ${secHead(idx, key, areas.length ? `<span class="count mono">${esc(t('panel_wl_areas', { n: areas.length }))}</span>` : '')}
         ${main}
         ${areas.length ? `<ol class="wl-areas">${areas.map(wlArea).join('')}</ol>` : ''}
+        ${isEn() && !mac ? `<p class="wl-note">${esc(t('panel_wl_tr_note'))}</p>` : ''}
         <p class="wl-note">${esc(t('panel_wl_note'))}</p>
       </section>`;
   }

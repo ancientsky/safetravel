@@ -13,7 +13,7 @@ python -m pip install -q -r pipeline/requirements.txt   # same interpreter that 
 rm -rf /tmp/pend && python -m pipeline pending --out /tmp/pend      # prints JSON counts
 ```
 
-If `translations`, `overviews` and `diseases` are all 0: stop, nothing to do.
+If `translations`, `overviews`, `diseases` and `warnings` are all 0: stop, nothing to do.
 
 1. **Translations** — for each `/tmp/pend/translations/in/chunk_NNN.json`, produce `/tmp/pend/translations/out/chunk_NNN.json`
    (JSON list, one object per input item, same order) with keys
@@ -27,23 +27,29 @@ If `translations`, `overviews` and `diseases` are all 0: stop, nothing to do.
    WHO / US CDC English name in a short tag form (e.g. `沙門氏菌感染症` → `Salmonellosis`, `急性病毒性A型肝炎` →
    `Acute hepatitis A`, `流感併發重症` → `Severe complicated influenza`). Do this yourself (the list is short).
    No Chinese characters in the English values.
-4. **Validate** every output: parses as JSON, same count and hash order as the input, no empty field,
-   `summary_zh` ≤ 40 chars, `summary_en` ≤ 30 words, no Kangxi-radical characters (U+2F00–U+2FD5, U+2E80–U+2EF3).
-5. **Import, export, verify**
+4. **Travel warnings** — for each `/tmp/pend/warnings/in/chunk_NNN.json` (MOFA/BOCA 國外旅遊警示 summaries and area
+   names, Chinese only at the source), produce `/tmp/pend/warnings/out/chunk_NNN.json`: JSON list, one object per input
+   item in the same order, `{"hash", "kind", "zh"}` copied unchanged plus `"en"`, following the **travel-warning rules**
+   below. Delegate to Haiku sub-agents, at most 6 chunks per agent.
+5. **Validate** every output: parses as JSON, same count and hash order as the input, no empty field,
+   `summary_zh` ≤ 40 chars, `summary_en` ≤ 30 words, no Kangxi-radical characters (U+2F00–U+2FD5, U+2E80–U+2EF3);
+   travel-warning `en` has no Chinese characters and `zh` is byte-identical to the input (the importer re-hashes it).
+6. **Import, export, verify**
    ```bash
    python pipeline/import_translations.py translations /tmp/pend/translations/out --model claude-haiku-routine
    python pipeline/import_translations.py overviews /tmp/pend/overviews/out/all.json --model claude-sonnet-routine
    [ -f /tmp/pend/diseases/out/names.json ] && python pipeline/import_translations.py diseases /tmp/pend/diseases/out/names.json --model claude-routine
+   python pipeline/import_translations.py warnings /tmp/pend/warnings/out --model claude-haiku-routine
    python -m pipeline export && python -m pipeline validate
    ```
-6. **Commit and push** (`data/safetravel.db`, `web/data/`):
+7. **Commit and push** (`data/safetravel.db`, `web/data/`):
    ```bash
    git -c user.name=ancientsky -c user.email=7279958+ancientsky@users.noreply.github.com \
        commit -am "data: translate N digests, refresh M overviews, name K diseases" && git push origin main
    ```
    On a non-fast-forward rejection (`data/safetravel.db` is binary and also written by the Actions workflow, so a rebase
    never merges it meaningfully): `git pull --rebase -X theirs origin main`, then **redo the whole import**: re-run
-   `import_translations.py` for every kind (translations, overviews, diseases), `python -m pipeline export`,
+   `import_translations.py` for every kind (translations, overviews, diseases, warnings), `python -m pipeline export`,
    `python -m pipeline validate`, commit the result, and only then push again. Never push an export that was not
    validated after the rebase. Up to 3 attempts.
    Pushing `web/**` triggers the Pages deploy automatically; that workflow runs `python -m pipeline validate` first and
@@ -74,3 +80,17 @@ If `translations`, `overviews` and `diseases` are all 0: stop, nothing to do.
   notable event with month and year. Mention the notice count naturally ("近兩年共 23 則疫情通報" / "23 notices in the past two years").
 - Strictly from the notices: no invented facts, no medical advice. When notices are regional or global roundups that
   merely mention the country, say so instead of attributing figures to it.
+
+## Travel-warning rules (MOFA / BOCA)
+
+- Input per item: `kind` (`summary` = first paragraph of a warning, `area` = name of a region with its own level),
+  `country_zh`, `country_en` (context only) and `zh`.
+- `summary`: faithful, complete English in a neutral consular-advice register ("MOFA advises Taiwanese nationals to…").
+  Keep every date, number, place, agency and contact detail (phone numbers, URLs, LINE IDs) exactly; never add, soften
+  or omit advice. 國人 = Taiwanese nationals / travellers; 外交部 = MOFA; 駐處 / 代表處 = the Taiwan representative office;
+  急難救助 = emergency assistance. A trailing "…" (cut at 220 characters) stays as "…".
+- `area`: an English place-name phrase, not a sentence: `與利比亞及蘇丹邊境` → `Borders with Libya and Sudan`,
+  `加拿大緬尼托巴省` → `Manitoba, Canada`. Use standard English place names (romanised official names where no
+  English exponym exists).
+- Country names in standard short English form (`data/manual/country_names.json`); no Chinese characters in `en`.
+
