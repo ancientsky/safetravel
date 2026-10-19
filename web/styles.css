@@ -1444,3 +1444,14 @@ body.watch-on .flights-canvas { opacity: .4; }
 .psec-wl .adv-top { flex-wrap: wrap; row-gap: 4px; }
 .psec-wl .adv-top .adv-meta, .psec-wl .adv-top .adv-age { margin-left: auto; }
 .psec-wl .adv-top .badge { white-space: normal; max-width: 100%; }
+
+/* phones: six header buttons + the clock must fit beside the logo */
+@media (max-width: 480px) {
+  .hud-right { gap: 4px; }
+  .hud-right .btn-icon { min-width: 32px; padding: 0 6px; }
+  .clock { padding: 0 4px; }
+  [data-testid="lang-toggle"] svg { display: none; } /* "EN" / "中" alone is clear enough */
+}
+@media (max-width: 380px) {
+  .brand-logo { display: none; }
+}
