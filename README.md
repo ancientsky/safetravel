@@ -9,6 +9,8 @@
 | ![國家面板：剛果民主共和國](docs/screenshots/panel-cd-zh.jpg) | ![入境航班看板](docs/screenshots/arrivals-zh.jpg) |
 | **疫區航線監測 / Outbreak route watch** | **淺色主題（英文）/ Light theme (English)** |
 | ![伊爾庫次克直飛航線](docs/screenshots/watch-irkutsk-zh.jpg) | ![Light theme, English](docs/screenshots/light-en.jpg) |
+| **旅遊警示圖層 / Travel-warning layer** | **出國前旅遊安全查詢 / Pre-trip safety check** |
+| ![外交部旅遊警示圖層：柬埔寨](docs/screenshots/warnings-kh-zh.jpg) | ![trip.html 目的地資訊卡：柬埔寨](docs/screenshots/trip-card-zh.jpg) |
 
 | 直式牆面螢幕 / Portrait wall screen | 手機 / Phone |
 |---|---|
@@ -20,14 +22,14 @@
 
 ### 這是什麼
 
-SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病管制署（疾管署）的「國際旅遊疫情建議等級」與「國際重要疫情資訊」，結合交通部 TDX 的即時航班資料，整理成一張可互動的世界地圖：
+SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病管制署（疾管署）的「國際旅遊疫情建議等級」與「國際重要疫情資訊」、外交部領事事務局的「國外旅遊警示分級」（中國大陸、香港、澳門為陸委會燈號），結合交通部 TDX 的即時航班資料，整理成一張可互動的世界地圖，並另有給民眾與旅行社使用的出國前查詢頁：
 
 - **旅遊疫情建議地圖**：依各國最高建議等級上色（第一級注意、第二級警示、第三級警告），已解除的建議不顯示。
 - **國家面板**：點選國家可看到所有有效建議（同疾病的多個省分會合併顯示）、AI 兩年疫情總覽，以及近兩年疫情時間軸（中英對照，可展開全文、連回疾管署原文）。
 - **焦點輪播**：每 15 秒自動介紹一個國家；可切換「查看完整資訊」自動開啟國家面板，並以閱讀速度自動捲動。
 - **桃園機場航線雷達**：以當日桃園機場（TPE）出入境航點畫出動態航線。
 - **入境航班看板**（給機場檢疫站）：目前時間前後 60 分鐘內抵達的國際客機，可依機場與檢疫站（桃園 A、B＝第一航廈，C、D＝第二航廈）篩選，並顯示出發地國家的建議等級與主要疫病。
-- **旅遊警示圖層**：地圖可切換為外交部領事事務局「國外旅遊警示分級」（灰、黃、橙、紅；中國大陸、香港、澳門為陸委會燈號），評估治安、衝突、災害等整體安全，與疾管署的疫情建議分開呈現、不合併成單一分數；部分地區較高的國家以虛線標示。
+- **旅遊警示圖層**：地圖可切換為外交部領事事務局「國外旅遊警示分級」（灰、黃、橙、紅；中國大陸、香港、澳門為陸委會燈號），評估治安、衝突、災害等整體安全，與疾管署的疫情建議分開呈現、不合併成單一分數；部分地區較高的國家以虛線標示。英文版顯示外交部摘要的非官方英譯，全文為中文原文。
 - **出國前旅遊安全查詢**（[`trip.html`](https://ancientsky.github.io/safetravel/trip.html)，給民眾與旅行社）：查詢目的地即可並列兩種官方分級、各地區警示與近期疫情；另有雙圖層世界地圖、近期變動、全部目的地表格（篩選、排序、匯出 CSV、列印）。預設淺色主題。
 - **疫區航線監測**：在地圖上顯示疫情城市的直飛航線網（目前有伊爾庫次克〔疑似鼠疫〕與金夏沙〔本迪布焦病毒 BDBV 伊波拉疫情〕），標出與桃園有直航、可能轉機來臺的航點，以及已通報輸出病例的航點。
 - **繁中／英文**、**深色（預設）／淺色主題**、可開關的**神秘音效**；資料更新後畫面會**自動重新載入**，適合長時間開著的展示螢幕。
@@ -82,8 +84,9 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 
 | 時間（台北） | 工作 | 觸發方式 |
 |---|---|---|
-| 每天 11:17、21:17 | 抓疾管署 CSV 與 TPE 航班 → SQLite → 匯出 JSON → 部署 | cron-job.org → `update-data.yml` |
-| 每天 11:52 | 翻譯新的疫情資訊、更新各國兩年總覽與新病名（Claude 排程；無須 Gemini） | Claude Code 排程（[docs/TRANSLATION_GUIDE.md](docs/TRANSLATION_GUIDE.md)） |
+| 每天 11:17、21:17 | 抓疾管署 CSV、TPE 航班與外交部旅遊警示 → SQLite（含警示等級變動紀錄）→ 匯出 JSON → 部署 | cron-job.org → `update-data.yml` |
+| 每天 11:52 | 翻譯新的疫情資訊與外交部旅遊警示摘要、更新各國兩年總覽與新病名（Claude 排程；無須 Gemini） | Claude Code 排程（[docs/TRANSLATION_GUIDE.md](docs/TRANSLATION_GUIDE.md)） |
+| 陸委會宣布調整時 | 更新中國大陸、香港、澳門燈號（陸委會網站擋自動抓取） | 人工編輯 `data/manual/mac_warnings.json` |
 | 05:00–23:59 每 10 分鐘；00:00–04:59 每 30 分鐘 | 入境航班（TDX，一次呼叫涵蓋全台機場）→ 直接發布到 Pages | cron-job.org → `arrivals.yml` |
 
 GitHub 內建的 `schedule` 在本 repo 實測會晚 4.5–8.5 小時才執行，因此已移除，改由 cron-job.org 透過 `workflow_dispatch` 準時觸發（設定方式：[docs/ARRIVALS_SETUP.md](docs/ARRIVALS_SETUP.md)）。入境航班每次執行前會先檢查資料新舊與本月用量（不耗 API 額度），TDX 免費方案每月 4,500 次內預留約 12% 緩衝。
@@ -97,6 +100,8 @@ flowchart LR
     B[疾管署 國際疫情資訊 CSV]
     T[交通部 TDX FIDS<br/>TPE 航班 · 全台入境航班]
     M[FlightConnections<br/>疫區直飛航線]
+    W[外交部領事事務局<br/>旅遊警示 列表＋RSS]
+    MC[陸委會燈號<br/>人工維護]
   end
   CJ[cron-job.org] -->|workflow_dispatch| U
   CJ -->|每 10 分鐘| R
@@ -104,21 +109,23 @@ flowchart LR
     U[update-data.yml<br/>fetch → SQLite → export] 
     R[arrivals.yml<br/>guard → TDX → arrivals.json]
   end
-  CL[Claude 每日排程<br/>翻譯 · 摘要] -->|commit| DB[(data/safetravel.db)]
+  CL[Claude 每日排程<br/>翻譯 · 摘要 · 旅遊警示英譯] -->|commit| DB[(data/safetravel.db)]
   A --> U
   B --> U
   T --> U
   T --> R
   M --> U
+  W --> U
+  MC --> U
   U --> DB
   U --> J[(web/data/*.json)]
   R --> P
-  J --> P[GitHub Pages<br/>web/ 靜態網站 · D3 v7]
+  J --> P[GitHub Pages<br/>index.html 地圖 · trip.html 查詢頁]
 ```
 
-- **pipeline/**（Python）：`fetch` 抓資料 → `load` 寫入 SQLite（歷史與翻譯快取）→ `enrich`（選用 Gemini）→ `export` 輸出 `web/data/*.json`；`arrivals` 產生入境航班；`watch` 產生疫區航線；`validate` 依資料合約檢查所有輸出。
+- **pipeline/**（Python）：`fetch` 抓資料 → `load` 寫入 SQLite（歷史與翻譯快取）→ `enrich`（選用 Gemini）→ `export` 輸出 `web/data/*.json`；`mofa` 處理外交部／陸委會旅遊警示（`warnings.json`）；`arrivals` 產生入境航班；`watch` 產生疫區航線；`pending`／`import_translations.py` 供每日翻譯排程取出與匯入待翻文字；`validate` 依資料合約檢查所有輸出。
 - **web/**：無建置步驟的 ES modules，D3 v7（只打包用到的函式，清單見 `scripts/d3-entry.mjs`）與 topojson-client 已 vendor 於 `web/vendor/`，以相對路徑部署在 `/safetravel/` 子路徑，CSP 限制只連自身網域。
-- 詳細設計：[ARCHITECTURE](docs/ARCHITECTURE.md) · 資料合約：[DATA_CONTRACT](docs/DATA_CONTRACT.md) · 入境航班設計：[ARRIVALS](docs/ARRIVALS.md) · 設定步驟：[ARRIVALS_SETUP](docs/ARRIVALS_SETUP.md) · 翻譯排程：[TRANSLATION_GUIDE](docs/TRANSLATION_GUIDE.md) · 維運：[OPERATIONS](docs/OPERATIONS.md)
+- 詳細設計：[ARCHITECTURE](docs/ARCHITECTURE.md) · 資料合約：[DATA_CONTRACT](docs/DATA_CONTRACT.md) · 入境航班設計：[ARRIVALS](docs/ARRIVALS.md) · 設定步驟：[ARRIVALS_SETUP](docs/ARRIVALS_SETUP.md) · 旅遊警示：[WARNINGS](docs/WARNINGS.md) · 翻譯排程：[TRANSLATION_GUIDE](docs/TRANSLATION_GUIDE.md) · 維運：[OPERATIONS](docs/OPERATIONS.md)
 
 ### 資料來源
 
@@ -142,6 +149,15 @@ flowchart LR
 4. **國家等級取最高值**：含次級行政區（例如中國大陸的北京市）。同疾病同等級的多個省分合併成一組顯示。
 5. **代碼**：納米比亞的 ISO 代碼是 `NA`，讀取時必須保留為字串；沒有代碼的地區以 `data/manual/territories.json` 對應，仍對應不到者（例如索馬利蘭 `SMLL`）列為「未對應」。
 
+### 旅遊警示如何呈現
+
+1. **兩種分級分開呈現**：疾管署評估傳染病風險（三級），外交部評估整體安全（四色）；地圖一次只依一種上色，提示框、國家面板與 `trip.html` 一律並列兩者，不合併成單一分數。
+2. **國家燈號取「全境」等級**：外交部只對部分地區發布較高警示時（例如柬埔寨全境橙色、柬泰邊境省份紅色），地圖以虛線標示「部分地區較高」，面板逐一列出各地區等級。
+3. **對應國家代碼**：外交部列表頁提供地區所屬國家，依 `data/manual/boca_names.json` → 國家名稱表 → 疾管署名稱比對成 ISO 代碼；對應不到者（目前只有索馬利蘭）列為「未對應」。
+4. **陸港澳**：由陸委會發布，網站擋自動抓取，燈號以人工維護於 `data/manual/mac_warnings.json`，畫面上標示最後核對日期。
+5. **變動紀錄**：每次更新與前次比對，等級變動、新增或撤銷都記錄在 SQLite，`trip.html` 的「近期變動」列出近 60 天的變動。
+6. **英文**：外交部只發布中文；摘要與地區名稱由每日排程翻譯（非官方英譯），「展開全文」顯示中文原文。
+
 ### 本機開發
 
 ```bash
@@ -150,11 +166,17 @@ python -m pipeline run --offline          # 只用 data/raw/ 的離線樣本：�
 python -m pipeline export                 # 由 SQLite 重新匯出 JSON（也會重建 watch.json）
 python -m pipeline arrivals --offline data/raw/flights/latest/tdx_fids_tpe.json --shift-to-now   # 入境航班樣本
 python -m pipeline watch                  # 重建疫區航線 web/data/watch.json
+python -m pipeline warnings               # 重建旅遊警示 web/data/warnings.json（用 data/raw/boca/ 的樣本）
+python -m pipeline pending --out /tmp/pend   # 列出待翻譯的疫情資訊與旅遊警示（翻譯流程見 TRANSLATION_GUIDE）
 python -m pipeline validate               # 依資料合約檢查 web/data
 python -m pytest pipeline/tests -q        # 單元測試
 python -m http.server -d web 8080         # 預覽：http://localhost:8080/
-node tests/smoke.mjs http://localhost:8080/   # 冒煙測試（需 Playwright 與 Chromium）
+node tests/smoke.mjs http://localhost:8080/            # 主站冒煙測試（需 Playwright 與 Chromium）
+node tests/trip-smoke.mjs http://localhost:8080/trip.html   # 出國前查詢頁冒煙測試
+npm ci && npm run vendor && node scripts/check-d3.mjs  # 重建 web/vendor/（D3 只打包 scripts/d3-entry.mjs 列出的函式）
 ```
+
+前端要用新的 D3 函式時，先加到 `scripts/d3-entry.mjs` 再執行 `npm run vendor`；部署流程會執行 `scripts/check-d3.mjs`，用到未打包的函式就會擋下部署。
 
 新增疫區航線：在 `data/manual/watch/` 放一份 `<id>.json`（城市、原因、來源、日期）與對應的航線 CSV（`Country,City_Airport,IATA,Monthly_Flights,City_zh`），執行 `python -m pipeline watch`，選單就會多一個開關。格式見 [DATA_CONTRACT.md](docs/DATA_CONTRACT.md#watchjson-outbreak-route-watch)。
 
@@ -164,17 +186,18 @@ node tests/smoke.mjs http://localhost:8080/   # 冒煙測試（需 Playwright �
 - [ ] **Workflow 權限**：Settings → Actions → General → Workflow permissions 允許讀寫（`update-data.yml` 會 commit 資料）。
 - [ ] **TDX 金鑰**：Secrets 新增 `TDX_CLIENT_ID`、`TDX_CLIENT_SECRET`（入境航班需要；TPE 航線沒有金鑰時以匿名額度呼叫）。選填變數 `ARRIVALS_MONTHLY_CAP`（預設 4200）。
 - [ ] **外部排程**：建立只有「Actions 讀寫」權限的 fine-grained PAT，在 cron-job.org 設定兩個排程（步驟見 [docs/ARRIVALS_SETUP.md](docs/ARRIVALS_SETUP.md)）。PAT 到期前記得更換。
-- [ ] **翻譯**：預設由每日 Claude 排程處理；若改用 Gemini，設定變數 `AI_PROVIDER=gemini` 與 Secret `GEMINI_API_KEY`（選填 `GEMINI_MODEL`）。
+- [ ] **翻譯**：預設由每日 Claude 排程處理（疫情資訊、各國總覽、病名、外交部旅遊警示摘要）；若改用 Gemini，設定變數 `AI_PROVIDER=gemini` 與 Secret `GEMINI_API_KEY`（選填 `GEMINI_MODEL`）。
+- [ ] **陸委會燈號**：陸委會調整中國大陸、香港、澳門旅遊警示時，更新 `data/manual/mac_warnings.json` 的燈號、日期、摘要與 `confirmed`（核對日期）。
 - [ ] **手動執行**：Actions → *Update data* 或 *Arrivals board* → Run workflow。
 
 ### 免責聲明
 
-本網站為非官方的資料整理與視覺化專案，**不構成醫療建議**。旅遊健康相關決策請以**臺灣疾病管制署（<https://www.cdc.gov.tw/>）**及當地主管機關公告為準。AI 翻譯與摘要可能有誤，請以原文為準；航班資料以機場與航空公司公告為準。資料可能因來源延遲或格式變更而不完整。
+本網站為非官方的資料整理與視覺化專案，**不構成醫療建議**。旅遊健康相關決策請以**臺灣疾病管制署（<https://www.cdc.gov.tw/>）**及當地主管機關公告為準；旅遊安全請以**外交部領事事務局（<https://www.boca.gov.tw/>）**與**陸委會**最新公告為準，旅遊警示僅供參考，不具退費、保險等法律拘束力。AI 翻譯與摘要可能有誤，請以原文為準；航班資料以機場與航空公司公告為準。資料可能因來源延遲或格式變更而不完整。
 
 ### 授權
 
 - **程式碼**：MIT License，見 [LICENSE](LICENSE)。
-- **資料**：疾管署與交通部 TDX 資料依[政府資料開放授權條款](https://data.gov.tw/license)使用，著作權屬原機關所有；使用時請標示來源與資料時間。
+- **資料**：疾管署、外交部領事事務局與交通部 TDX 資料依[政府資料開放授權條款](https://data.gov.tw/license)使用，陸委會燈號摘錄自其公告，著作權屬原機關所有；使用時請標示來源與資料時間。
 - **第三方資料**：OpenFlights、world-atlas、world-countries 等依其各自授權條款使用。
 
 ---
@@ -183,14 +206,14 @@ node tests/smoke.mjs http://localhost:8080/   # 冒煙測試（需 Playwright �
 
 ### What is this
 
-SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC) international travel-health advisories and epidemic digests with live flight data from Taiwan's Ministry of Transportation (TDX):
+SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC) international travel-health advisories and epidemic digests, the Ministry of Foreign Affairs (MOFA/BOCA) travel warnings (Mainland Affairs Council ratings for mainland China, Hong Kong and Macau) and live flight data from Taiwan's Ministry of Transportation (TDX), plus a pre-trip lookup page for travellers and travel agencies:
 
 - **Advisory map** coloured by each country's highest active level (Level 1 Watch, 2 Alert, 3 Warning); lifted advisories are removed.
 - **Country panel** with every active advisory (provinces with the same disease grouped), an AI two-year overview and a two-year epidemic timeline (zh/en, full text, link to the TCDC original).
 - **Spotlight tour** that presents a country every 15 s, optionally opening the full panel and auto-scrolling it at reading pace.
 - **TPE route radar**: animated routes for today's Taoyuan Airport departures and arrivals.
 - **Inbound flights board** for airport quarantine stations: international passenger flights arriving within ±60 minutes, filtered by airport and checkpoint (Taoyuan A/B = Terminal 1, C/D = Terminal 2), with the origin country's advisory level and main diseases.
-- **Travel-warning layer**: switch the map to the MOFA (BOCA) travel warning levels (grey, yellow, orange, red; mainland China, Hong Kong and Macau use the MAC rating). They rate overall safety — crime, conflict, disasters — and are shown beside, never merged with, the CDC health advisories; countries rated higher in some areas get a dashed outline.
+- **Travel-warning layer**: switch the map to the MOFA (BOCA) travel warning levels (grey, yellow, orange, red; mainland China, Hong Kong and Macau use the MAC rating). They rate overall safety — crime, conflict, disasters — and are shown beside, never merged with, the CDC health advisories; countries rated higher in some areas get a dashed outline. The English UI shows unofficial English translations of the MOFA summaries; the full text is the Chinese original.
 - **Pre-trip safety check** ([`trip.html`](https://ancientsky.github.io/safetravel/trip.html), for travellers and travel agencies): search a destination to see both official ratings side by side, regional warnings and recent epidemic news; plus a two-layer world map, recent changes and an all-destinations table (filter, sort, CSV export, print). Light theme by default.
 - **Outbreak route watch**: the direct-flight networks of outbreak cities (currently Irkutsk — suspected plague — and Kinshasa — Bundibugyo virus (BDBV) Ebola), highlighting destinations that also fly to Taoyuan and destinations with a reported exported case.
 - Bilingual (zh-Hant default, English), dark (default) and light themes, optional ambient sound, and automatic reload when new data is published — built to run unattended on display screens.
@@ -208,15 +231,16 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 
 | Taipei time | Job | Trigger |
 |---|---|---|
-| 11:17 and 21:17 daily | TCDC CSVs + TPE flights → SQLite → JSON → deploy | cron-job.org → `update-data.yml` |
-| 11:52 daily | translate new digests, refresh overviews and disease names (no Gemini needed) | scheduled Claude Code routine ([TRANSLATION_GUIDE](docs/TRANSLATION_GUIDE.md)) |
+| 11:17 and 21:17 daily | TCDC CSVs + TPE flights + MOFA travel warnings → SQLite (incl. warning-level history) → JSON → deploy | cron-job.org → `update-data.yml` |
+| 11:52 daily | translate new digests and MOFA warning summaries, refresh overviews and disease names (no Gemini needed) | scheduled Claude Code routine ([TRANSLATION_GUIDE](docs/TRANSLATION_GUIDE.md)) |
+| when MAC announces a change | update the mainland China / Hong Kong / Macau ratings (the MAC site blocks automated fetches) | edit `data/manual/mac_warnings.json` by hand |
 | every 10 min 05:00–23:59, every 30 min 00:00–04:59 | inbound flights (one TDX call covers every Taiwan airport) → published straight to Pages | cron-job.org → `arrivals.yml` |
 
 GitHub's own cron started runs 4.5–8.5 h late on this repository, so it was removed; cron-job.org dispatches the workflows on time ([setup](docs/ARRIVALS_SETUP.md)). Before each TDX call the arrivals workflow checks data age and monthly usage at no cost, keeping about 12 % headroom inside the free 4,500 calls/month.
 
 ### Architecture
 
-See the diagram above: `pipeline/` (Python) fetches the sources, keeps history and the translation cache in SQLite (`data/safetravel.db`), exports `web/data/*.json` and validates them against [DATA_CONTRACT](docs/DATA_CONTRACT.md); `arrivals` and `watch` produce the inbound board and route-watch data. `web/` is build-free ES modules with D3 v7 (only the functions listed in `scripts/d3-entry.mjs`) and topojson-client vendored, served from the `/safetravel/` sub-path under a strict CSP. Details: [ARCHITECTURE](docs/ARCHITECTURE.md) · [ARRIVALS](docs/ARRIVALS.md) · [OPERATIONS](docs/OPERATIONS.md).
+See the diagram above: `pipeline/` (Python) fetches the sources, keeps history and the translation cache in SQLite (`data/safetravel.db`), exports `web/data/*.json` and validates them against [DATA_CONTRACT](docs/DATA_CONTRACT.md); `mofa` builds the travel warnings (`warnings.json`), `arrivals` and `watch` produce the inbound board and route-watch data, and `pending` / `import_translations.py` hand text to and from the daily translation routine. `web/` is build-free ES modules with D3 v7 (only the functions listed in `scripts/d3-entry.mjs`) and topojson-client vendored, served from the `/safetravel/` sub-path under a strict CSP. Details: [ARCHITECTURE](docs/ARCHITECTURE.md) · [WARNINGS](docs/WARNINGS.md) · [ARRIVALS](docs/ARRIVALS.md) · [TRANSLATION_GUIDE](docs/TRANSLATION_GUIDE.md) · [OPERATIONS](docs/OPERATIONS.md).
 
 ### Data sources
 
@@ -230,6 +254,15 @@ TCDC travel advisory levels (`CountryEpidLevel/ExportCSV`) and international epi
 4. A country takes its highest level, including sub-national rows; same-disease provinces are grouped.
 5. Namibia's code `NA` must stay a string; territories without a code map via `data/manual/territories.json`, and anything still unmatched (e.g. Somaliland `SMLL`) is listed as unmapped.
 
+### How travel warnings are shown
+
+1. The two ratings stay separate: TCDC rates communicable disease (3 levels), MOFA rates overall safety (4 colours). The map is coloured by one at a time; tooltips, the country panel and `trip.html` always show both.
+2. A country is coloured by its whole-country level. When MOFA rates some areas higher (e.g. Cambodia orange, its border provinces with Thailand red), the map adds a dashed outline and the panel lists every area with its own level.
+3. Names map to ISO codes via `data/manual/boca_names.json`, the country-name tables and TCDC names; anything unmatched (currently only Somaliland) is listed as unmapped.
+4. Mainland China, Hong Kong and Macau are rated by MAC, maintained by hand in `data/manual/mac_warnings.json`; the UI shows the last-checked date.
+5. Each run compares levels with the previous one and records changes, new and withdrawn warnings in SQLite; `trip.html` lists the last 60 days.
+6. MOFA publishes in Chinese only: summaries and area names are translated by the daily routine (unofficial), and the full text stays the Chinese original.
+
 ### Local development
 
 ```bash
@@ -238,10 +271,16 @@ python -m pipeline run --offline          # fixtures only: no network, no AI
 python -m pipeline export                 # re-export JSON from SQLite (also rebuilds watch.json)
 python -m pipeline arrivals --offline data/raw/flights/latest/tdx_fids_tpe.json --shift-to-now
 python -m pipeline watch                  # rebuild web/data/watch.json
+python -m pipeline warnings               # rebuild web/data/warnings.json from the data/raw/boca/ fixtures
+python -m pipeline pending --out /tmp/pend   # untranslated digests and travel warnings (see TRANSLATION_GUIDE)
 python -m pipeline validate && python -m pytest pipeline/tests -q
 python -m http.server -d web 8080         # http://localhost:8080/
 node tests/smoke.mjs http://localhost:8080/
+node tests/trip-smoke.mjs http://localhost:8080/trip.html
+npm ci && npm run vendor && node scripts/check-d3.mjs   # rebuild web/vendor/ (D3 subset from scripts/d3-entry.mjs)
 ```
+
+To use another D3 function in the front end, add it to `scripts/d3-entry.mjs` and run `npm run vendor`; the Pages deploy runs `scripts/check-d3.mjs` and refuses to publish if `web/` calls a D3 function outside the bundle.
 
 To watch another outbreak city, add `data/manual/watch/<id>.json` plus its routes CSV and run `python -m pipeline watch` ([format](docs/DATA_CONTRACT.md#watchjson-outbreak-route-watch)).
 
@@ -250,12 +289,13 @@ To watch another outbreak city, add `data/manual/watch/<id>.json` plus its route
 - [ ] Pages source: **GitHub Actions**; workflow permissions: read and write.
 - [ ] Secrets `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET` (optional variable `ARRIVALS_MONTHLY_CAP`, default 4200).
 - [ ] A fine-grained PAT with only *Actions: read and write* on this repository, used by two cron-job.org jobs ([steps](docs/ARRIVALS_SETUP.md)); renew it before it expires.
-- [ ] Translation runs in the daily Claude routine; to use Gemini instead set variable `AI_PROVIDER=gemini` and secret `GEMINI_API_KEY`.
+- [ ] Translation (digests, overviews, disease names, MOFA warning summaries) runs in the daily Claude routine; to use Gemini instead set variable `AI_PROVIDER=gemini` and secret `GEMINI_API_KEY`.
+- [ ] When MAC changes its mainland China / Hong Kong / Macau rating, update level, dates, summaries and `confirmed` in `data/manual/mac_warnings.json`.
 
 ### Disclaimer
 
-Unofficial visualisation of public data — **not medical advice**. Rely on the **Taiwan CDC (<https://www.cdc.gov.tw/>)** and local authorities for travel-health decisions, and on airports and airlines for flight information. AI translations and summaries may contain errors; the original text prevails.
+Unofficial visualisation of public data — **not medical advice**. Rely on the **Taiwan CDC (<https://www.cdc.gov.tw/>)** and local authorities for travel-health decisions, on **MOFA BOCA (<https://www.boca.gov.tw/>)** and the **MAC** for travel safety (their travel warnings are reference information with no binding force on refunds or insurance), and on airports and airlines for flight information. AI translations and summaries may contain errors; the original text prevails.
 
 ### Licence
 
-Code: MIT ([LICENSE](LICENSE)). Data: Taiwan CDC and MOTC TDX data under the [Open Government Data License](https://data.gov.tw/license), © the respective agencies — please credit the source and data date. Third-party data and libraries are subject to their own licences.
+Code: MIT ([LICENSE](LICENSE)). Data: Taiwan CDC, MOFA BOCA and MOTC TDX data under the [Open Government Data License](https://data.gov.tw/license), MAC ratings quoted from its announcements, © the respective agencies — please credit the source and data date. Third-party data and libraries are subject to their own licences.
