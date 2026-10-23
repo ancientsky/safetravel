@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "description": "Taiwan CDC travel-health advisory map with animated TPE flights (GitHub Pages)",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "vendor": "node scripts/vendor.mjs",
     "preview": "python3 -m http.server -d web 8080"
@@ -14,5 +17,8 @@
     "topojson-client": "3.1.0",
     "world-atlas": "2.0.2",
     "world-countries": "5.1.0"
+  },
+  "allowScripts": {
+    "esbuild": false
   }
 }

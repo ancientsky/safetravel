@@ -15,6 +15,8 @@ Read `docs/ARCHITECTURE.md` and `docs/DATA_CONTRACT.md` before changing anything
 
 ## Commands
 
+Python 3.14 (`.python-version`) and Node.js 24 (`.nvmrc`), same as GitHub Actions.
+
 ```bash
 python -m pip install -r pipeline/requirements.txt    # Actions install the hash-locked pipeline/requirements.lock
 python -m pipeline run --offline          # fixtures only, no network, no Gemini

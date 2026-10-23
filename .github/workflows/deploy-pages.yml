@@ -36,6 +36,17 @@ jobs:
         run: pip install --require-hashes -r pipeline/requirements.lock
       - name: Validate web/data before publishing
         run: python -m pipeline validate
+      - name: Node.js 24 (official nodejs.org build, checksum-pinned)
+        env:
+          NODE_VERSION: v24.22.1
+          NODE_SHA256: 6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/node.tar.xz" "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz"
+          echo "${NODE_SHA256}  $RUNNER_TEMP/node.tar.xz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/node"
+          tar -xJf "$RUNNER_TEMP/node.tar.xz" -C "$RUNNER_TEMP/node" --strip-components=1
+          echo "$RUNNER_TEMP/node/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/node/bin/node" --version
       - name: Check the vendored d3 subset covers every d3 call
         run: node scripts/check-d3.mjs
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0

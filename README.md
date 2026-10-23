@@ -160,6 +160,8 @@ flowchart LR
 
 ### 本機開發
 
+需要 **Python 3.14**（`.python-version`）與 **Node.js 24**（`.nvmrc`，目前 24.22.1）；GitHub Actions 使用相同版本。
+
 ```bash
 python -m pip install -r pipeline/requirements.txt
 python -m pipeline run --offline          # 只用 data/raw/ 的離線樣本：不連網、不呼叫 AI
@@ -264,6 +266,8 @@ TCDC travel advisory levels (`CountryEpidLevel/ExportCSV`) and international epi
 6. MOFA publishes in Chinese only: summaries and area names are translated by the daily routine (unofficial), and the full text stays the Chinese original.
 
 ### Local development
+
+Requires **Python 3.14** (`.python-version`) and **Node.js 24** (`.nvmrc`, currently 24.22.1); GitHub Actions uses the same versions.
 
 ```bash
 python -m pip install -r pipeline/requirements.txt

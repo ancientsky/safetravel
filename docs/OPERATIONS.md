@@ -121,7 +121,7 @@ After a rebuild, commit the three JSON files, open `web/` locally (`python -m ht
 
 - `pipeline/requirements.txt` is the human-edited source (loose lower bounds). `pipeline/requirements.lock` is generated from it
   with hashes and is what Actions installs (`pip install --require-hashes -r pipeline/requirements.lock`). CI additionally installs
-  `requirements-dev.txt` normally. Regenerate after editing `requirements.txt` (use Python 3.12 to match the workflows) and commit both:
+  `requirements-dev.txt` normally. Regenerate after editing `requirements.txt` (use Python 3.14 to match the workflows and `.python-version`) and commit both:
 
   ```bash
   pip install pip-tools
