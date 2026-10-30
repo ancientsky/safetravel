@@ -12,14 +12,17 @@ import { createTable } from './trip-table.js';
 import { renderChanges } from './trip-changes.js';
 import { createSearch } from './trip-search.js';
 import { createWeather, loadWeather } from './trip-weather.js';
+import { createWxMap } from './trip-wxmap.js';
 
 const THEME_KEY = 'safetravel.trip.theme';
+const TABS = ['mofa', 'cdc', 'wx'];
 const root = document.documentElement;
 
 const app = {
   model: buildModel({}),
   tab: 'mofa',
   map: null,
+  wxmap: null,
   open: null,       // ISO of the open card
   returnFocus: null,
   notices: new Set(),
@@ -31,7 +34,12 @@ const table = createTable({ root: $('#all'), onOpen: (iso) => openCard(iso), onP
 const search = createSearch({
   input: $('#q'), listEl: $('#q-list'), statusEl: $('#q-status'), onOpen: (iso) => openCard(iso),
 });
-const weather = createWeather({ root: $('#weather'), onOpen: (iso) => openCard(iso), onSettled: () => renderStamps() });
+const weather = createWeather({
+  root: $('#weather'),
+  onOpen: (iso) => openCard(iso),
+  onSettled: () => { renderStamps(); feedWxMap(); },
+  onUnit: () => { app.wxmap?.refresh(); if (app.tab === 'wx') renderLegend(); },
+});
 
 // ---------------- theme & language ----------------
 function applyThemeButton() {
@@ -88,6 +96,11 @@ function renderLegend() {
   const item = (cls, label, n) => h('li', {}, h('i', { class: `sw ${cls}`, 'aria-hidden': 'true' }), h('span', { text: label }),
     n != null ? h('span', { class: 'lg-n', text: String(n) }) : null);
   const items = [];
+  if (app.tab === 'wx') {
+    $('#legend').replaceChildren(...(app.wxmap && !weather.failed() ? app.wxmap.legendItems()
+      : [h('li', { class: 'lg-note', text: weather.failed() ? t('wx_failed') : t('wxm_loading') })]));
+    return;
+  }
   if (app.tab === 'mofa') {
     for (const lv of [4, 3, 2, 1]) items.push(item(`m-${lv}`, `${lv} ${mofaShort(lv)}`, count((d) => d.w && d.mofa === lv)));
     items.push(item('m-0', t('legend_mofa_none'), count((d) => !d.w || !d.mofa)));
@@ -101,7 +114,7 @@ function renderLegend() {
 }
 
 function setTab(tab, focus = false) {
-  app.tab = tab === 'cdc' ? 'cdc' : 'mofa';
+  app.tab = TABS.includes(tab) ? tab : 'mofa';
   mapBox.dataset.tab = app.tab;
   $('#map-sec').dataset.tab = app.tab;
   document.querySelectorAll('.tab').forEach((b) => {
@@ -111,15 +124,20 @@ function setTab(tab, focus = false) {
     if (on && focus) b.focus();
   });
   $('#map-panel').setAttribute('aria-labelledby', `tab-${app.tab}`);
-  $('#tmap').setAttribute('aria-label', t(app.tab === 'mofa' ? 'map_label_mofa' : 'map_label_cdc'));
+  $('#tmap').setAttribute('aria-label', t(`map_label_${app.tab}`));
+  // the weather layer has focusable markers, which an role="img" would hide from assistive tech
+  $('#tmap').setAttribute('role', app.tab === 'wx' ? 'group' : 'img');
+  app.wxmap?.setActive(app.tab === 'wx');
   renderLegend();
 }
 document.querySelectorAll('.tab').forEach((b) => {
   b.addEventListener('click', () => setTab(b.dataset.tab));
   b.addEventListener('keydown', (ev) => {
-    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key)) {
+    const i = TABS.indexOf(app.tab);
+    const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[ev.key];
+    if (to != null) {
       ev.preventDefault();
-      setTab(app.tab === 'mofa' ? 'cdc' : 'mofa', true);
+      setTab(TABS[(to + TABS.length) % TABS.length], true);
     }
   });
 });
@@ -131,6 +149,11 @@ async function initMap() {
     app.map = createMap({ box: mapBox, svgEl: $('#tmap'), tipEl: $('#tip'), onOpen: (iso) => openCard(iso) });
     app.map.render(world, app.model);
     if (app.open) app.map.select(app.open);
+    app.wxmap = createWxMap({
+      map: app.map, box: mapBox, svgEl: $('#tmap'), tipEl: $('#tip'), barEl: $('.wxm-bar'), onOpen: (iso) => openCard(iso),
+    });
+    feedWxMap();
+    setTab(app.tab);
     $('.z-in').addEventListener('click', () => app.map.zoomBy(1.6));
     $('.z-out').addEventListener('click', () => app.map.zoomBy(1 / 1.6));
     $('.z-reset').addEventListener('click', () => app.map.reset());
@@ -139,6 +162,16 @@ async function initMap() {
     mapBox.classList.add('failed');
     notice('notice_no_map');
   }
+}
+
+/** Hand weather.json to the map layer once both have loaded (either may finish first). */
+function feedWxMap() {
+  const data = weather.data();
+  if (app.tab === 'wx' && weather.failed()) renderLegend();
+  if (!app.wxmap || !data || app.wxmap.hasData()) return;
+  app.wxmap.setData(data, app.model);
+  app.wxmap.setActive(app.tab === 'wx');
+  if (app.tab === 'wx') renderLegend();
 }
 
 // ---------------- card ----------------
@@ -195,6 +228,7 @@ function renderAll() {
   table.render(app.model);
   renderChanges($('#changes'), app.model, (iso) => openCard(iso));
   weather.render();
+  app.wxmap?.refresh();
   search.refresh();
   if (app.open) openCard(app.open, { focus: false, scroll: false });
 }

@@ -30,7 +30,7 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 - **桃園機場航線雷達**：以當日桃園機場（TPE）出入境航點畫出動態航線。
 - **入境航班看板**（給機場檢疫站）：目前時間前後 60 分鐘內抵達的國際客機，可依機場與檢疫站（桃園 A、B＝第一航廈，C、D＝第二航廈）篩選，並顯示出發地國家的建議等級與主要疫病。
 - **旅遊警示圖層**：地圖可切換為外交部領事事務局「國外旅遊警示分級」（灰、黃、橙、紅；中國大陸、香港、澳門為陸委會燈號），評估治安、衝突、災害等整體安全，與疾管署的疫情建議分開呈現、不合併成單一分數；部分地區較高的國家以虛線標示。英文版顯示外交部摘要的非官方英譯，全文為中文原文。
-- **出國前旅遊安全查詢**（[`trip.html`](https://ancientsky.github.io/safetravel/trip.html)，給民眾與旅行社）：查詢目的地即可並列兩種官方分級、各地區警示與近期疫情；另有雙圖層世界地圖、**全球都市天氣預報**（中央氣象署 80 個城市未來 7 天，可依地區篩選、°C／°F 切換，點城市即開啟該國資訊卡，資訊卡內也列出當地城市預報）、近期變動、全部目的地表格（篩選、排序、匯出 CSV、列印）。預設淺色主題。
+- **出國前旅遊安全查詢**（[`trip.html`](https://ancientsky.github.io/safetravel/trip.html)，給民眾與旅行社）：查詢目的地即可並列兩種官方分級、各地區警示與近期疫情；另有三圖層世界地圖（旅遊警示／疫情建議／天氣：80 個城市的天氣與最高溫標在地圖上，可逐日切換或播放）、**全球都市天氣預報**（中央氣象署 80 個城市未來 7 天，可依地區篩選、°C／°F 切換，點城市即開啟該國資訊卡，資訊卡內也列出當地城市預報）、近期變動、全部目的地表格（篩選、排序、匯出 CSV、列印）。預設淺色主題。
 - **疫區航線監測**：在地圖上顯示疫情城市的直飛航線網（目前有伊爾庫次克〔疑似鼠疫〕與金夏沙〔本迪布焦病毒 BDBV 伊波拉疫情〕），標出與桃園有直航、可能轉機來臺的航點，以及已通報輸出病例的航點。
 - **繁中／英文**、**深色（預設）／淺色主題**、可開關的**神秘音效**；資料更新後畫面會**自動重新載入**，適合長時間開著的展示螢幕。
 
@@ -218,7 +218,7 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 - **TPE route radar**: animated routes for today's Taoyuan Airport departures and arrivals.
 - **Inbound flights board** for airport quarantine stations: international passenger flights arriving within ±60 minutes, filtered by airport and checkpoint (Taoyuan A/B = Terminal 1, C/D = Terminal 2), with the origin country's advisory level and main diseases.
 - **Travel-warning layer**: switch the map to the MOFA (BOCA) travel warning levels (grey, yellow, orange, red; mainland China, Hong Kong and Macau use the MAC rating). They rate overall safety — crime, conflict, disasters — and are shown beside, never merged with, the CDC health advisories; countries rated higher in some areas get a dashed outline. The English UI shows unofficial English translations of the MOFA summaries; the full text is the Chinese original.
-- **Pre-trip safety check** ([`trip.html`](https://ancientsky.github.io/safetravel/trip.html), for travellers and travel agencies): search a destination to see both official ratings side by side, regional warnings and recent epidemic news; plus a two-layer world map, a **world-city weather forecast** (CWA, 80 cities × 7 days, region filter, °C/°F; a city opens its country card, which also lists the local forecast), recent changes and an all-destinations table (filter, sort, CSV export, print). Light theme by default.
+- **Pre-trip safety check** ([`trip.html`](https://ancientsky.github.io/safetravel/trip.html), for travellers and travel agencies): search a destination to see both official ratings side by side, regional warnings and recent epidemic news; plus a three-layer world map (travel warnings / health notices / weather: each city's weather and high on the map, day by day or played), a **world-city weather forecast** (CWA, 80 cities × 7 days, region filter, °C/°F; a city opens its country card, which also lists the local forecast), recent changes and an all-destinations table (filter, sort, CSV export, print). Light theme by default.
 - **Outbreak route watch**: the direct-flight networks of outbreak cities (currently Irkutsk — suspected plague — and Kinshasa — Bundibugyo virus (BDBV) Ebola), highlighting destinations that also fly to Taoyuan and destinations with a reported exported case.
 - Bilingual (zh-Hant default, English), dark (default) and light themes, optional ambient sound, and automatic reload when new data is published — built to run unattended on display screens.
 

@@ -16,6 +16,7 @@ const DEFAULT_URL = 'https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007';
 // ---------------- data ----------------
 const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : null);
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : null);
+const geo = (v, lim) => (typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= lim ? v : null);
 
 /** Validate weather.json into the shape the UI relies on (bad rows are dropped, never trusted). */
 function normalize(raw) {
@@ -42,6 +43,7 @@ function normalize(raw) {
     const region = order.has(c.region) ? c.region : '';
     cities.push({
       id: String(c.id ?? idx), nameZh: nameZh || nameEn, nameEn: nameEn || nameZh, iso, region, days, idx,
+      lat: geo(c.lat, 90), lon: geo(c.lon, 180),
     });
   });
   if (!cities.length) throw new Error('weather.json has no usable cities');
@@ -196,8 +198,13 @@ function cityCard(c, data, model) {
   dayStrip(c, data.scale));
 }
 
+/** Shared with the map layer (trip-wxmap.js) so both views format alike. */
+export const wx = {
+  unit: () => unit, deg, icon, phrase, weekday, monthDay, longDay, cityName, cityAlt, isWeekend, rampSwatch, issuedText, WET,
+};
+
 // ---------------- section ----------------
-export function createWeather({ root, onOpen, onSettled }) {
+export function createWeather({ root, onOpen, onSettled, onUnit }) {
   const st = { region: 'all', q: '' };
   let data = null;
   let failed = false;
@@ -225,6 +232,7 @@ export function createWeather({ root, onOpen, onSettled }) {
     storageSet(UNIT_KEY, unit);
     render();
     for (const fill of local) fill();
+    onUnit?.();
   });
   panel.addEventListener('click', (ev) => {
     const b = ev.target.closest('.wx-open');
@@ -409,6 +417,9 @@ export function createWeather({ root, onOpen, onSettled }) {
         onSettled?.();
       });
     },
+    /** Normalized weather.json once loaded (else null), and whether loading failed. */
+    data: () => data,
+    failed: () => failed,
     /** Header stamp: null while loading, '' when unavailable, else the issue time. */
     stamp() { return data ? fmtStamp(data.issued) : failed ? '' : null; },
   };

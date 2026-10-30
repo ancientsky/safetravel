@@ -1,6 +1,8 @@
 // trip.html world map: a light SVG choropleth with two layers (MOFA/MAC warnings, Taiwan CDC notices).
 // Fills come from CSS ([data-tab] on the wrapper × data-m / data-c on each path), so switching layers is
 // a single attribute change. Hatched overlays mark countries rated higher in some areas than nationwide.
+// A third tab ("wx") hands the untransformed overlay group to trip-wxmap.js, which keeps its city markers
+// at constant screen size by re-projecting them through the current zoom transform (see onView).
 import { h, mofaChip, cdcChip } from './trip-dom.js';
 import { t, nameOf, altNameOf, mofaFull, cdcFull } from './trip-i18n.js';
 
@@ -35,6 +37,14 @@ export function createMap({ box, svgEl, tipEl, onOpen }) {
   const gC = gZoom.append('g').attr('class', 'cts');
   const gH = gZoom.append('g').attr('class', 'hatches').attr('aria-hidden', 'true');
   const selPath = gZoom.append('path').attr('class', 'sel-outline').attr('aria-hidden', 'true');
+  // not zoom-transformed: overlay content is positioned in screen units by its owner
+  const gOver = svg.append('g').attr('class', 'overlay');
+  const viewListeners = new Set();
+  let viewFrame = 0;
+  function notifyView() {
+    if (viewFrame) return;
+    viewFrame = requestAnimationFrame(() => { viewFrame = 0; for (const fn of viewListeners) fn(); });
+  }
   let countrySel = null;
   let hatchSel = null;
 
@@ -50,6 +60,7 @@ export function createMap({ box, svgEl, tipEl, onOpen }) {
       cur = ev.transform;
       gZoom.attr('transform', cur);
       box.classList.toggle('zoomed', cur.k > 1.01);
+      notifyView();
     });
   svg.call(zoom).on('dblclick.zoom', null);
 
@@ -182,7 +193,8 @@ export function createMap({ box, svgEl, tipEl, onOpen }) {
   const isoOf = (ev) => ev.target?.closest?.('path.ct')?.dataset.iso || null;
   gC.on('pointerover', (ev) => {
     const iso = isoOf(ev);
-    if (!iso || ev.pointerType === 'touch' || !tipFor(iso)) { tipEl.hidden = true; return; }
+    // weather tab: the city markers own the tooltip
+    if (!iso || ev.pointerType === 'touch' || box.dataset.tab === 'wx' || !tipFor(iso)) { tipEl.hidden = true; return; }
     boxRect = box.getBoundingClientRect();
     tipEl.hidden = false;
     placeTip(ev);
@@ -207,5 +219,15 @@ export function createMap({ box, svgEl, tipEl, onOpen }) {
     reset() { svg.transition().duration(250).call(zoom.transform, d3.zoomIdentity); },
     hideTip() { tipEl.hidden = true; },
     hasShape: (iso) => byIso.has(iso),
+    // ---- overlay API (trip-wxmap.js) ----
+    overlay: gOver.node(),
+    /** [x, y] in viewBox units at the current zoom, or null. */
+    project(lon, lat) {
+      const p = projection([lon, lat]);
+      return p ? cur.apply(p) : null;
+    },
+    size: () => ({ width, height }),
+    /** Called (once per frame) after zoom, pan or a resize. */
+    onView(fn) { viewListeners.add(fn); return () => viewListeners.delete(fn); },
   };
 }

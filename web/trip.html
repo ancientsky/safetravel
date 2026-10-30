@@ -138,14 +138,25 @@
         <h2 id="map-h" data-i18n="map_h">世界地圖</h2>
         <div class="tabs" role="tablist" data-i18n-attr="aria-label:tabs_label">
           <button type="button" role="tab" id="tab-mofa" class="tab" data-tab="mofa" aria-selected="true" aria-controls="map-panel" data-testid="tab-mofa">
-            <i class="tab-sw m" aria-hidden="true"></i><span data-i18n="tab_mofa">旅遊警示（外交部／陸委會）</span>
+            <i class="tab-sw m" aria-hidden="true"></i><span class="tab-l" data-i18n="tab_mofa">旅遊警示（外交部／陸委會）</span><span class="tab-s" data-i18n="tab_mofa_short">旅遊警示</span>
           </button>
           <button type="button" role="tab" id="tab-cdc" class="tab" data-tab="cdc" aria-selected="false" aria-controls="map-panel" tabindex="-1" data-testid="tab-cdc">
-            <i class="tab-sw c" aria-hidden="true"></i><span data-i18n="tab_cdc">疫情建議（疾管署）</span>
+            <i class="tab-sw c" aria-hidden="true"></i><span class="tab-l" data-i18n="tab_cdc">疫情建議（疾管署）</span><span class="tab-s" data-i18n="tab_cdc_short">疫情建議</span>
+          </button>
+          <button type="button" role="tab" id="tab-wx" class="tab" data-tab="wx" aria-selected="false" aria-controls="map-panel" tabindex="-1" data-testid="tab-wx">
+            <i class="tab-sw w" aria-hidden="true"></i><span class="tab-l" data-i18n="tab_wx">天氣（氣象署）</span><span class="tab-s" data-i18n="tab_wx_short">天氣</span>
           </button>
         </div>
       </div>
       <div id="map-panel" role="tabpanel" aria-labelledby="tab-mofa">
+        <div class="wxm-bar" data-testid="wxm-bar" hidden>
+          <div class="wxm-days" role="group" data-i18n-attr="aria-label:wxm_days_label"></div>
+          <button type="button" class="btn wxm-play" aria-pressed="false" data-testid="wxm-play">
+            <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+            <svg class="i-stop" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6v12M16 6v12"/></svg>
+            <span class="wxm-play-t" data-i18n="wxm_play">播放</span>
+          </button>
+        </div>
         <div id="map-box" class="map-box" data-tab="mofa" data-testid="map">
           <svg id="tmap" class="tmap" role="img"></svg>
           <p class="map-loading" data-i18n="map_loading">地圖載入中…</p>
@@ -157,7 +168,7 @@
           </div>
         </div>
         <ul id="legend" class="legend" data-i18n-attr="aria-label:legend_label"></ul>
-        <p class="map-hint"><span data-i18n="map_hint"></span> <span class="hint-cdc" data-i18n="map_hint_cdc"></span></p>
+        <p class="map-hint"><span data-i18n="map_hint"></span> <span class="hint-cdc" data-i18n="map_hint_cdc"></span> <span class="hint-wx" data-i18n="map_hint_wx"></span></p>
       </div>
     </section>
 

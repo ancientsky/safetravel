@@ -271,6 +271,113 @@ async function run(page, context) {
     return `JP: ${rows.length} cities`;
   });
 
+  await check('map tabs: arrow keys cycle through 3 tabs; weather tab shows 80 city markers', async () => {
+    await page.locator('[data-testid="tab-mofa"]').focus();
+    const seen = [];
+    for (let i = 0; i < 3; i++) {
+      await page.keyboard.press('ArrowRight');
+      seen.push(await page.evaluate(() => document.activeElement?.dataset.tab));
+    }
+    assert(seen.join() === 'cdc,wx,mofa', `ArrowRight order ${seen}`);
+    await page.keyboard.press('End');
+    const r = await page.evaluate(() => ({
+      tab: document.querySelector('[data-testid="tab-wx"]').getAttribute('aria-selected'),
+      focused: document.activeElement?.dataset.tab,
+      markers: document.querySelectorAll('[data-testid="wx-marker"]').length,
+      shown: [...document.querySelectorAll('[data-testid="wx-marker"]')].filter((e) => e.getBoundingClientRect().width > 0).length,
+      full: document.querySelectorAll('[data-testid="wx-marker"].is-full').length,
+      named: [...document.querySelectorAll('[data-testid="wx-marker"]')].every((e) => /°/.test(e.getAttribute('aria-label') || '')),
+      legend: document.querySelector('#legend')?.textContent || '',
+      bar: !document.querySelector('[data-testid="wxm-bar"]').hidden,
+      role: document.querySelector('#tmap').getAttribute('role'),
+    }));
+    assert(r.tab === 'true' && r.focused === 'wx', `End → selected ${r.tab}, focus ${r.focused}`);
+    assert(r.markers === 80 && r.shown === 80, `${r.markers} markers, ${r.shown} shown`);
+    assert(r.full > 10 && r.full < 80, `${r.full} full markers at world zoom`);
+    assert(r.named, 'a marker lacks an accessible name with a temperature');
+    assert(r.legend.includes('最高溫') && r.legend.includes('發布') && r.legend.includes('臺灣日期'), `legend "${r.legend.slice(0, 60)}"`);
+    assert(r.bar && r.role === 'group', `day bar ${r.bar}, svg role ${r.role}`);
+    return `${r.markers} markers, ${r.full} full`;
+  });
+
+  await check('weather map: day selector, °F and tooltip update the Tokyo marker', async () => {
+    const tokyo = page.locator('[data-testid="wx-marker"][data-city="47662"]');
+    const exp = await page.evaluate(async () => {
+      const d = await (await fetch('data/weather.json')).json();
+      return d.cities.find((c) => c.id === '47662').days.map((x) => x.max);
+    });
+    const temp = async () => (await tokyo.locator('.wxm-t').textContent()).replace('−', '-');
+    const d1 = await temp();
+    await page.locator('[data-testid="wxm-day-1"]').click();
+    const d2 = await temp();
+    const label2 = await tokyo.getAttribute('aria-label');
+    assert(d1 === `${exp[0]}°` && d2 === `${exp[1]}°`, `day 1 ${d1} / day 2 ${d2}, expected ${exp[0]}° / ${exp[1]}°`);
+    assert(label2.startsWith('東京') && label2.includes(`${exp[1]}°`), `label "${label2}"`);
+    await page.locator('[data-testid="wx-unit-f"]').click();
+    const f = await temp();
+    await page.locator('[data-testid="wx-unit-c"]').click();
+    assert(f === `${Math.round((exp[1] * 9) / 5 + 32)}°`, `°F marker ${f}`);
+    await page.locator('[data-testid="wxm-day-0"]').click();
+    await page.locator('#map-sec').scrollIntoViewIfNeeded();
+    const box = await tokyo.locator('.wxm-dot').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.locator('#tip:not([hidden]) .wxt-d').first().waitFor({ timeout: 3000 });
+    const tip = await page.evaluate(() => ({ n: document.querySelectorAll('#tip .wxt-d').length, text: document.querySelector('#tip').textContent }));
+    await page.mouse.move(2, 2);
+    assert(tip.n === 7 && tip.text.includes('東京') && tip.text.includes('Tokyo'), `tooltip ${tip.n} days "${tip.text.slice(0, 30)}"`);
+    return `day 1 ${d1}, day 2 ${d2}, ${f}`;
+  });
+
+  await check('weather map: keyboard and click on a marker open the destination card', async () => {
+    const tokyo = page.locator('[data-testid="wx-marker"][data-city="47662"]');
+    await tokyo.focus();
+    await page.keyboard.press('ArrowRight');
+    const moved = await page.evaluate(() => document.activeElement?.dataset.city);
+    assert(moved && moved !== '47662', `arrow key focus ${moved}`);
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => location.hash === '#JP', null, { timeout: 4000 });
+    await page.locator('#map-sec').scrollIntoViewIfNeeded();
+    const london = page.locator('[data-testid="wx-marker"][data-city="3770"] .wxm-dot');
+    const b = await london.boundingBox();
+    await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+    await page.waitForFunction(() => location.hash === '#GB', null, { timeout: 4000 });
+    const title = await page.locator('#card-title').textContent();
+    await page.locator('[data-testid="tab-mofa"]').click();
+    const hidden = await page.evaluate(() => getComputedStyle(document.querySelector('.wxm')).display === 'none');
+    assert(title.includes('英國'), `card "${title}"`);
+    assert(hidden, 'markers still shown on the warning tab');
+    return `#JP then #GB (${title})`;
+  });
+
+  await check('weather map on a 390 px phone: no overflow, tap shows the forecast, second tap opens the card', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const phone = await ctx.newPage();
+    const errs = [];
+    phone.on('pageerror', (err) => errs.push(err.message));
+    phone.on('console', (msg) => { if (msg.type() === 'error') errs.push(msg.text()); });
+    await phone.goto(PAGE_URL.split('#')[0], { waitUntil: 'load' });
+    await phone.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+    await phone.locator('[data-testid="tab-wx"]').tap();
+    await phone.locator('#map-sec').scrollIntoViewIfNeeded();
+    const m = await phone.evaluate(() => ({
+      sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
+      markers: [...document.querySelectorAll('[data-testid="wx-marker"]')].filter((e) => e.getBoundingClientRect().width > 0).length,
+    }));
+    const dot = await phone.locator('[data-testid="wx-marker"][data-city="47662"] .wxm-dot').boundingBox();
+    await phone.touchscreen.tap(dot.x + dot.width / 2, dot.y + dot.height / 2);
+    await phone.locator('#tip:not([hidden]) .wxt-d').first().waitFor({ timeout: 3000 });
+    const hash1 = await phone.evaluate(() => location.hash);
+    await phone.touchscreen.tap(dot.x + dot.width / 2, dot.y + dot.height / 2);
+    await phone.waitForFunction(() => location.hash === '#JP', null, { timeout: 4000 });
+    await ctx.close();
+    assert(m.sw <= m.cw, `scrollWidth ${m.sw} > clientWidth ${m.cw}`);
+    assert(m.markers === 80, `${m.markers} markers`);
+    assert(hash1 === '', `first tap navigated to ${hash1}`);
+    assert(!errs.length, `error: ${errs[0]}`);
+    return `${m.sw}px wide, ${m.markers} markers`;
+  });
+
   await check('English toggle switches headings', async () => {
     await page.locator('[data-testid="lang-toggle"]').click();
     const h1 = await page.locator('h1').textContent();
@@ -378,7 +485,11 @@ async function run(page, context) {
     await p4.route('**/data/weather.json', (route) => route.fulfill({ status: 404, body: 'missing' }));
     await p4.goto(`${PAGE_URL.split('#')[0]}#JP`, { waitUntil: 'load' });
     await p4.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+    await p4.locator('[data-testid="tab-wx"]').click();
     const r = await p4.evaluate(() => ({
+      legend: document.querySelector('#legend')?.textContent || '',
+      markers: document.querySelectorAll('[data-testid="wx-marker"]').length,
+      bar: document.querySelector('[data-testid="wxm-bar"]').hidden,
       failed: document.querySelector('[data-testid="wx-failed"]')?.textContent || '',
       cards: document.querySelectorAll('[data-testid="wx-city"]').length,
       tools: document.querySelector('.wx-tools')?.hidden,
@@ -395,7 +506,8 @@ async function run(page, context) {
     assert(!r.block && r.title.includes('日本'), `card "${r.title}", weather block ${r.block}`);
     assert(r.rows > 150 && r.paths > 150, `${r.rows} rows, ${r.paths} paths`);
     assert(r.stamps.includes('氣象署預報') && r.stamps.includes('未知'), `stamps "${r.stamps}"`);
-    return 'notice shown, table + map + card fine';
+    assert(r.legend.includes('無法載入') && r.markers === 0 && r.bar, `weather tab: legend "${r.legend}", ${r.markers} markers`);
+    return 'notice shown, table + map + card fine, weather tab explains';
   });
 
   await check('no console errors during the run', async () => {
