@@ -11,6 +11,7 @@ import { renderCard } from './trip-card.js';
 import { createTable } from './trip-table.js';
 import { renderChanges } from './trip-changes.js';
 import { createSearch } from './trip-search.js';
+import { createWeather, loadWeather } from './trip-weather.js';
 
 const THEME_KEY = 'safetravel.trip.theme';
 const root = document.documentElement;
@@ -30,6 +31,7 @@ const table = createTable({ root: $('#all'), onOpen: (iso) => openCard(iso), onP
 const search = createSearch({
   input: $('#q'), listEl: $('#q-list'), statusEl: $('#q-status'), onOpen: (iso) => openCard(iso),
 });
+const weather = createWeather({ root: $('#weather'), onOpen: (iso) => openCard(iso), onSettled: () => renderStamps() });
 
 // ---------------- theme & language ----------------
 function applyThemeButton() {
@@ -68,6 +70,8 @@ function renderStamps() {
     [t('stamp_cdc'), A ? fmtStamp(A.generated_at) : ''],
     [t('stamp_mac'), fmtDay(W?.sources?.mac?.confirmed)],
   ];
+  const wx = weather.stamp(); // null until weather.json has settled
+  if (wx != null) items.push([t('stamp_cwa'), wx]);
   $('#stamps').replaceChildren(...items.map(([k, v]) => h('div', {},
     h('dt', { text: k }), h('dd', {}, v ? h('time', { text: v }) : t('stamp_unknown')))));
 
@@ -143,7 +147,9 @@ function openCard(iso, { focus = true, scroll = true } = {}) {
   if (!d) return false;
   if (!app.open) app.returnFocus = document.activeElement;
   app.open = d.iso;
-  renderCard(cardEl, d, { model: app.model, onClose: closeCard, onPrint: () => printPart('card') });
+  renderCard(cardEl, d, {
+    model: app.model, onClose: closeCard, onPrint: () => printPart('card'), localWeather: weather.localSection,
+  });
   cardEl.hidden = false;
   app.map?.select(d.iso);
   app.map?.hideTip();
@@ -188,6 +194,7 @@ function renderAll() {
   setTab(app.tab);
   table.render(app.model);
   renderChanges($('#changes'), app.model, (iso) => openCard(iso));
+  weather.render();
   search.refresh();
   if (app.open) openCard(app.open, { focus: false, scroll: false });
 }
@@ -196,6 +203,8 @@ async function main() {
   initLang();
   applyStatic();
   applyThemeButton();
+  const wxData = loadWeather(); // non-critical, in parallel: weather.attach() renders it after the first paint
+  wxData.catch(() => {});      // handled in attach(); avoid an "unhandled rejection" while the main data loads
   const [w, a, c] = await Promise.allSettled([
     getJSON('data/warnings.json'), getJSON('data/alerts.json'), getJSON('data/countries.json'),
   ]);
@@ -208,13 +217,16 @@ async function main() {
   app.model = buildModel({ warnings, alerts, countries: val(c) });
   bindLevels(warnings, alerts);
   search.setModel(app.model);
+  weather.setModel(app.model);
   if (!warnings && alerts) app.tab = 'cdc';
   renderAll();
   root.classList.remove('i18n-pending');
 
   const iso = location.hash.slice(1).toUpperCase();
   if (/^[A-Z]{2}$/.test(iso)) openCard(iso, { focus: false });
+  const wxDone = weather.attach(wxData);
   await initMap();
+  await wxDone;
   document.body.dataset.ready = '1';
 }
 

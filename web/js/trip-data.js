@@ -19,8 +19,8 @@ export function loadEpidemics() {
   return epiPromise;
 }
 
-const LINK_HOSTS = ['boca.gov.tw', 'mac.gov.tw', 'cdc.gov.tw'];
-/** Data-sourced links: only https pages of BOCA, MAC or Taiwan CDC may become an href; anything else → ''. */
+const LINK_HOSTS = ['boca.gov.tw', 'mac.gov.tw', 'cdc.gov.tw', 'cwa.gov.tw'];
+/** Data-sourced links: only https pages of BOCA, MAC, Taiwan CDC or CWA may become an href; anything else → ''. */
 export function safeHref(u) {
   try {
     const x = new URL(String(u));

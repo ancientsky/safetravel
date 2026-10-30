@@ -213,8 +213,8 @@ function epiSection(d, token) {
   return sec;
 }
 
-/** Render destination `d` into the card element. */
-export function renderCard(el, d, { model, onClose, onPrint }) {
+/** Render destination `d` into the card element. `localWeather(iso)` returns the weather block (or null). */
+export function renderCard(el, d, { model, onClose, onPrint, localWeather }) {
   const token = ++renderToken;
   el.replaceChildren(
     h('div', { class: 'card-head' },
@@ -227,6 +227,7 @@ export function renderCard(el, d, { model, onClose, onPrint }) {
         h('button', { type: 'button', class: 'btn btn-icon', 'aria-label': t('card_close'), title: t('card_close'), onclick: onClose, text: '×' }))),
     h('div', { class: 'ratings' }, mofaBlock(d, model), cdcBlock(d, model)),
     epiSection(d, token),
+    localWeather ? localWeather(d.iso) : null,
     h('div', { class: 'card-disc' },
       h('p', { text: t('card_disclaimer_mofa') }),
       h('p', { text: t('card_disclaimer_cdc') }),
