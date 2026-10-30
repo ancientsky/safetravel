@@ -1,0 +1,47 @@
+name: Probe fetch CWA world-city forecast (temporary)
+# One-off: saves the CWA F-C0032-007 world-city forecast under data/raw/cwa/ so the parser can be developed
+# offline (the dev sandbox cannot reach opendata.cwa.gov.tw). The API key comes from the CWA secret and is never
+# written to the files or the log. Delete after use.
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Download
+        env:
+          CWA: ${{ secrets.CWA }}
+        run: |
+          set +e
+          mkdir -p data/raw/cwa
+          [ -n "$CWA" ] || { echo "CWA secret is empty"; exit 1; }
+          UA='Mozilla/5.0 (compatible; SafeTravelTW/1.0; +https://ancientsky.github.io/safetravel/)'
+          get() {  # name, url (key appended), output
+            curl -sSL -m 90 -A "$UA" -o "$3" -w "$1 %{http_code} %{content_type} %{size_download}\n" "$2&Authorization=${CWA}" 2>&1 | sed "s/${CWA}/***/g"
+          }
+          get fileapi-json "https://opendata.cwa.gov.tw/fileapi/v1/opendataapi/F-C0032-007?downloadType=WEB&format=JSON" data/raw/cwa/F-C0032-007.json
+          get fileapi-xml  "https://opendata.cwa.gov.tw/fileapi/v1/opendataapi/F-C0032-007?downloadType=WEB&format=XML" data/raw/cwa/F-C0032-007.xml
+          get datastore    "https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-007?format=JSON" data/raw/cwa/F-C0032-007.datastore.json
+          # never commit anything that echoes the key back
+          grep -l -F "$CWA" data/raw/cwa/* && { echo "key found in a response: not committing"; exit 1; }
+          ls -la data/raw/cwa
+          head -c 600 data/raw/cwa/F-C0032-007.json; echo
+      - name: Commit raw files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git add data/raw/cwa
+          git commit -m "data: raw CWA F-C0032-007 world-city forecast (fixture)" || exit 0
+          for i in 1 2 3; do git push origin HEAD:main && exit 0; git pull --rebase origin main; done
+          exit 1
