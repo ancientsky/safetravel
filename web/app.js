@@ -16,19 +16,27 @@ import { createArrivals } from './js/arrivals.js';
 import { createWatch } from './js/watch.js';
 import { createSearch, renderFilterChips, renderLayerSwitch } from './js/search.js';
 import {
-  startClock, renderTiles, renderFreshness, renderLegend, renderFlightHud,
+  startClock, renderTiles, renderFreshness, renderLegend, renderFlightHud, setLegendExtra,
 } from './js/hud.js';
 
 const LANG_KEY = 'safetravel.lang';
 const THEME_KEY = 'safetravel.theme';
 const FLIGHTS_KEY = 'safetravel.flights';
 const LAYER_KEY = 'safetravel.layer';
+const WX_KEY = 'safetravel.weather';
 
 /** Initial map layer: ?layer=mofa|cdc deep link, else the stored choice, else CDC. */
 function initialLayer() {
   const q = new URLSearchParams(location.search).get('layer');
   if (q === 'mofa' || q === 'cdc') return q;
   return storageGet(LAYER_KEY) === 'mofa' ? 'mofa' : 'cdc';
+}
+
+/** Weather overlay (default off): ?wx=1|0 deep link, else the stored choice. */
+function initialWeather() {
+  const q = new URLSearchParams(location.search).get('wx');
+  if (q === '1' || q === '0') return q === '1';
+  return storageGet(WX_KEY) === 'on';
 }
 
 /** epidemics.json via a worker (parse off the main thread, items streamed in batches). */
@@ -126,6 +134,7 @@ async function main() {
   applyTheme(initialTheme());
   state.flightsOn = storageGet(FLIGHTS_KEY) !== 'off';
   state.layer = initialLayer();
+  state.weather = { on: initialWeather(), status: 'idle', data: null, day: 0 };
   bindData(state.data);
   applyStatic();
   document.documentElement.classList.remove('i18n-pending'); // see the inline script in index.html
@@ -151,7 +160,7 @@ async function main() {
   on('refresh:pending', () => sound.play('arpeggio'));
   // tiny click for the UI toggles (language, theme, filters, routes, spotlight switches)
   document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-testid="lang-toggle"], [data-testid="theme-toggle"], .chip-filter, .fh-toggle, .switch, .arr-toggle, .arr-cp, .arr-big, .watch-toggle')) sound.play('click');
+    if (e.target.closest('[data-testid="lang-toggle"], [data-testid="theme-toggle"], .chip-filter, .fh-toggle, .switch, .arr-toggle, .arr-cp, .arr-big, .watch-toggle, .wx-toggle, .wxb-day, .wxb-play')) sound.play('click');
   });
 
   // MOFA/MAC travel warnings: not critical (the map works without them); fetched alongside.
@@ -180,7 +189,7 @@ async function main() {
   const getInsets = () => {
     if (window.innerWidth >= 760) return arrivals?.insets() || null;
     const bottomOf = (sel) => document.querySelector(sel)?.getBoundingClientRect().bottom || 0;
-    const top = Math.max(bottomOf('.toolbar'), bottomOf('.legend'), bottomOf('.flight-hud')) + 8;
+    const top = Math.max(bottomOf('.toolbar'), bottomOf('.legend'), bottomOf('.flight-hud'), bottomOf('.wx-bar:not([hidden])')) + 8;
     const spot = document.querySelector('#spotlight')?.getBoundingClientRect().top || window.innerHeight;
     return { top, bottom: window.innerHeight - spot + 8 };
   };
@@ -235,6 +244,50 @@ async function main() {
   renderLayerSwitch(layerNode, setLayer);
   window.__safetravel.setLayer = setLayer;
 
+  // Weather overlay (CWA world-city forecast): OFF by default. Its module and weather.json are only fetched the
+  // first time it is switched on (or after the first map render when it starts on).
+  const wxButton = $('[data-testid="weather-toggle"]');
+  let wxOverlay = null;
+  let wxModule = null;
+  let mapReady = false;
+  const renderWxToggle = () => wxButton.setAttribute('aria-pressed', String(state.weather.on));
+  const wxChanged = () => {
+    renderLegend($('#legend'));
+    panel.refresh();
+    if (window.innerWidth < 760) relayoutSoon(); // phones: the day bar changes the free band above the map
+  };
+  function loadWxOverlay() {
+    wxModule ||= import('./js/weather.js').then((m) => {
+      setLegendExtra(m.legendHtml);
+      wxOverlay = m.createWeatherOverlay({
+        map, mapRoot, bar: $('#wx-bar'), openCountry: (iso) => openCountry(iso), onChange: wxChanged,
+      });
+      panel.setWeather(wxOverlay.panelProvider);
+      return wxOverlay;
+    });
+    return wxModule;
+  }
+  function setWeather(v) {
+    state.weather.on = !!v;
+    storageSet(WX_KEY, state.weather.on ? 'on' : 'off');
+    const u = new URL(location.href);
+    if (u.searchParams.has('wx')) { // keep a shared ?wx= link in sync with the toggle
+      u.searchParams.set('wx', state.weather.on ? '1' : '0');
+      history.replaceState(null, '', u);
+    }
+    renderWxToggle();
+    if (!mapReady) return; // applied after the first map render
+    if (state.weather.on) loadWxOverlay().then((o) => o.setOn(true)).catch((err) => { state.errors.push(String(err)); });
+    else wxOverlay?.setOn(false);
+    wxChanged();
+  }
+  renderWxToggle();
+  wxButton.addEventListener('click', () => setWeather(!state.weather.on));
+  window.__safetravel.weather = {
+    isOn: () => state.weather.on, set: setWeather, status: () => state.weather.status,
+    day: (i) => wxOverlay?.debug.setDay(i),
+  };
+
   // Let the HUD paint first; the map (one long d3 task) renders in the next frame on clean layout.
   await afterPaint();
 
@@ -257,6 +310,8 @@ async function main() {
     map.resize();
     if (panel.isOpen()) map.setSelected(panel.current());
   };
+  let relayoutTimer = 0;
+  function relayoutSoon() { clearTimeout(relayoutTimer); relayoutTimer = setTimeout(relayout, 60); }
   arrivals = createArrivals({
     root: $('#arrivals'), button: $('[data-testid="arrivals-toggle"]'), map, openCountry, onLayout: relayout,
   });
@@ -267,6 +322,13 @@ async function main() {
   const watch = createWatch({ button: $('[data-testid="watch-toggle"]'), menu: $('#watch-menu'), map });
   if (state.data.world) watch.init();
   window.__safetravel.watch = watch.debug;
+
+  if (state.data.world) {
+    mapReady = true;
+    if (state.weather.on) setWeather(true);
+  } else {
+    wxButton.disabled = true;
+  }
 
   // travel warnings arrive after (or with) the critical data: switch the layer on when they do
   warningsP.then(() => {
@@ -310,6 +372,7 @@ async function main() {
     spotlight?.refresh();
     arrivals.refresh();
     watch.refresh();
+    wxOverlay?.refresh();
   });
   $('[data-testid="theme-toggle"]').addEventListener('click', () => {
     applyTheme(state.theme === 'dark' ? 'light' : 'dark');

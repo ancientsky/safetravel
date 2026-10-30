@@ -2,65 +2,14 @@
 // Section #weather (region tabs, text filter, °C/°F) plus the "local weather" block of the destination card.
 // DOM is built with textContent / SVG attributes only; icons are <use> references into the sprite in trip.html.
 import { h, extLink } from './trip-dom.js';
-import { t, isEn, nameOf, fmtStamp, fmtDay } from './trip-i18n.js';
-import { getJSON, safeHref, normKey } from './trip-data.js';
-import { clean, parseDay, storageGet, storageSet } from './util.js';
+import { t, isEn, nameOf, fmtStamp } from './trip-i18n.js';
+import { getJSON, normKey } from './trip-data.js';
+import { parseDay, storageGet, storageSet } from './util.js';
+import { normalizeWeather as normalize, WET, DATASET_URL, degree } from './wx-shared.js';
 
 const UNIT_KEY = 'safetravel.trip.unit';
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const ICONS = new Set(['sun', 'partly', 'cloud', 'overcast', 'rain', 'showers', 'thunder', 'snow', 'sleet', 'fog']);
-const WET = new Set(['rain', 'showers', 'thunder', 'sleet']);
-const ISO_RE = /^[A-Z]{2}$/;
-const DEFAULT_URL = 'https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007';
-
-// ---------------- data ----------------
-const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : null);
-const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : null);
-const geo = (v, lim) => (typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= lim ? v : null);
-
-/** Validate weather.json into the shape the UI relies on (bad rows are dropped, never trusted). */
-function normalize(raw) {
-  const src = obj(raw?.source) || {};
-  const regions = (Array.isArray(raw?.regions) ? raw.regions : []).map(obj).filter(Boolean)
-    .map((r) => ({ id: String(r.id ?? ''), zh: clean(r.zh), en: clean(r.en) }))
-    .filter((r) => /^[\w-]{1,32}$/.test(r.id));
-  const order = new Map(regions.map((r, i) => [r.id, i]));
-  const cities = [];
-  (Array.isArray(raw?.cities) ? raw.cities : []).forEach((c, idx) => {
-    if (!obj(c) || !Array.isArray(c.days)) return;
-    const days = c.days.map(obj).filter(Boolean).map((d) => {
-      let max = num(d.max);
-      let min = num(d.min);
-      if (max != null && min != null && min > max) [max, min] = [min, max];
-      return {
-        date: fmtDay(d.date), icon: ICONS.has(d.icon) ? d.icon : 'cloud', zh: clean(d.wx_zh), en: clean(d.wx_en), max, min,
-      };
-    }).filter((d) => d.date);
-    const nameZh = clean(c.name_zh);
-    const nameEn = clean(c.name_en);
-    if (!days.length || !(nameZh || nameEn)) return;
-    const iso = ISO_RE.test(String(c.iso ?? '')) ? c.iso : null;
-    const region = order.has(c.region) ? c.region : '';
-    cities.push({
-      id: String(c.id ?? idx), nameZh: nameZh || nameEn, nameEn: nameEn || nameZh, iso, region, days, idx,
-      lat: geo(c.lat, 90), lon: geo(c.lon, 180),
-    });
-  });
-  if (!cities.length) throw new Error('weather.json has no usable cities');
-  // CWA's region order, then CWA's city order
-  cities.sort((a, b) => (order.get(a.region) ?? 99) - (order.get(b.region) ?? 99) || a.idx - b.idx);
-  if (cities.some((c) => !c.region)) regions.push({ id: '', zh: '其他', en: 'Other' });
-
-  const temps = cities.flatMap((c) => c.days.flatMap((d) => [d.max, d.min])).filter((v) => v != null);
-  let lo = temps.length ? Math.floor(Math.min(...temps) / 5) * 5 : 0;
-  let hi = temps.length ? Math.ceil(Math.max(...temps) / 5) * 5 : 30;
-  if (hi - lo < 10) { lo -= 5; hi += 5; }
-  return {
-    issued: typeof src.issued === 'string' ? src.issued : '',
-    url: safeHref(src.url) || DEFAULT_URL,
-    regions, cities, scale: { lo, hi },
-  };
-}
+const DEFAULT_URL = DATASET_URL;
 
 let dataPromise = null;
 /** weather.json, fetched once per page (retried after a failure). */
@@ -71,9 +20,7 @@ export function loadWeather() {
 
 // ---------------- formatting ----------------
 let unit = storageGet(UNIT_KEY) === 'F' ? 'F' : 'C';
-const conv = (c) => (c == null ? null : unit === 'F' ? Math.round((c * 9) / 5 + 32) : c);
-const minus = (v) => String(v).replace('-', '\u2212'); // typographic minus for sub-zero values
-const deg = (c) => (c == null ? '–' : `${minus(conv(c))}°`);
+const deg = (c) => degree(c, unit);
 const cityName = (c) => (isEn() ? c.nameEn : c.nameZh);
 const cityAlt = (c) => (isEn() ? c.nameZh : c.nameEn);
 const phrase = (d) => (isEn() ? d.en || d.zh : d.zh || d.en);

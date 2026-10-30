@@ -88,3 +88,16 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
 - All copy through `i18n` (`zh-Hant` default, `en`), persisted in `localStorage`.
 - Theme: `dark` default (black `#050a07` → deep green, neon green `#19ff8a` accent, cyan secondary), `light` alternative. Level colours per `DATA_CONTRACT.md`.
 - Everything the map needs is loaded from `web/data/*.json` with `fetch()` relative to `index.html` (works under `/safetravel/` sub-path).
+
+## Weather (CWA world-city forecast)
+
+`pipeline/weather.py` → `web/data/weather.json` (contract in DATA_CONTRACT.md). Front end:
+- `web/js/wx-shared.js`: pure helpers shared by both pages (data normalisation, temperature classes, °C/°F, marker priority and
+  keyboard order, the greedy screen-space declutter).
+- `trip.html`: `trip-weather.js` (city cards, card block; unit in `localStorage` `safetravel.trip.unit`) and `trip-wxmap.js`
+  (third map tab).
+- Main site: `web/js/weather.js`, loaded with a dynamic `import()` only when the overlay is switched on — while it is off
+  nothing weather-related is fetched or built. State in `localStorage` `safetravel.weather` (`on`/`off`, default off),
+  overridden by `?wx=1` / `?wx=0`. Markers are HTML buttons in their own layer (above the map, flights canvas and route watch,
+  below the HUD), placed in screen pixels on every zoom/pan frame and kept clear of the HUD cards.
+

@@ -111,6 +111,11 @@ export function renderFreshness(node) {
   node.title = gen ? fmtDateTime(gen) : '';
 }
 
+// Optional extra legend content (weather overlay, js/weather.js): set once that module has loaded.
+let legendExtra = null;
+export function setLegendExtra(fn) { legendExtra = fn; }
+const extra = () => legendExtra?.() || { block: '', mini: '' };
+
 function flightLegend() {
   return state.data.flights?.routes?.length ? `<ul class="legend-list legend-flights">
       <li><span class="swatch-line out" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_out'))}</span></li>
@@ -119,6 +124,7 @@ function flightLegend() {
 }
 
 function renderWarnLegend(node) {
+  const wx = extra();
   const w = state.data.warnings?.countries || {};
   const counts = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
   let partial = 0;
@@ -134,9 +140,9 @@ function renderWarnLegend(node) {
     <h2 class="legend-title">${esc(t('wl_legend_title'))}</h2>
     <ul class="legend-list">${rows}
       <li><span class="swatch swatch-part" aria-hidden="true"></span><span class="lg-name">${esc(t('wl_legend_partial'))}</span><b class="mono">${fmtNum(partial)}</b></li>
-      <li><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>
+      <li><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>${wx.mini}
     </ul>
-    ${flightLegend()}
+    ${flightLegend()}${wx.block}
     <p class="legend-note">${esc(t('wl_legend_mac'))}</p>
     <p class="legend-note">${esc(t('wl_legend_note'))}</p>
     <p class="legend-hint">${esc(t('map_hint'))}</p>`;
@@ -146,6 +152,7 @@ export function renderLegend(node) {
   node.classList.remove('is-pending');
   node.classList.toggle('is-mofa', mofaMode());
   if (mofaMode()) { renderWarnLegend(node); return; }
+  const wx = extra();
   const c = state.data.alerts?.countries || {};
   const counts = { 0: 0, 1: 0, 2: 0, 3: 0 };
   for (const v of Object.values(c)) counts[v.max_level || 0]++;
@@ -157,9 +164,9 @@ export function renderLegend(node) {
   node.innerHTML = `
     <h2 class="legend-title">${esc(t('legend_title'))}</h2>
     <ul class="legend-list">${rows}
-      <li><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>
+      <li><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>${wx.mini}
     </ul>
-    ${flightLegend()}
+    ${flightLegend()}${wx.block}
     ${unmapped ? `<p class="legend-note">${esc(t('legend_unmapped', { n: unmapped }))}</p>` : ''}
     <p class="legend-hint">${esc(t('map_hint'))}</p>`;
 }

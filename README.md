@@ -47,7 +47,7 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 | 音效 | 開關音效（預設關閉；瀏覽器擋自動播放時，按鈕會出現提示點，點一下即可開啟） |
 | 月亮／太陽 | 切換深色／淺色主題 |
 
-**地圖操作**：滾輪縮放、拖曳平移、雙擊重設；按 `/` 跳到搜尋框，`Esc` 關閉國家面板。左上可切換「疫情建議・疾管署／旅遊警示・外交部」圖層並依等級篩選；左下圖例旁的「航線」開關可關閉 TPE 航線動畫。滑鼠提示與國家面板一律並列兩種分級；國家面板的「外交部旅遊警示」區塊可展開全文並連回領事事務局原文。
+**地圖操作**：滾輪縮放、拖曳平移、雙擊重設；按 `/` 跳到搜尋框，`Esc` 關閉國家面板。左上可切換「疫情建議・疾管署／旅遊警示・外交部」圖層並依等級篩選，旁邊的「天氣」開關（預設關閉）會在地圖上疊加中央氣象署 80 個城市的天氣與最高溫，可逐日切換或播放，國家面板也會多一段「當地天氣預報」；左下圖例旁的「航線」開關可關閉 TPE 航線動畫。滑鼠提示與國家面板一律並列兩種分級；國家面板的「外交部旅遊警示」區塊可展開全文並連回領事事務局原文。
 
 **入境航班看板**
 
@@ -70,6 +70,7 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 | `…/safetravel/?arr=TPE-C&big=1` | 同上，大字模式 |
 | `…/safetravel/?watch=irkutsk` | 開啟伊爾庫次克疫區航線圖（`kinshasa` 金夏沙；兩個都開：`?watch=irkutsk,kinshasa`） |
 | `…/safetravel/?layer=mofa` | 以外交部旅遊警示圖層開啟地圖（`cdc` 為疫情建議） |
+| `…/safetravel/?wx=1` | 開啟天氣圖層（`?wx=0` 關閉） |
 | `…/safetravel/trip.html#KH` | 出國前查詢頁，直接開啟某目的地資訊卡 |
 
 參數可以合併，例如 `?arr=TPE-C&big=1&watch=irkutsk`。
@@ -225,10 +226,10 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 ### How to use
 
 - **Header buttons**: language · **Arrivals** (inbound board, off by default) · **Trip check** (`trip.html`) · **Outbreak routes** (menu with one switch per watched city) · Sound · Theme.
-- **Map**: wheel to zoom, drag to pan, double-click to reset; `/` focuses search, `Esc` closes the panel; layer switch (CDC health / MOFA safety) and level filters top-left; tooltips and the panel always show both ratings; the route radar switch bottom-left.
+- **Map**: wheel to zoom, drag to pan, double-click to reset; `/` focuses search, `Esc` closes the panel; layer switch (CDC health / MOFA safety), level filters and a **Weather** overlay switch (off by default: CWA forecasts for 80 cities with a 7-day selector, plus a local-weather section in the country panel) top-left; tooltips and the panel always show both ratings; the route radar switch bottom-left.
 - **Inbound board**: pick the airport and checkpoint; click a row to open the origin country; hover to highlight its route. *Auto-scroll* (on by default) glides through the list and pauses for 8 s after the mouse moves or 15 s after a touch/wheel/click — a parked cursor does not stop it. *Large* is for wall screens. Drag the title bar to float the board (position remembered per orientation); *Dock* restores it. Data refreshes every 10 minutes (every 30 minutes from 00:00 to 04:59 Taipei).
 - **Outbreak route watch**: Outbreak routes → switch on *Irkutsk IKT* and/or *Kinshasa FIH*. Line width shows monthly flights; cyan marks destinations with direct flights to Taoyuan; a red warning ring marks a reported exported case (Kinshasa → Nairobi); faint dashed lines are listed routes without scheduled flights this month. While a watch is on, the spotlight tour no longer moves the map.
-- **Deep links**: `#/country/CD` (country panel) · `?arr=TPE-C` (board for Taoyuan checkpoint C; `TPE-A`…`TPE-D`, or `TSA`, `KHH`, `RMQ`…) · `&big=1` (large type) · `?watch=irkutsk`, `?watch=kinshasa` or `?watch=irkutsk,kinshasa` (route watch) · `?layer=mofa` (travel-warning layer) · `trip.html#KH` (pre-trip page with a destination card). Parameters combine, e.g. `?arr=TPE-C&big=1&watch=irkutsk`.
+- **Deep links**: `#/country/CD` (country panel) · `?arr=TPE-C` (board for Taoyuan checkpoint C; `TPE-A`…`TPE-D`, or `TSA`, `KHH`, `RMQ`…) · `&big=1` (large type) · `?watch=irkutsk`, `?watch=kinshasa` or `?watch=irkutsk,kinshasa` (route watch) · `?layer=mofa` (travel-warning layer) · `?wx=1` (weather overlay on; `?wx=0` off) · `trip.html#KH` (pre-trip page with a destination card). Parameters combine, e.g. `?arr=TPE-C&big=1&watch=irkutsk`.
 - **Wall screens**: in landscape the board docks left and the map shifts right, beside the country panel; in portrait it docks on top, the map refits below, the board narrows beside an open panel and spotlight zooms avoid it. New epidemic data reloads the page automatically; after a site code update, reload once by hand.
 
 ### Refresh schedule

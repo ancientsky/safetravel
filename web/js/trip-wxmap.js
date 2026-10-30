@@ -6,28 +6,15 @@
 import { h } from './trip-dom.js';
 import { t, nameOf } from './trip-i18n.js';
 import { wx } from './trip-weather.js';
+import {
+  tempClass, declutter, cityRank, keyboardOrder,
+} from './wx-shared.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const PLAY_MS = 1600;
-// placed first when space is short (well-known destinations for Taiwanese travellers); then CWA's order
-const MAJOR = [
-  'Tokyo', 'Seoul', 'Hong Kong', 'Bangkok', 'Singapore', 'Shanghai', 'Beijing', 'Manila', 'Ho Chi Minh City', 'Kuala Lumpur',
-  'Jakarta', 'Sydney', 'Auckland', 'New Delhi', 'Kathmandu', 'Moscow', 'Istanbul', 'London', 'Paris', 'Rome', 'Frankfurt', 'Madrid',
-  'Cairo', 'Johannesburg', 'New York', 'Los Angeles', 'San Francisco', 'Vancouver', 'Toronto', 'Honolulu', 'Guam', 'Mexico City',
-  'Rio de Janeiro', 'Buenos Aires', 'Lima', 'Santiago', 'Osaka', 'Guangzhou', 'Vladivostok', 'Perth', 'Stockholm', 'Athens',
-];
-// temperature buckets (°C) → CSS classes .wxk-* that mix the same ramp colours as the cards' bars
-const BUCKETS = [-10, -5, 0, 5, 10, 14, 17, 20, 24, 27, 30, 34, 38];
 const PILL_H = 22;
-const GAP = 6;      // dot centre → pill edge
-const DOT_PAD = 6;  // half-size of the box a dot keeps clear
 
-export function tempClass(c) {
-  if (c == null) return 'wxk-na';
-  let best = BUCKETS[0];
-  for (const b of BUCKETS) if (Math.abs(c - b) < Math.abs(c - best)) best = b;
-  return `wxk-${best < 0 ? `m${-best}` : best}`;
-}
+export { tempClass };
 
 function svg(tag, attrs = {}) {
   const el = document.createElementNS(SVG_NS, tag);
@@ -39,8 +26,6 @@ function svg(tag, attrs = {}) {
 const textWidth = (s) => [...s].reduce((w, ch) => w + (ch === '°' ? 5 : ch === '–' ? 7 : 7.4), 0);
 const nameWidth = (s) => [...s].reduce((w, ch) => w
   + (/[\u2e80-\u9fff\uff00-\uffef]/.test(ch) ? 12.4 : /[A-Z]/.test(ch) ? 8.8 : /[\s.,']/.test(ch) ? 3.8 : /[iljrft]/.test(ch) ? 4.6 : 7.4), 0);
-
-const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
 export function createWxMap({ map, box, svgEl, tipEl, barEl, onOpen }) {
   const st = { active: false, day: 0, timer: 0, pinned: null, lastPointer: 'mouse', focus: 0 };
@@ -62,10 +47,8 @@ export function createWxMap({ map, box, svgEl, tipEl, barEl, onOpen }) {
     layer.replaceChildren();
     markers = [];
     if (!data || !model) return;
-    const regionIdx = new Map(data.regions.map((r, i) => [r.id, i]));
-    const fromLeft = (lon) => (((lon - 155 + 540) % 360) + 360) % 360; // the map is centred on 155°E
-    const cities = data.cities.filter((c) => c.lat != null && c.lon != null);
-    cities.sort((a, b) => (regionIdx.get(a.region) ?? 99) - (regionIdx.get(b.region) ?? 99) || fromLeft(a.lon) - fromLeft(b.lon));
+    // the map is centred on 155°E
+    const cities = keyboardOrder(data.cities.filter((c) => c.lat != null && c.lon != null), data.regions, 155);
     for (const c of cities) {
       const dest = c.iso ? model.dests.get(c.iso) : null;
       const bg = svg('rect', { class: 'wxm-bg', height: PILL_H, rx: PILL_H / 2 });
@@ -83,8 +66,7 @@ export function createWxMap({ map, box, svgEl, tipEl, barEl, onOpen }) {
         city: c, dest, el, pill, bg, use, text, name, wS: 0, wL: 0, full: false, named: false, px: 0, py: 0, ox: 0, oy: 0,
       });
     }
-    const rank = (m) => { const i = MAJOR.indexOf(m.city.nameEn); return i < 0 ? MAJOR.length + m.city.idx : i; };
-    prio = [...markers].sort((a, b) => rank(a) - rank(b));
+    prio = [...markers].sort((a, b) => cityRank(a.city) - cityRank(b.city));
     st.focus = Math.min(st.focus, Math.max(0, markers.length - 1));
     markers.forEach((m, i) => { m.i = i; m.el.tabIndex = i === st.focus ? 0 : -1; });
     paint();
@@ -120,50 +102,12 @@ export function createWxMap({ map, box, svgEl, tipEl, barEl, onOpen }) {
   function layout() {
     if (!st.active || !markers.length) return;
     const { width, height } = map.size();
-    const pts = [];
     for (const m of markers) {
       const p = map.project(m.city.lon, m.city.lat);
       m.vis = !!p && p[0] > -10 && p[0] < width + 10 && p[1] > -10 && p[1] < height + 10;
       if (p) [m.px, m.py] = p;
-      if (m.vis) pts.push({ m, x: m.px - DOT_PAD, y: m.py - DOT_PAD, w: DOT_PAD * 2, h: DOT_PAD * 2 });
     }
-    // pill positions around the dot: above, right, left, below
-    const cands = (w) => [[-w / 2, -GAP - PILL_H], [GAP, -PILL_H / 2], [-GAP - w, -PILL_H / 2], [-w / 2, GAP]];
-    const placed = []; // { m, r }
-    const tryPlace = (m, w) => {
-      for (const [ox, oy] of cands(w)) {
-        const r = { x: m.px + ox - 1, y: m.py + oy - 1, w: w + 2, h: PILL_H + 2 };
-        if (r.x < 0 || r.y < 0 || r.x + r.w > width || r.y + r.h > height) continue;
-        if (placed.some((q) => q.m !== m && overlaps(r, q.r))) continue;
-        if (pts.some((q) => q.m !== m && overlaps(r, q))) continue;
-        return { r, ox, oy };
-      }
-      return null;
-    };
-    // pass 1: as many short markers (icon + temperature) as fit, by priority
-    for (const m of prio) {
-      m.full = false;
-      m.named = false;
-      const hit = m.vis ? tryPlace(m, m.wS) : null;
-      if (hit) {
-        placed.push({ m, r: hit.r });
-        Object.assign(m, { full: true, ox: hit.ox, oy: hit.oy });
-      }
-    }
-    // pass 2: add the city name where the longer pill still fits
-    for (const q of placed) {
-      const hit = tryPlace(q.m, q.m.wL);
-      if (hit) {
-        q.r = hit.r;
-        Object.assign(q.m, { named: true, ox: hit.ox, oy: hit.oy });
-      }
-    }
-    // dots show their named pill on hover / focus, above the dot (below near the top edge)
-    for (const m of markers) {
-      if (m.full) continue;
-      m.named = true;
-      [m.ox, m.oy] = cands(m.wL)[m.py - PILL_H - GAP < 0 ? 3 : 0];
-    }
+    declutter(prio, { bounds: { x0: 0, y0: 0, x1: width, y1: height }, pillH: PILL_H });
     for (const m of markers) {
       m.el.setAttribute('transform', `translate(${m.px.toFixed(1)} ${m.py.toFixed(1)})`);
       m.pill.setAttribute('transform', `translate(${m.ox.toFixed(1)} ${m.oy.toFixed(1)})`);

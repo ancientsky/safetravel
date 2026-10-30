@@ -395,6 +395,16 @@ export function createPanel({ root, map }) {
     }, 22);
   }
 
+  // optional "local weather" section (weather overlay on, js/weather.js): { has(iso), html(iso) }
+  let weather = null;
+  function renderWeather(idx) {
+    return `
+      <section class="psec psec-wx" aria-labelledby="psec-${idx.toLowerCase()}" data-testid="panel-weather">
+        ${secHead(idx, 'panel_sec_weather')}
+        ${weather.html(iso)}
+      </section>`;
+  }
+
   function render() {
     if (!iso) return;
     if (state.epidemicsStatus === 'ready') {
@@ -405,7 +415,8 @@ export function createPanel({ root, map }) {
     // the active map layer's section comes first; letters follow the order
     const secs = [renderAdvisories, renderAI, renderTimeline];
     if (state.data.warnings) secs.splice(mofaMode() ? 0 : 1, 0, renderWarning);
-    body.innerHTML = secs.map((fn, i) => fn('ABCDE'[i])).join('');
+    if (weather?.has(iso)) secs.splice(secs.indexOf(renderTimeline), 0, renderWeather); // before the long timeline
+    body.innerHTML = secs.map((fn, i) => fn('ABCDEF'[i])).join('');
     if (wtext.status !== 'idle') fillWarnText();
     startTypewriter();
     const more = $('.more-btn', body);
@@ -477,5 +488,6 @@ export function createPanel({ root, map }) {
     current: () => iso,
     scroller: () => body,
     refresh: () => { if (iso) render(); },
+    setWeather: (provider) => { weather = provider; },
   };
 }
