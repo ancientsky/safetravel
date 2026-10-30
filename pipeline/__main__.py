@@ -67,6 +67,14 @@ def do_fetch(conn, only: str | None = None) -> dict:
             db.set_source_state(conn, "boca", url=st["url"], fetched_at=st["fetched_at"], ok=1, reason=None)
         else:
             db.set_source_state(conn, "boca", url=st["url"], ok=0, reason=st["reason"])
+    if only in (None, "cwa"):
+        from . import weather
+        st = weather.fetch()
+        out["cwa"] = st
+        if st["ok"]:
+            db.set_source_state(conn, "cwa", url=st["url"], fetched_at=st["fetched_at"], ok=1, reason=None)
+        elif st["reason"] != "CWA_API_KEY not set":
+            db.set_source_state(conn, "cwa", url=st["url"], ok=0, reason=st["reason"])
     if only in (None, "flights"):
         try:
             res = fetch.fetch_flights(cached_names=db.get_airport_names(conn))
@@ -182,6 +190,11 @@ def cmd_warnings(args) -> int:
     return mofa.main()
 
 
+def cmd_weather(args) -> int:
+    from . import weather
+    return weather.main()
+
+
 def cmd_pending(args) -> int:
     from . import pending
     return pending.main(["--out", args.out, "--chunk", str(args.chunk), "--overview-batch", str(args.overview_batch)])
@@ -202,7 +215,7 @@ def main(argv=None) -> int:
     ai_args(p)
     p.set_defaults(fn=cmd_run)
     p = sub.add_parser("fetch")
-    p.add_argument("--only", choices=["cdc", "flights", "boca"])
+    p.add_argument("--only", choices=["cdc", "flights", "boca", "cwa"])
     p.set_defaults(fn=cmd_fetch)
     sub.add_parser("load").set_defaults(fn=cmd_load)
     p = sub.add_parser("enrich")
@@ -227,6 +240,7 @@ def main(argv=None) -> int:
     p.add_argument("--force", action="store_true", help="skip the minimum-age rule (caps still apply)")
     p.set_defaults(fn=cmd_arrivals)
     sub.add_parser("warnings", help="load + export MOFA/MAC travel warnings from data/raw/boca").set_defaults(fn=cmd_warnings)
+    sub.add_parser("weather", help="fetch (with CWA_API_KEY) + export the CWA world-city forecast").set_defaults(fn=cmd_weather)
     sub.add_parser("watch", help="rebuild web/data/watch.json (outbreak route watch)").set_defaults(fn=cmd_watch)
     p = sub.add_parser("pending", help="export untranslated digests / stale overviews for an external translator")
     p.add_argument("--out", required=True)

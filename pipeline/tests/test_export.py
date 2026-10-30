@@ -16,11 +16,13 @@ def _details():
 
 
 def test_load_is_idempotent(conn):
+    # the fixture CSV is refreshed by every data update, so count its rows instead of hard-coding them
+    rows = len(load.read_csv(C.raw_dir() / "TCDCTravelAlertAll.csv"))
     a = load.load_all(conn)
     b = load.load_all(conn)
-    assert a["alerts"]["new"] == 2504 and b["alerts"]["new"] == 0
+    assert rows > 2000 and a["alerts"]["new"] == rows and b["alerts"]["new"] == 0
     assert b["epidemics"]["new"] == 0 and b["epidemics"]["changed"] == 0
-    assert conn.execute("SELECT COUNT(*) FROM alerts_raw").fetchone()[0] == 2504
+    assert conn.execute("SELECT COUNT(*) FROM alerts_raw").fetchone()[0] == rows
 
 
 def test_namibia_is_not_null(loaded):

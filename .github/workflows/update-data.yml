@@ -59,6 +59,7 @@ jobs:
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}
           TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
           TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+          CWA_API_KEY: ${{ secrets.CWA }}
           INPUT_MAX_CALLS: ${{ inputs.max_calls }}
           INPUT_SKIP_GEMINI: ${{ inputs.skip_gemini }}
           AI_PROVIDER: ${{ vars.AI_PROVIDER || 'claude-routine' }}

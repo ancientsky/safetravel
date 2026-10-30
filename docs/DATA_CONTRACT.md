@@ -191,3 +191,33 @@ shown as a link in the menu. Rules: `routes` sorted by `monthly` desc (routes li
 (`[lat, lon]`); a route without coordinates is dropped with a warning. To add or retire a watch, add/remove the
 `<id>.json` + CSV pair (or set `"enabled": false`) and run `python -m pipeline watch`. Deep link: `?watch=<id>`.
 
+
+## `weather.json` (world-city forecast)
+
+Central Weather Administration open data **F-C0032-007 全球都市天氣預報**: 80 cities, 7 daily forecasts each. Built by
+`pipeline/weather.py` from `data/raw/cwa/F-C0032-007.json` (file API, JSON). `update-data.yml` downloads it twice a day with
+the `CWA` repository secret (env `CWA_API_KEY`; the key is passed as a URL parameter and masked in every logged error); without
+a key, or when the download does not parse with ≥ 50 cities, the previous raw file is kept and re-exported. The dataset is
+Chinese only: English names, ISO country and coordinates come from `data/manual/cwa_cities.json` (keyed by `StationID`, a WMO
+station number); stations missing there are still exported (empty `name_en`, `iso: null`) and listed under `unmapped`.
+
+```json
+{
+  "generated_at": "2026-10-30T16:20:00+08:00",
+  "source": { "dataset": "F-C0032-007", "url": "https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007",
+              "issued": "2026-10-30T08:00:00+08:00", "fetched_at": "…", "ok": true },
+  "regions": [ { "id": "asia", "zh": "亞洲、大洋洲", "en": "Asia & Oceania" }, … ],
+  "days": [ "2026-10-31", …7 ],
+  "cities": [
+    { "id": "47662", "name_zh": "東京", "name_en": "Tokyo", "iso": "JP", "region": "asia", "lat": 35.69, "lon": 139.69,
+      "days": [ { "date": "2026-10-31", "wx_zh": "多雲", "wx_en": "Cloudy", "code": "04", "icon": "cloud", "max": 24, "min": 14 }, … ] }
+  ],
+  "unmapped": []
+}
+```
+
+- `regions` keep CWA's own grouping and order (CWA lists e.g. Moscow and Istanbul under 亞洲、大洋洲).
+- `days[].date` is the Taiwan calendar date (UTC+8) of the 24-hour period CWA forecasts, not the city's local date.
+- `icon` ∈ `sun, partly, cloud, overcast, rain, showers, thunder, snow, sleet, fog`, derived from the Chinese phrase
+  (thunder > snow/sleet > showers > rain > fog > sun/partly > overcast > cloud) so new CWA codes still get an icon; `wx_en`
+  comes from a phrase table in `weather.py`, falling back to the icon's name. `max`/`min` are integer °C or `null`.

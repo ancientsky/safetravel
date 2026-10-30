@@ -1,0 +1,583 @@
+{
+ "_comment": "CWA F-C0032-007 (全球都市天氣預報) stations, keyed by the dataset's StationID (WMO station number). The dataset is Chinese only: English names, ISO country and approximate city-centre coordinates are maintained here. Where the WMO number belongs to a neighbouring station (57083 Zhengzhou, 52983 Yuzhong, 57131 Jinghe, 10628, 10476, 2484) the city follows CWA's LocationName. New stations show up in weather.json 'unmapped' until added here.",
+ "regions": {
+  "亞洲、大洋洲": {
+   "id": "asia",
+   "en": "Asia & Oceania"
+  },
+  "中國大陸": {
+   "id": "china",
+   "en": "Mainland China & Hong Kong"
+  },
+  "歐洲、非洲": {
+   "id": "europe",
+   "en": "Europe & Africa"
+  },
+  "美洲": {
+   "id": "americas",
+   "en": "Americas"
+  }
+ },
+ "cities": {
+  "47662": {
+   "zh": "東京",
+   "en": "Tokyo",
+   "iso": "JP",
+   "lat": 35.69,
+   "lon": 139.69
+  },
+  "47772": {
+   "zh": "大阪",
+   "en": "Osaka",
+   "iso": "JP",
+   "lat": 34.69,
+   "lon": 135.5
+  },
+  "47108": {
+   "zh": "首爾",
+   "en": "Seoul",
+   "iso": "KR",
+   "lat": 37.57,
+   "lon": 126.98
+  },
+  "48454": {
+   "zh": "曼谷",
+   "en": "Bangkok",
+   "iso": "TH",
+   "lat": 13.75,
+   "lon": 100.5
+  },
+  "96745": {
+   "zh": "雅加達",
+   "en": "Jakarta",
+   "iso": "ID",
+   "lat": -6.21,
+   "lon": 106.85
+  },
+  "48647": {
+   "zh": "吉隆坡",
+   "en": "Kuala Lumpur",
+   "iso": "MY",
+   "lat": 3.14,
+   "lon": 101.69
+  },
+  "48698": {
+   "zh": "新加坡",
+   "en": "Singapore",
+   "iso": "SG",
+   "lat": 1.35,
+   "lon": 103.82
+  },
+  "98425": {
+   "zh": "馬尼拉",
+   "en": "Manila",
+   "iso": "PH",
+   "lat": 14.6,
+   "lon": 120.98
+  },
+  "48894": {
+   "zh": "胡志明市",
+   "en": "Ho Chi Minh City",
+   "iso": "VN",
+   "lat": 10.82,
+   "lon": 106.63
+  },
+  "48826": {
+   "zh": "河內",
+   "en": "Hanoi",
+   "iso": "VN",
+   "lat": 21.03,
+   "lon": 105.85
+  },
+  "31960": {
+   "zh": "海參威",
+   "en": "Vladivostok",
+   "iso": "RU",
+   "lat": 43.12,
+   "lon": 131.89
+  },
+  "31735": {
+   "zh": "伯力",
+   "en": "Khabarovsk",
+   "iso": "RU",
+   "lat": 48.48,
+   "lon": 135.08
+  },
+  "91212": {
+   "zh": "關島",
+   "en": "Guam",
+   "iso": "GU",
+   "lat": 13.48,
+   "lon": 144.79
+  },
+  "93439": {
+   "zh": "威靈頓",
+   "en": "Wellington",
+   "iso": "NZ",
+   "lat": -41.29,
+   "lon": 174.78
+  },
+  "93110": {
+   "zh": "奧克蘭",
+   "en": "Auckland",
+   "iso": "NZ",
+   "lat": -36.85,
+   "lon": 174.76
+  },
+  "94767": {
+   "zh": "雪梨機場",
+   "en": "Sydney Airport",
+   "iso": "AU",
+   "lat": -33.95,
+   "lon": 151.18
+  },
+  "94610": {
+   "zh": "伯斯",
+   "en": "Perth",
+   "iso": "AU",
+   "lat": -31.95,
+   "lon": 115.86
+  },
+  "94578": {
+   "zh": "布里斯班",
+   "en": "Brisbane",
+   "iso": "AU",
+   "lat": -27.47,
+   "lon": 153.03
+  },
+  "94866": {
+   "zh": "墨爾本",
+   "en": "Melbourne",
+   "iso": "AU",
+   "lat": -37.81,
+   "lon": 144.96
+  },
+  "94768": {
+   "zh": "雪梨",
+   "en": "Sydney",
+   "iso": "AU",
+   "lat": -33.87,
+   "lon": 151.21
+  },
+  "44454": {
+   "zh": "加德滿都",
+   "en": "Kathmandu",
+   "iso": "NP",
+   "lat": 27.72,
+   "lon": 85.32
+  },
+  "42182": {
+   "zh": "新德里",
+   "en": "New Delhi",
+   "iso": "IN",
+   "lat": 28.61,
+   "lon": 77.21
+  },
+  "17060": {
+   "zh": "伊斯坦布爾",
+   "en": "Istanbul",
+   "iso": "TR",
+   "lat": 41.01,
+   "lon": 28.98
+  },
+  "27612": {
+   "zh": "莫斯科",
+   "en": "Moscow",
+   "iso": "RU",
+   "lat": 55.76,
+   "lon": 37.62
+  },
+  "91182": {
+   "zh": "檀香山",
+   "en": "Honolulu",
+   "iso": "US",
+   "lat": 21.31,
+   "lon": -157.86
+  },
+  "72295": {
+   "zh": "洛杉磯",
+   "en": "Los Angeles",
+   "iso": "US",
+   "lat": 34.05,
+   "lon": -118.24
+  },
+  "72386": {
+   "zh": "拉斯維加斯",
+   "en": "Las Vegas",
+   "iso": "US",
+   "lat": 36.17,
+   "lon": -115.14
+  },
+  "72494": {
+   "zh": "舊金山",
+   "en": "San Francisco",
+   "iso": "US",
+   "lat": 37.77,
+   "lon": -122.42
+  },
+  "72793": {
+   "zh": "西雅圖",
+   "en": "Seattle",
+   "iso": "US",
+   "lat": 47.61,
+   "lon": -122.33
+  },
+  "74486": {
+   "zh": "紐約",
+   "en": "New York",
+   "iso": "US",
+   "lat": 40.71,
+   "lon": -74.01
+  },
+  "72405": {
+   "zh": "華盛頓",
+   "en": "Washington, D.C.",
+   "iso": "US",
+   "lat": 38.91,
+   "lon": -77.04
+  },
+  "72530": {
+   "zh": "芝加哥",
+   "en": "Chicago",
+   "iso": "US",
+   "lat": 41.88,
+   "lon": -87.63
+  },
+  "72202": {
+   "zh": "邁阿密",
+   "en": "Miami",
+   "iso": "US",
+   "lat": 25.76,
+   "lon": -80.19
+  },
+  "71265": {
+   "zh": "多倫多",
+   "en": "Toronto",
+   "iso": "CA",
+   "lat": 43.65,
+   "lon": -79.38
+  },
+  "71892": {
+   "zh": "溫哥華",
+   "en": "Vancouver",
+   "iso": "CA",
+   "lat": 49.28,
+   "lon": -123.12
+  },
+  "71627": {
+   "zh": "蒙特婁",
+   "en": "Montreal",
+   "iso": "CA",
+   "lat": 45.5,
+   "lon": -73.57
+  },
+  "76680": {
+   "zh": "墨西哥城",
+   "en": "Mexico City",
+   "iso": "MX",
+   "lat": 19.43,
+   "lon": -99.13
+  },
+  "83746": {
+   "zh": "里約",
+   "en": "Rio de Janeiro",
+   "iso": "BR",
+   "lat": -22.91,
+   "lon": -43.17
+  },
+  "85577": {
+   "zh": "聖地牙哥",
+   "en": "Santiago",
+   "iso": "CL",
+   "lat": -33.45,
+   "lon": -70.67
+  },
+  "84628": {
+   "zh": "利瑪",
+   "en": "Lima",
+   "iso": "PE",
+   "lat": -12.05,
+   "lon": -77.04
+  },
+  "87582": {
+   "zh": "布宜諾斯艾利斯",
+   "en": "Buenos Aires",
+   "iso": "AR",
+   "lat": -34.6,
+   "lon": -58.38
+  },
+  "54342": {
+   "zh": "瀋陽",
+   "en": "Shenyang",
+   "iso": "CN",
+   "lat": 41.81,
+   "lon": 123.43
+  },
+  "54857": {
+   "zh": "青島",
+   "en": "Qingdao",
+   "iso": "CN",
+   "lat": 36.07,
+   "lon": 120.38
+  },
+  "54511": {
+   "zh": "北京",
+   "en": "Beijing",
+   "iso": "CN",
+   "lat": 39.9,
+   "lon": 116.41
+  },
+  "58238": {
+   "zh": "南京",
+   "en": "Nanjing",
+   "iso": "CN",
+   "lat": 32.06,
+   "lon": 118.8
+  },
+  "57083": {
+   "zh": "開封",
+   "en": "Kaifeng",
+   "iso": "CN",
+   "lat": 34.8,
+   "lon": 114.31
+  },
+  "52983": {
+   "zh": "蘭州",
+   "en": "Lanzhou",
+   "iso": "CN",
+   "lat": 36.06,
+   "lon": 103.83
+  },
+  "57494": {
+   "zh": "武漢",
+   "en": "Wuhan",
+   "iso": "CN",
+   "lat": 30.59,
+   "lon": 114.31
+  },
+  "57516": {
+   "zh": "重慶",
+   "en": "Chongqing",
+   "iso": "CN",
+   "lat": 29.56,
+   "lon": 106.55
+  },
+  "56778": {
+   "zh": "昆明",
+   "en": "Kunming",
+   "iso": "CN",
+   "lat": 25.04,
+   "lon": 102.71
+  },
+  "58362": {
+   "zh": "上海",
+   "en": "Shanghai",
+   "iso": "CN",
+   "lat": 31.23,
+   "lon": 121.47
+  },
+  "58606": {
+   "zh": "南昌",
+   "en": "Nanchang",
+   "iso": "CN",
+   "lat": 28.68,
+   "lon": 115.86
+  },
+  "58457": {
+   "zh": "杭州",
+   "en": "Hangzhou",
+   "iso": "CN",
+   "lat": 30.27,
+   "lon": 120.16
+  },
+  "59287": {
+   "zh": "廣州",
+   "en": "Guangzhou",
+   "iso": "CN",
+   "lat": 23.13,
+   "lon": 113.26
+  },
+  "58847": {
+   "zh": "福州",
+   "en": "Fuzhou",
+   "iso": "CN",
+   "lat": 26.07,
+   "lon": 119.3
+  },
+  "45007": {
+   "zh": "香港",
+   "en": "Hong Kong",
+   "iso": "HK",
+   "lat": 22.32,
+   "lon": 114.17
+  },
+  "59758": {
+   "zh": "海口",
+   "en": "Haikou",
+   "iso": "CN",
+   "lat": 20.04,
+   "lon": 110.34
+  },
+  "57131": {
+   "zh": "西安",
+   "en": "Xi'an",
+   "iso": "CN",
+   "lat": 34.34,
+   "lon": 108.94
+  },
+  "1492": {
+   "zh": "奧斯陸",
+   "en": "Oslo",
+   "iso": "NO",
+   "lat": 59.91,
+   "lon": 10.75
+  },
+  "8221": {
+   "zh": "馬德里",
+   "en": "Madrid",
+   "iso": "ES",
+   "lat": 40.42,
+   "lon": -3.7
+  },
+  "6180": {
+   "zh": "哥本哈根",
+   "en": "Copenhagen",
+   "iso": "DK",
+   "lat": 55.68,
+   "lon": 12.57
+  },
+  "2974": {
+   "zh": "赫爾辛基",
+   "en": "Helsinki",
+   "iso": "FI",
+   "lat": 60.17,
+   "lon": 24.94
+  },
+  "10628": {
+   "zh": "法蘭克福",
+   "en": "Frankfurt",
+   "iso": "DE",
+   "lat": 50.11,
+   "lon": 8.68
+  },
+  "10476": {
+   "zh": "柏林",
+   "en": "Berlin",
+   "iso": "DE",
+   "lat": 52.52,
+   "lon": 13.4
+  },
+  "6700": {
+   "zh": "日內瓦",
+   "en": "Geneva",
+   "iso": "CH",
+   "lat": 46.2,
+   "lon": 6.14
+  },
+  "6447": {
+   "zh": "布魯塞爾",
+   "en": "Brussels",
+   "iso": "BE",
+   "lat": 50.85,
+   "lon": 4.35
+  },
+  "3770": {
+   "zh": "倫敦",
+   "en": "London",
+   "iso": "GB",
+   "lat": 51.51,
+   "lon": -0.13
+  },
+  "7156": {
+   "zh": "巴黎",
+   "en": "Paris",
+   "iso": "FR",
+   "lat": 48.86,
+   "lon": 2.35
+  },
+  "11034": {
+   "zh": "維也納",
+   "en": "Vienna",
+   "iso": "AT",
+   "lat": 48.21,
+   "lon": 16.37
+  },
+  "16242": {
+   "zh": "羅馬",
+   "en": "Rome",
+   "iso": "IT",
+   "lat": 41.9,
+   "lon": 12.5
+  },
+  "16105": {
+   "zh": "威尼斯",
+   "en": "Venice",
+   "iso": "IT",
+   "lat": 45.44,
+   "lon": 12.32
+  },
+  "12843": {
+   "zh": "布達佩斯",
+   "en": "Budapest",
+   "iso": "HU",
+   "lat": 47.5,
+   "lon": 19.04
+  },
+  "16716": {
+   "zh": "雅典",
+   "en": "Athens",
+   "iso": "GR",
+   "lat": 37.98,
+   "lon": 23.73
+  },
+  "12375": {
+   "zh": "華沙",
+   "en": "Warsaw",
+   "iso": "PL",
+   "lat": 52.23,
+   "lon": 21.01
+  },
+  "11518": {
+   "zh": "布拉格",
+   "en": "Prague",
+   "iso": "CZ",
+   "lat": 50.08,
+   "lon": 14.44
+  },
+  "6240": {
+   "zh": "阿姆斯特丹",
+   "en": "Amsterdam",
+   "iso": "NL",
+   "lat": 52.37,
+   "lon": 4.9
+  },
+  "2484": {
+   "zh": "斯德哥爾摩",
+   "en": "Stockholm",
+   "iso": "SE",
+   "lat": 59.33,
+   "lon": 18.07
+  },
+  "8535": {
+   "zh": "里斯本",
+   "en": "Lisbon",
+   "iso": "PT",
+   "lat": 38.72,
+   "lon": -9.14
+  },
+  "62366": {
+   "zh": "開羅",
+   "en": "Cairo",
+   "iso": "EG",
+   "lat": 30.04,
+   "lon": 31.24
+  },
+  "68368": {
+   "zh": "約翰尼斯堡",
+   "en": "Johannesburg",
+   "iso": "ZA",
+   "lat": -26.2,
+   "lon": 28.05
+  }
+ }
+}

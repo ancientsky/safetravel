@@ -501,6 +501,50 @@ def check_watch(v: V, w):
             v.err(where, "totals do not match routes")
 
 
+WEATHER_ICONS = {"sun", "partly", "cloud", "overcast", "rain", "showers", "thunder", "snow", "sleet", "fog"}
+
+
+def check_weather(v: V, w):
+    """web/data/weather.json (CWA world-city forecast, docs/DATA_CONTRACT.md#weatherjson), optional."""
+    if not v.keys("weather.json", w, ["generated_at", "source", "regions", "days", "cities", "unmapped"]):
+        return
+    v.pat("weather.json", w["generated_at"], TS, "generated_at")
+    if v.keys("weather.json.source", w["source"], ["dataset", "url", "issued", "fetched_at", "ok"]):
+        if not str(w["source"]["url"]).startswith("https://opendata.cwa.gov.tw/"):
+            v.err("weather.json.source", "url must point to opendata.cwa.gov.tw")
+    region_ids = set()
+    for i, r in enumerate(w["regions"] or []):
+        if v.keys(f"weather.json.regions[{i}]", r, ["id", "zh", "en"]):
+            region_ids.add(r["id"])
+    for d in w["days"] or []:
+        v.pat("weather.json.days", d, DATE, "day")
+    if not isinstance(w["cities"], list) or not w["cities"]:
+        v.err("weather.json.cities", "expected a non-empty list")
+        return
+    for i, c in enumerate(w["cities"]):
+        where = f"weather.json.cities[{i}]"
+        if not v.keys(where, c, ["id", "name_zh", "name_en", "iso", "region", "lat", "lon", "days"]):
+            continue
+        if not c["name_zh"]:
+            v.err(where, "empty name_zh")
+        if c["iso"] is not None:
+            v.pat(where, c["iso"], ISO2, "iso")
+        if c["region"] not in region_ids:
+            v.err(where, f"unknown region {c['region']!r}")
+        for j, d in enumerate(c["days"] or []):
+            dw = f"{where}.days[{j}]"
+            if not v.keys(dw, d, ["date", "wx_zh", "wx_en", "code", "icon", "max", "min"]):
+                continue
+            v.pat(dw, d["date"], DATE, "date")
+            if d["icon"] not in WEATHER_ICONS:
+                v.err(dw, f"unknown icon {d['icon']!r}")
+            for k in ("max", "min"):
+                if d[k] is not None and (not isinstance(d[k], int) or isinstance(d[k], bool) or not -90 <= d[k] <= 60):
+                    v.err(dw, f"{k} must be an int in -90..60 or null")
+            if isinstance(d["max"], int) and isinstance(d["min"], int) and d["max"] < d["min"]:
+                v.err(dw, "max below min")
+
+
 def check_warnings(v: V, w):
     """web/data/warnings.json (MOFA/MAC travel warnings, docs/WARNINGS.md), optional."""
     if not v.keys("warnings.json", w, ["generated_at", "sources", "levels", "regions", "countries", "unmapped", "changes"]):
@@ -556,6 +600,12 @@ def validate_dir(d: Path) -> list[str]:
             check_warnings(v, json.loads(wn.read_text(encoding="utf-8")))
         except ValueError as e:
             v.err("warnings.json", f"cannot parse: {e}")
+    ww = d / "weather.json"
+    if ww.exists():
+        try:
+            check_weather(v, json.loads(ww.read_text(encoding="utf-8")))
+        except json.JSONDecodeError as e:
+            v.err("weather.json", f"cannot parse: {e}")
     wp = d / "watch.json"
     if wp.exists():
         try:

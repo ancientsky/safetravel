@@ -363,6 +363,11 @@ def export_all(conn, out_dir=None) -> dict:
         mofa.export(conn, out_dir)
     except Exception as e:  # pragma: no cover
         C.log.exception("warnings.json not rebuilt: %s", e)
+    try:  # CWA world-city forecast (data/raw/cwa); never blocks the main export
+        from . import weather
+        weather.export(conn, out_dir)
+    except Exception as e:  # pragma: no cover
+        C.log.exception("weather.json not rebuilt: %s", e)
     try:  # outbreak route watch (static, hand-maintained input); never blocks the main export
         from . import watch
         watch.build(out_dir)
