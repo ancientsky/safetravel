@@ -638,7 +638,7 @@ SLIDE_BASE = {"id", "template", "active", "lang", "from", "until", "duration", "
 # template -> (required fields, optional fields)
 SLIDE_FIELDS = {
     "alert": ({"kicker", "disease", "country", "rule"},
-              {"category", "region_label", "country_en", "iso", "status", "ask", "note"}),
+              {"category", "region_label", "country_en", "iso", "status", "ask", "note", "routes"}),
     "symptoms": ({"title", "symptoms", "steps"}, {"subtitle", "intro", "mascot"}),
     "report": ({"headline", "symptoms", "cta"}, {"tail", "condition", "sign"}),
     "germs": ({"headline", "message"}, {"art"}),
@@ -684,6 +684,25 @@ def _slide_asset(v: V, where: str, p, web: Path) -> None:
         v.err(where, f"{str(p)[:60]!r}: must be slides/assets/<file>.(png|webp|jpg|svg|gif|avif)")
     elif not (web / p).is_file():
         v.err(where, f"{p} does not exist under web/")
+
+
+def _slide_routes(v: V, where: str, routes, web: Path) -> None:
+    """[["FIH", "CDG", "TPE"], ...]: 1-3 routes of 2-4 IATA codes listed in web/slides/airports.json."""
+    try:
+        known = {k for k in json.loads((web / "slides" / "airports.json").read_text(encoding="utf-8")) if not k.startswith("_")}
+    except (OSError, ValueError) as e:
+        v.err(where, f"cannot read slides/airports.json: {e}")
+        return
+    if not isinstance(routes, list) or not 1 <= len(routes) <= 3:
+        v.err(where, "1-3 routes, each a list of airport codes")
+        return
+    for i, r in enumerate(routes):
+        if not isinstance(r, list) or not 2 <= len(r) <= 4:
+            v.err(f"{where}[{i}]", "2-4 airport codes, origin first")
+            continue
+        for c in r:
+            if c not in known:
+                v.err(f"{where}[{i}]", f"{str(c)[:8]!r} is not in web/slides/airports.json (add it there)")
 
 
 def _slide_date(v: V, where: str, s) -> str | None:
@@ -764,6 +783,8 @@ def check_slides(v: V, m, web: Path) -> None:
                     _slide_text(v, f"{where}.{k}", g(k))
             if "iso" in s and not (isinstance(g("iso"), str) and ISO2.match(g("iso"))):
                 v.err(f"{where}.iso", "must be an ISO 3166 alpha-2 code like 'CD'")
+            if "routes" in s:
+                _slide_routes(v, f"{where}.routes", g("routes"), web)
         elif tpl == "symptoms":
             for k in ("title", "subtitle"):
                 if k in s:

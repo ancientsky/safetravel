@@ -11,10 +11,11 @@ PNG = C.ROOT / "web" / "slides" / "assets" / "cdc-logo.png"
 
 
 def make_web(tmp_path, *names):
-    """A minimal web/ copy: the real slides.json + its assets, and the given files in slides/auto/."""
+    """A minimal web/ copy: the real slides.json + airports.json + assets, and the given files in slides/auto/."""
     web = tmp_path / "web"
     shutil.copytree(C.ROOT / "web" / "slides" / "assets", web / "slides" / "assets")
     shutil.copy(C.ROOT / "web" / "slides" / "slides.json", web / "slides" / "slides.json")
+    shutil.copy(C.ROOT / "web" / "slides" / "airports.json", web / "slides" / "airports.json")
     (web / "slides" / "auto").mkdir()
     for n in names:
         shutil.copy(PNG, web / "slides" / "auto" / n)
@@ -80,3 +81,14 @@ def test_committed_index_matches_the_folder():
     assert not errors
     committed = (C.ROOT / "web" / "slides" / "auto" / "index.json").read_text(encoding="utf-8")
     assert json.loads(committed) == doc, "run: python -m pipeline.slides_auto web"
+
+
+def test_alert_routes_need_known_airports(tmp_path):
+    web = make_web(tmp_path)
+    p = web / "slides" / "slides.json"
+    m = json.loads(p.read_text(encoding="utf-8"))
+    alert = next(s for s in m["slides"] if s.get("routes"))
+    alert["routes"] = [["FIH", "XXX", "TPE"], ["FIH"]]
+    p.write_text(json.dumps(m, ensure_ascii=False), encoding="utf-8")
+    msgs = " ".join(VAL.validate_slides(web))
+    assert "'XXX' is not in web/slides/airports.json" in msgs and "2-4 airport codes" in msgs

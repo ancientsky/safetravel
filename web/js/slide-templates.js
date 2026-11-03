@@ -155,62 +155,140 @@ function loadWorld() {
   }
   return worldPromise;
 }
+let airportsPromise = null;
+function loadAirports() { // web/slides/airports.json: IATA -> {zh, en, lat, lon} for "routes"
+  if (!airportsPromise) {
+    airportsPromise = fetch('slides/airports.json').then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+  }
+  return airportsPromise;
+}
+const IATA_RE = /^[A-Z]{3}$/;
 
-/** Mini map: the affected country, Taiwan and an arrival arc. Needs vendored d3 + topojson; silently omitted otherwise. */
-async function drawMap(box, iso) {
+/** Quadratic leg a -> b, bowed sideways (towards the top of the map) by `k` of its length. */
+function legD(a, b, k, move) {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy) || 1;
+  let nx = dy / len;
+  let ny = -dx / len;
+  if (ny > 0) { nx = -nx; ny = -ny; }
+  const c = [(a[0] + b[0]) / 2 + nx * len * k, (a[1] + b[1]) / 2 + ny * len * k];
+  const f = (q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`;
+  return `${move ? `M${f(a)}` : ''}Q${f(c)} ${f(b)}`;
+}
+
+const PLANE_D = 'M-20 -3 4 -3 14 -16h6l-5 13h9l4-5h4l-3 8 3 8h-4l-4-5h-9l5 13h-6L4 3h-24z';
+
+/**
+ * Mini map: the affected country, Taiwan and the way travellers arrive. Without `routes` one arc from the country to
+ * Taiwan; with routes (e.g. [["FIH","CDG","TPE"],["FIH","AUH","TPE"]]) each route is a multi-leg flight through its
+ * hub, airports dotted and labelled, one plane per route. Needs vendored d3 + topojson; silently omitted otherwise.
+ */
+async function drawMap(box, iso, routes, lang) {
   if (!iso || typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
-  const world = await loadWorld();
+  const [world, airports] = await Promise.all([loadWorld(), Array.isArray(routes) && routes.length ? loadAirports() : {}]);
   if (!world?.objects?.countries) return;
   const all = topojson.feature(world, world.objects.countries).features;
   const target = all.find((f) => f.id === iso);
   const tw = all.find((f) => f.id === 'TW');
   if (!target || !tw) return;
+  const ap = (c) => (typeof c === 'string' && IATA_RE.test(c) && Number.isFinite(airports?.[c]?.lat) ? airports[c] : null);
+  const legs = (Array.isArray(routes) ? routes : [])
+    .filter((r) => Array.isArray(r) && r.length >= 2 && r.every((c) => ap(c)))
+    .slice(0, 3);
+  const codes = [...new Set(legs.flat())];
   const W = 1000;
   const H = 400;
-  const proj = d3.geoNaturalEarth1().fitExtent([[60, 60], [W - 60, H - 40]], { type: 'FeatureCollection', features: [target, tw] });
+  const fitTo = { type: 'FeatureCollection', features: [target, tw, ...codes.map((c) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [ap(c).lon, ap(c).lat] } }))] };
+  const proj = d3.geoNaturalEarth1().fitExtent(codes.length ? [[70, 70], [W - 70, H - 50]] : [[60, 60], [W - 60, H - 40]], fitTo);
   const path = d3.geoPath(proj);
-  const [x1, y1] = path.centroid(target);
-  const [x2, y2] = path.centroid(tw);
-  const bend = Math.min(220, Math.hypot(x2 - x1, y2 - y1) * 0.35);
-  const cx = (x1 + x2) / 2;
-  const cy = Math.min(y1, y2) - bend;
-  const arcD = `M${x1.toFixed(1)} ${y1.toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+  const xy = (c) => proj([ap(c).lon, ap(c).lat]);
+  const zh = lang !== 'en';
+  // one route = one continuous path through its hubs (the plane follows it with getPointAtLength)
+  const flights = legs.length
+    ? legs.map((r) => ({ d: r.slice(1).map((c, i) => legD(xy(r[i]), xy(c), 0.16, i === 0)).join(''), stops: r.slice(1, -1).map(xy) }))
+    : (() => {
+      const [x1, y1] = path.centroid(target);
+      const [x2, y2] = path.centroid(tw);
+      const bend = Math.min(220, Math.hypot(x2 - x1, y2 - y1) * 0.35);
+      return [{ d: `M${x1.toFixed(1)} ${y1.toFixed(1)} Q${((x1 + x2) / 2).toFixed(1)} ${(Math.min(y1, y2) - bend).toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`, stops: [] }];
+    })();
+  const origin = legs.length ? xy(legs[0][0]) : path.centroid(target);
+  const dest = legs.length ? xy(legs[0].at(-1)) : path.centroid(tw);
   const land = all.filter((f) => f !== target).map((f) => path(f)).filter(Boolean).join('');
-  const plane = s('g', { class: 'map-plane' },
-    s('path', { d: 'M-20 -3 4 -3 14 -16h6l-5 13h9l4-5h4l-3 8 3 8h-4l-4-5h-9l5 13h-6L4 3h-24z', transform: 'scale(-1 1)' }));  // nose to +x, the direction of travel
-  const svg = s('svg', { class: 'map-svg', viewBox: `0 0 ${W} ${H}`, 'aria-hidden': 'true', preserveAspectRatio: 'xMidYMid meet' },
+  const planes = flights.map(() => s('g', { class: 'map-plane' }, s('path', { d: PLANE_D, transform: 'scale(-1 1)' }))); // nose to +x
+  const labels = codes.map((c) => {
+    const [x, y] = xy(c);
+    const origin = c === legs[0]?.[0];
+    const dest = c === legs[0]?.at(-1);
+    // origin (on the red country): underneath, clear of the climbing legs; hubs: on the left, clear of the onward
+    // leg east to Taiwan (and of the plane parked on it); destination: right unless at the map edge
+    const right = origin || (dest ? x < W * 0.78 : x < 200);
+    const below = origin;
+    return s('g', { class: `map-ap${dest ? ' is-dest' : ''}${origin ? ' is-origin' : ''}` },
+      s('circle', { class: 'map-ap-dot', cx: x, cy: y, r: 7 }),
+      s('text', { class: 'map-ap-label', x: x + (right ? 14 : -14), y: y + (below ? 34 : -14), 'text-anchor': right ? 'start' : 'end' },
+        s('tspan', { class: 'map-ap-city', text: zh ? ap(c).zh : ap(c).en }),
+        s('tspan', { class: 'map-ap-code', dx: 8, text: c })));
+  });
+  const svg = s('svg', { class: `map-svg${legs.length ? ' has-routes' : ''}`, viewBox: `0 0 ${W} ${H}`, 'aria-hidden': 'true', preserveAspectRatio: 'xMidYMid meet' },
     s('path', { class: 'map-land', d: land }),
     s('path', { class: 'map-target', d: path(target) }),
     s('path', { class: 'map-tw', d: path(tw) }),
-    s('circle', { class: 'map-ring', cx: x1, cy: y1, r: 26 }),
-    s('circle', { class: 'map-ring map-ring-2', cx: x1, cy: y1, r: 26 }),
-    s('path', { class: 'map-arc', d: arcD, pathLength: 1 }),
-    s('path', { class: 'map-arc-flow', d: arcD }),
-    s('circle', { class: 'map-dot', cx: x1, cy: y1, r: 9 }),
-    s('circle', { class: 'map-tw-dot', cx: x2, cy: y2, r: 10 }),
-    plane);
+    s('circle', { class: 'map-ring', cx: origin[0], cy: origin[1], r: 26 }),
+    s('circle', { class: 'map-ring map-ring-2', cx: origin[0], cy: origin[1], r: 26 }),
+    ...flights.map((f) => s('path', { class: 'map-arc', d: f.d, pathLength: 1 })),
+    ...flights.map((f) => s('path', { class: 'map-arc-flow', d: f.d })),
+    s('circle', { class: 'map-dot', cx: origin[0], cy: origin[1], r: 9 }),
+    s('circle', { class: 'map-tw-dot', cx: dest[0], cy: dest[1], r: 10 }),
+    ...labels,
+    legs.length ? s('text', { class: 'map-note', x: W - 16, y: H - 14, 'text-anchor': 'end', text: zh ? '轉機航線示意' : 'Typical connecting routes' }) : null,
+    ...planes);
   box.append(svg);
-  const arc = svg.querySelector('.map-arc-flow');
-  const len = arc.getTotalLength();
-  const place = (t) => {
-    const p = arc.getPointAtLength(len * t);
-    const q = arc.getPointAtLength(Math.min(len, len * t + 1));
-    const r = arc.getPointAtLength(Math.max(0, len * t - 1));
+  const arcs = [...svg.querySelectorAll('.map-arc-flow')];
+  const lens = arcs.map((a) => a.getTotalLength());
+  const place = (i, at) => {
+    const a = arcs[i];
+    const p = a.getPointAtLength(at);
+    const q = a.getPointAtLength(Math.min(lens[i], at + 1));
+    const r = a.getPointAtLength(Math.max(0, at - 1));
     const ang = (Math.atan2(q.y - r.y, q.x - r.x) * 180) / Math.PI;
-    plane.setAttribute('transform', `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${ang.toFixed(1)}) scale(1.6)`);
+    planes[i].setAttribute('transform', `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${ang.toFixed(1)}) scale(1.6)`);
   };
-  const REST = 0.86; // the plane parks just short of Taiwan so the island stays visible
-  place(REST);
-  // the controller calls this when the slide becomes active: the plane flies DRC -> Taiwan once, then rests
+  // first-leg length (to the hub), where the plane pauses briefly before the connecting flight
+  const hubAt = flights.map((f, i) => {
+    if (!f.stops.length) return null;
+    const probe = s('path', { d: f.d.slice(0, f.d.indexOf('Q', f.d.indexOf('Q') + 1)) });
+    svg.append(probe);
+    const L = probe.getTotalLength();
+    probe.remove();
+    return Math.min(L, lens[i]);
+  });
+  // where each plane parks: without routes just short of Taiwan (the island stays visible); with routes midway
+  // along the connecting flight, so each plane sits on its own arc and no label is covered
+  const rest = lens.map((L, i) => (hubAt[i] == null ? L * 0.86 : hubAt[i] + (L - hubAt[i]) * 0.55));
+  const ease = (k) => 1 - (1 - k) ** 3;
+  const at = (i, k) => { // k: 0..1 of the animation -> length along route i
+    const h = hubAt[i];
+    if (h == null) return rest[i] * ease(k);
+    const A = 0.42; const HOLD = 0.12; // leg 1, hold at the hub, connecting flight
+    if (k < A) return h * ease(k / A);
+    if (k < A + HOLD) return h;
+    return h + (rest[i] - h) * ease((k - A - HOLD) / (1 - A - HOLD));
+  };
+  const parkAll = () => planes.forEach((_, i) => place(i, rest[i]));
+  parkAll();
+  // the controller calls this when the slide becomes active: the planes fly once, then rest near Taiwan
   box.closest('.slide').slideEnter = (still) => {
-    if (still) { place(REST); return; }
+    if (still) { parkAll(); return; }
+    const dur = legs.length ? 2600 : 1000;
     const t0 = performance.now() + 400;
     const step = (now) => {
-      const k = Math.min(1, Math.max(0, (now - t0) / 1000));
-      place(REST * (1 - (1 - k) ** 3));
+      const k = Math.min(1, Math.max(0, (now - t0) / dur));
+      planes.forEach((_, i) => place(i, at(i, k)));
       if (k < 1) requestAnimationFrame(step);
     };
-    place(0);
+    planes.forEach((_, i) => place(i, 0));
     requestAnimationFrame(step);
   };
 }
@@ -231,13 +309,13 @@ function alert(d, ctx) {
     h('div', { class: 'al-mid' },
       h('p', { class: 'al-region fx-rise', style: delay(0.42) }, pinIcon(), h('span', { text: d.region_label || '' })),
       h('p', { class: `al-country fx-rise${plain(d.country).length > 16 ? ' is-long' : ''}`, style: delay(0.5), text: d.country || '' }),
-      d.country_en ? h('p', { class: 'al-country-en fx-rise', lang: 'en', style: delay(0.58), text: d.country_en }) : null,
+      d.country_en ? h('p', { class: 'al-country-en fx-rise', lang: 'en', style: delay(0.58) }, rich(d.country_en)) : null,
       d.status ? h('p', { class: 'al-status fx-rise', style: delay(0.66) }, h('span', { class: 'al-who', lang: 'en', text: 'WHO' }), h('span', { text: plain(d.status).replace(/^WHO[:：]?\s*/, '') })) : null),
     h('div', { class: 'al-rule' },
       d.ask ? h('p', { class: 'al-ask fx-rise', style: delay(0.74) }, rich(d.ask)) : null,
       h('p', { class: 'al-must fx-rise', style: delay(0.84) }, rich(d.rule, 1)),
       d.note ? h('p', { class: 'al-note fx-rise', style: delay(0.94), text: d.note }) : null));
-  ctx.wait.push(drawMap(map, typeof d.iso === 'string' ? d.iso.toUpperCase() : ''));
+  ctx.wait.push(drawMap(map, typeof d.iso === 'string' ? d.iso.toUpperCase() : '', d.routes, d.lang));
   return el;
 }
 function pinIcon() {

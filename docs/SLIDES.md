@@ -98,8 +98,9 @@
   "disease": "伊波拉",
   "region_label": "流行地區",
   "country": "剛果民主共和國",
-  "country_en": "Democratic Republic of the Congo (DRC)",
+  "country_en": [{ "t": "Democratic Republic of the Congo " }, { "t": "(DRC)", "hl": true }],
   "iso": "CD",
+  "routes": [["FIH", "CDG", "TPE"], ["FIH", "AUH", "TPE"]],
   "status": "WHO 列為「國際關注公共衛生緊急事件」",
   "ask": [{ "t": "過去 " }, { "t": "21 天內", "hl": true }, { "t": "曾到過剛果民主共和國？" }],
   "rule": [{ "t": "須主動向" }, { "t": "疾管署檢疫站報到", "hl": true }, { "t": "\n並配合入境後自主健康管理 21 天" }],
@@ -107,7 +108,10 @@
 }
 ```
 
-`iso` 是流行國家的 ISO 兩碼，會畫出該國到臺灣的航線地圖（不填就不顯示地圖）。必填：`kicker`、`disease`、`country`、`rule`。
+`iso` 是流行國家的 ISO 兩碼，會畫出地圖並把該國標成紅色（不填就不顯示地圖）。必填：`kicker`、`disease`、`country`、`rule`。
+
+- `routes`（選填）：旅客實際的轉機路線，每條是機場代碼清單（起點、轉機點…、終點），最多 3 條、每條 2–4 個機場。地圖會畫出每段航程、標出機場（城市＋代碼，依海報語言），每條路線一架飛機：先飛到轉機點、停一下、再飛往臺灣，並註明「轉機航線示意」。不填 `routes` 時畫一條從該國直接到臺灣的弧線（只適合真的有直飛的情況）。機場座標與中英文城市名在 `web/slides/airports.json`；用到清單裡沒有的機場時，在那裡加一筆（座標可從 `web/data/airports.json` 查），檢查會擋下未登錄的代碼。
+- `country_en` 可以用 `hl` 片段標示縮寫（例如 `(DRC)`），會顯示成和國名一樣的紅色。
 
 #### `symptoms`：症狀提醒（吉祥物＋症狀圖示）
 
@@ -242,6 +246,7 @@ CHROMIUM_PATH=/opt/pw-browsers/chromium node scripts/export-slides.mjs http://lo
 
 - **Playlist**: `web/slides/slides.json`. Retire a poster with `"active": false` or an `until` date (Asia/Taipei, inclusive); schedule one with `from`. Open screens re-read the file every 5 minutes and re-check dates on every slide change.
 - **Auto-publish folder**: drop an image into `web/slides/auto/` (GitHub web: Add file → Upload files) and it plays after the manifest's posters, ordered by file name; delete it to retire it, prefix `_` to pause it. Settings ride in the file name, words separated by `_` or spaces: `上架YYYY-MM-DD`/`fromYYYY-MM-DD`, `下架YYYY-MM-DD`/`untilYYYY-MM-DD`, `10秒`/`10s`, `直式`/`橫式` (portrait/landscape versions of one poster), `中文`/`英文`/`雙語` (zh/en/bi), `加頁尾`/`brand`; a leading number only orders. `python -m pipeline.slides_auto` writes `web/slides/auto/index.json` (generated; run by the export workflow, which fails on a bad name, and by the Pages deploy with `--lenient`, which skips the bad file).
+- **Alert routes**: `"routes": [["FIH", "CDG", "TPE"], ["FIH", "AUH", "TPE"]]` draws real connecting itineraries (1–3 routes of 2–4 airports, labelled city + code in the poster language, one plane per route pausing at the hub); airports come from `web/slides/airports.json` (add missing ones there). Without `routes` a single arc country → Taiwan is drawn. `hl` segments in `country_en` show in the country's red (e.g. `(DRC)`).
 - **Add a poster**: quickest is the `image` template (`src_landscape` optional) — drop the file into `web/slides/assets/` and add `{ "id", "template": "image", "active", "lang", "src": "slides/assets/<file>", "alt" }` (shown whole with a slow Ken Burns zoom). Or use a template — `alert`, `symptoms`, `report`, `germs` — with the fields in section 2 (highlights are segment arrays `[{"t": "…", "hl": true}]`, never HTML).
 - **Settings** (appear on mouse move / tap, hide after 3 s; `S` pins): seconds per poster (default 5, 3–60; a poster's `duration` wins), orientation (portrait / landscape / auto), poster language, per-screen show/hide, print, downloads. Keys: ←/→, Space, F, Esc. URL parameters override stored settings: `?interval=8&orient=landscape&only=id1,id2&lang=en` (`slide=`, `play=0`, `still=1` too). Screen Wake Lock while playing.
 - **Print / PDF**: the browser print outputs every playlist slide, one per page, at the current orientation, final animation state, backgrounds included.

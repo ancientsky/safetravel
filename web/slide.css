@@ -203,6 +203,7 @@ body.paused .dots::before { content: ""; width: 14px; height: 18px; border: soli
 .al-country { margin-top: 6px; font-size: 122px; font-weight: 900; line-height: 1.1; color: #d40018; letter-spacing: .02em; }
 .al-country.is-long { font: 900 80px/1.08 var(--latin); letter-spacing: -.01em; }
 .al-country-en { margin-top: 8px; font: 700 40px/1.2 var(--latin); color: #6a2bd0; }
+.al-country-en mark.hl { color: #d40018; animation: none; } /* abbreviation, red like the country name */
 .al-status {
   display: inline-flex; align-items: center; gap: 16px; margin-top: 26px; max-width: 100%;
   font-size: 40px; font-weight: 800; line-height: 1.25; color: #2b2833; text-align: left;
@@ -221,6 +222,15 @@ body.paused .dots::before { content: ""; width: 14px; height: 18px; border: soli
 .map-arc { fill: none; stroke: rgba(255, 210, 63, .45); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
 .map-arc-flow { fill: none; stroke: #ffd23f; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 2 22; }
 .map-plane path { fill: #fff; stroke: #34327e; stroke-width: 1.5; }
+.has-routes .map-arc, .has-routes .map-arc-flow { stroke-width: 5; }
+.map-ap-dot { fill: #fff; stroke: #34327e; stroke-width: 3; }
+.map-ap.is-origin .map-ap-dot, .map-ap.is-dest .map-ap-dot { display: none; } /* drawn by .map-dot / .map-tw-dot */
+.map-ap-label { font: 800 26px/1 var(--latin); fill: #fff; paint-order: stroke; stroke: #2b2a72; stroke-width: 7px; stroke-linejoin: round; }
+.map-ap-city { font-family: var(--poster); font-weight: 800; }
+.map-ap-code { fill: #ffd23f; font-weight: 900; }
+.map-note { font: 700 20px/1 var(--poster); fill: rgba(255, 255, 255, .78); letter-spacing: .04em; }
+.map-ap { transform-box: fill-box; transform-origin: center; }
+.slide.is-active .map-ap { animation: fx-pop .45s var(--spring) 1.1s both; }
 .slide.is-active .map-arc { animation: draw 1s var(--ease) .4s both; }
 .slide.is-active .map-arc-flow { animation: arc-in .4s ease 1.3s both, flow 1.6s linear 1.3s infinite; }
 .slide.is-active .map-ring { animation: pulse-ring 2.4s ease-out 1.2s infinite; }
