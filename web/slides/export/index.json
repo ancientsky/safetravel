@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "generated_at": "2026-11-03T01:17:57Z",
+  "manifest_sha256": "a9dd7a1c51ef342faa1bf66f004a66ad66333aac87c168dab8d8a2f4754534c0",
+  "slides": [
+    {
+      "id": "ebola-drc-zh",
+      "portrait": "ebola-drc-zh-portrait.png",
+      "landscape": "ebola-drc-zh-landscape.png"
+    },
+    {
+      "id": "healthy-travel",
+      "portrait": "healthy-travel-portrait.png",
+      "landscape": "healthy-travel-landscape.png"
+    },
+    {
+      "id": "report-en",
+      "portrait": "report-en-portrait.png",
+      "landscape": "report-en-landscape.png"
+    },
+    {
+      "id": "report-zh",
+      "portrait": "report-zh-portrait.png",
+      "landscape": "report-zh-landscape.png"
+    },
+    {
+      "id": "ebola-drc-en",
+      "portrait": "ebola-drc-en-portrait.png",
+      "landscape": "ebola-drc-en-landscape.png"
+    },
+    {
+      "id": "no-germs",
+      "portrait": "no-germs-portrait.png",
+      "landscape": "no-germs-landscape.png"
+    }
+  ]
+}
