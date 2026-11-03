@@ -29,7 +29,7 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
 | `web/` | frontend | The static site served by GitHub Pages (root = `web/`) |
 | `web/data/` | pipeline export | JSON consumed by the browser. Overwritten every run. `epidemics.json` is a slim index; full texts are lazy-loaded from `web/data/epidemics/<ISO2>.json` (+ `_global.json`). `world.json` (50m) and `world-110m.json` (narrow screens) are built by `build_geo.py`. |
 | `web/vendor/` | npm (vendored, `npm run vendor`) | `d3.min.js` (only the d3 functions listed in `scripts/d3-entry.mjs`, bundled by esbuild; the Pages deploy runs `scripts/check-d3.mjs` and fails if `web/` calls a d3 function outside that list), `topojson-client.min.js` — no CDN at runtime |
-| `web/slides/` | humans + Actions | Health-poster carousel (`slide.html`): `slides.json` playlist, `assets/` artwork, `export/` PNG + PDF written by `slides.yml`. Spec: `SLIDES.md` |
+| `web/slides/` | humans + Actions | Health-poster carousel (`slide.html`): `slides.json` playlist, `assets/` artwork, `auto/` auto-publish folder (images dropped there + generated `index.json`), `export/` PNG written by `slides.yml`. Spec: `SLIDES.md` |
 | `scripts/slide-sources/` | humans | Original Taiwan CDC posters + seal; `scripts/crop-slide-assets.py` cuts the artwork into `web/slides/assets/` |
 | `.github/workflows/` | ops | `update-data.yml` (cron) · `deploy-pages.yml` (on push to main, web/**) · `arrivals.yml` (arrivals board, external trigger) · `slides.yml` (poster PNG/PDF export → commit → dispatch deploy) |
 | `docs/` | — | This file + `DATA_CONTRACT.md` + `SLIDES.md` (poster carousel) + `ARRIVALS.md` (arrivals board spec) + `ARRIVALS_SETUP.md` (owner setup, zh-Hant) |
@@ -114,8 +114,12 @@ Kiosk page for airport quarantine-station screens; maintenance guide in `docs/SL
 - Entrance animations only animate *from* a start state, so print, `?still=1` (export) and `prefers-reduced-motion`
   show the final state by switching animations off.
 - The `alert` map uses the vendored d3 (`geoNaturalEarth1`, `geoPath`) + topojson with `web/data/world-110m.json`.
-- `pipeline/validate.py` checks `web/slides/slides.json` as part of `python -m pipeline validate` (all Pages deploy
-  paths) and standalone with `python -m pipeline.validate` (stdlib only, used by `slides.yml`).
-- `.github/workflows/slides.yml`: on poster changes, `scripts/export-slides.mjs` renders PNGs and PDFs with Playwright,
-  commits `web/slides/export/` with the bot identity and dispatches `deploy-pages.yml` (GITHUB_TOKEN commits do not
+- `pipeline/validate.py` checks `web/slides/slides.json` and `web/slides/auto/index.json` with
+  `python -m pipeline.validate web` (stdlib only), run by `deploy-pages.yml` and `slides.yml` — not by the data /
+  arrivals deploys, so a poster typo never blocks them.
+- `pipeline/slides_auto.py` (stdlib) indexes `web/slides/auto/`: each image becomes an `image` poster, settings parsed
+  from the file name (dates, seconds, 直式/橫式 pair, language); `slide.js` appends `auto/index.json` to the playlist.
+  `slides.yml` runs it strictly (a bad file name fails the run), `deploy-pages.yml` with `--lenient` (skips the file).
+- `.github/workflows/slides.yml`: on poster changes, `scripts/export-slides.mjs` renders PNGs with Playwright,
+  commits `web/slides/export/` and `web/slides/auto/index.json` with the bot identity and dispatches `deploy-pages.yml` (GITHUB_TOKEN commits do not
   trigger workflows).

@@ -548,8 +548,11 @@ body.paused .dots::before { content: ""; width: 14px; height: 18px; border: soli
 
 /* ================================================================ template: image (whole poster file) */
 .im { position: absolute; inset: 0; background: #0e1116; overflow: hidden; }
+.im-set { display: contents; }
+.im.has-l .im-l, [data-orient="landscape"] .im.has-l .im-p { display: none; }
+[data-orient="landscape"] .im.has-l .im-l { display: contents; }
 .im-back { position: absolute; inset: -60px; width: calc(100% + 120px); height: calc(100% + 120px); object-fit: cover; filter: blur(46px) brightness(.55) saturate(1.2); }
-.im-frame { position: absolute; inset: 36px; display: grid; place-items: center; }
+.im-frame { position: absolute; inset: 36px; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; }
 .im-poster { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px; box-shadow: 0 24px 70px rgba(0, 0, 0, .55); }
 .slide.is-active .im-frame { animation: im-in 1s var(--ease) both, kenburns 24s linear 1s both; }
 @keyframes im-in { from { opacity: 0; scale: .94; } to { opacity: 1; scale: 1; } }

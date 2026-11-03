@@ -7,6 +7,7 @@ import { renderSlide, TEMPLATES, assetSrc, h } from './slide-templates.js';
 
 const MANIFEST = 'slides/slides.json';
 const EXPORT_INDEX = 'slides/export/index.json';
+const AUTO_INDEX = 'slides/auto/index.json'; // posters dropped in web/slides/auto/ (python -m pipeline.slides_auto)
 const KEY = 'safetravel.slide.';
 const LANG_KEY = 'safetravel.lang'; // shared with the other pages
 const DIMS = { portrait: [1080, 1920], landscape: [1920, 1080] };
@@ -234,11 +235,27 @@ function tick(now) {
 }
 
 // ---------------------------------------------------------------- manifest loading / live refresh
+// text = slides.json + "\n" + auto/index.json (as hashed by scripts/export-slides.mjs); the auto posters follow the manifest's
 async function fetchManifest() {
   const r = await fetch(`${MANIFEST}?t=${Date.now()}`, { cache: 'no-store' });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const text = await r.text();
-  return { text, data: JSON.parse(text) };
+  const data = JSON.parse(text);
+  let autoText = '';
+  let auto = [];
+  try {
+    const a = await fetch(`${AUTO_INDEX}?t=${Date.now()}`, { cache: 'no-store' });
+    if (a.ok) {
+      autoText = await a.text();
+      const j = JSON.parse(autoText);
+      if (Array.isArray(j?.slides)) auto = j.slides.filter((x) => x && x.auto === true && x.template === 'image');
+    }
+  } catch (e) {
+    console.warn('slides: auto folder index unavailable', e);
+  }
+  const own = Array.isArray(data?.slides) ? data.slides : [];
+  const ids = new Set(own.map((x) => x?.id));
+  return { text: `${text}\n${autoText}`, data: { ...data, slides: [...own, ...auto.filter((x) => !ids.has(x.id))] } };
 }
 async function refresh() {
   try {
@@ -314,7 +331,7 @@ function renderList() {
       : h('span', { class: `badge b-${status}`, text: t(`st_${status}`, { date: status === 'scheduled' ? sl.from : sl.until }) });
     const go = h('button', { type: 'button', class: 'go', disabled: status !== 'ok' },
       h('b', { text: TEMPLATES.includes(sl?.template) ? t(`tpl_${sl.template}`) : '?' }),
-      h('span', { class: 'mono', text: `${id}${sl?.lang ? ` · ${sl.lang}` : ''}` }));
+      h('span', { class: 'mono', text: `${sl?.auto && typeof sl.alt === 'string' ? sl.alt : id}${sl?.lang ? ` · ${sl.lang}` : ''}` }));
     go.addEventListener('click', () => show(st.playlist.findIndex((x) => x.id === id)));
     return h('li', { class: `${status === 'ok' ? 'on' : 'off'}${manifestOff ? ' m-off' : ''}`, dataset: { id, status } }, box, go, badge);
   }));

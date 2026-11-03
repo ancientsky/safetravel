@@ -5,6 +5,8 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 export const TEMPLATES = ['alert', 'symptoms', 'report', 'germs', 'image'];
 export const ASSET_RE = /^slides\/assets\/[A-Za-z0-9._-]+\.(png|webp|jpe?g|svg|gif|avif)$/;
+// images dropped in web/slides/auto/ (URL-encoded file names, written by python -m pipeline.slides_auto)
+export const AUTO_RE = /^slides\/auto\/[A-Za-z0-9._~%-]+\.(png|webp|jpe?g|gif|avif)$/i;
 
 /** h('div', {class, text, dataset, style: {'--d': '.2s'}, ...attrs}, ...children) — text only, never HTML. */
 export function h(tag, props, ...kids) {
@@ -41,7 +43,7 @@ export function cdcHref(u) {
   } catch { /* not a URL */ }
   return '';
 }
-export const assetSrc = (p) => (typeof p === 'string' && ASSET_RE.test(p) && !p.includes('..') ? p : '');
+export const assetSrc = (p) => (typeof p === 'string' && (ASSET_RE.test(p) || AUTO_RE.test(p)) && !p.includes('..') ? p : '');
 
 const LANG_ATTR = { zh: 'zh-Hant', en: 'en', bi: 'zh-Hant' };
 const delay = (sec) => ({ '--d': `${sec}s` });
@@ -307,14 +309,14 @@ function counterScene(sign) {
         s('path', { class: 'sc-case-line', d: 'M678 396v114M704 396v114M730 396v114' }),
         s('circle', { class: 'sc-wheel', cx: 668, cy: 534, r: 9 }),
         s('circle', { class: 'sc-wheel', cx: 740, cy: 534, r: 9 })),
+      // far (right) arm: drawn behind the torso and backpack, only the hand on the suitcase grip shows
+      s('path', { class: 'sc-arm-b', d: 'M622 300Q650 322 680 336' }),
+      s('circle', { class: 'sc-hand', cx: 686, cy: 340, r: 11 }),
       s('g', { class: 'sc-leg sc-leg-b' }, s('path', { d: 'M612 420 640 528' })),
       s('g', { class: 'sc-leg sc-leg-a' }, s('path', { d: 'M596 420 566 528' })),
       s('rect', { class: 'sc-torso', x: 568, y: 268, width: 76, height: 168, rx: 34 }),
       s('path', { class: 'sc-pack', d: 'M630 282h34a10 10 0 0 1 10 10v92a10 10 0 0 1-10 10h-34z' }),
       s('g', { class: 'sc-arm sc-arm-a' }, s('path', { d: 'M586 300 556 368' }), s('circle', { class: 'sc-hand', cx: 553, cy: 376, r: 11 })),
-      // trailing arm angles down and back to the suitcase grip
-      s('path', { class: 'sc-arm-b', d: 'M626 300Q650 322 680 336' }),
-      s('circle', { class: 'sc-hand', cx: 686, cy: 340, r: 11 }),
       // head in profile, facing the counter (left): face, hair at the back, ear, eye, mask
       s('g', { class: 'sc-head' },
         s('circle', { class: 'sc-face', cx: 604, cy: 222, r: 38 }),
@@ -389,11 +391,16 @@ function germs(d) {
 }
 
 // ---------------------------------------------------------------- template: image (whole poster, no template)
+// optional src_landscape: a separate landscape version, shown on landscape screens instead of src
 function image(d) {
   const src = assetSrc(d.src);
-  return h('div', { class: 'im' },
-    src ? h('img', { class: 'im-back', src, alt: '', decoding: 'async' }) : null,
-    src ? h('div', { class: 'im-frame' }, h('img', { class: 'im-poster', src, alt: d.alt || '', decoding: 'async' })) : null);
+  const wide = assetSrc(d.src_landscape);
+  const set = (u, cls) => h('div', { class: `im-set ${cls}` },
+    h('img', { class: 'im-back', src: u, alt: '', decoding: 'async' }),
+    h('div', { class: 'im-frame' }, h('img', { class: 'im-poster', src: u, alt: d.alt || '', decoding: 'async' })));
+  return h('div', { class: `im${wide ? ' has-l' : ''}` },
+    src ? set(src, 'im-p') : null,
+    src && wide ? set(wide, 'im-l') : null);
 }
 
 const RENDER = { alert, symptoms, report, germs, image };

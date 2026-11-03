@@ -22,6 +22,7 @@ const PDF_DIR = pdfAt >= 0 ? path.resolve(args.splice(pdfAt, 2)[1] || '') : null
 const BASE = new URL(args[0] || process.env.SLIDES_URL || 'http://localhost:8150/');
 const OUT = path.resolve('web/slides/export');
 const MANIFEST = path.resolve('web/slides/slides.json');
+const AUTO_INDEX = path.resolve('web/slides/auto/index.json');
 const DIMS = { portrait: [1080, 1920], landscape: [1920, 1080] };
 const page = (q) => new URL(`slide.html?${new URLSearchParams({ still: '1', play: '0', ...q })}`, BASE).href;
 
@@ -42,7 +43,10 @@ async function open(context, url) {
 
 async function main() {
   mkdirSync(OUT, { recursive: true });
-  const manifestText = readFileSync(MANIFEST, 'utf8');
+  // the page hashes slides.json + "\n" + auto/index.json the same way to tell when this export is stale
+  let autoText = '';
+  try { autoText = readFileSync(AUTO_INDEX, 'utf8'); } catch { /* no auto folder */ }
+  const manifestText = `${readFileSync(MANIFEST, 'utf8')}\n${autoText}`;
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
   const written = new Set(['index.json']);
   const index = {
@@ -59,7 +63,7 @@ async function main() {
       const probe = await open(context, page({ orient }));
       const ids = (await probe.evaluate(() => document.getElementById('stage').dataset.playlist || '')).split(',').filter(Boolean);
       await probe.close();
-      if (!ids.length) throw new Error('no active slides in web/slides/slides.json');
+      if (!ids.length) throw new Error('no active slides in web/slides/slides.json or web/slides/auto/');
       for (const id of ids) {
         const p = await open(context, page({ orient, only: id }));
         const file = `${id}-${orient}.png`;

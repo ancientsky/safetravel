@@ -16,7 +16,11 @@ const PAGE_URL = new URL(process.argv[2] || 'http://localhost:8080/slide.html').
 const SITE = new URL('./', PAGE_URL).href;
 const SHOTS_DIR = path.resolve(process.env.SHOTS_DIR || path.join('tests', 'shots'));
 const MANIFEST = JSON.parse(readFileSync(new URL('../web/slides/slides.json', import.meta.url), 'utf8'));
-const ACTIVE = MANIFEST.slides.filter((s) => s.active !== false).map((s) => s.id);
+// + posters dropped in web/slides/auto/ (auto/index.json, python -m pipeline.slides_auto), shown after the manifest's
+const AUTO = (() => { try { return JSON.parse(readFileSync(new URL('../web/slides/auto/index.json', import.meta.url), 'utf8')).slides || []; } catch { return []; } })();
+const TODAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date());
+const ACTIVE = [...MANIFEST.slides.filter((s) => s.active !== false),
+  ...AUTO.filter((s) => (!s.from || s.from <= TODAY) && (!s.until || s.until >= TODAY))].map((s) => s.id);
 const PORTRAIT = { width: 1080, height: 1920 };
 const LANDSCAPE = { width: 1920, height: 1080 };
 
@@ -264,6 +268,44 @@ async function run(browser) {
       await page.waitForFunction(() => !document.getElementById('stage').dataset.playlist.includes('no-germs'), null, { timeout: 4000 });
       assert(await page.evaluate(() => window.__marker === 1), 'page reloaded');
       return (await playlist(page)).join(' · ');
+    });
+    await context.close();
+  }
+
+  // ------------------------------------------------------------ auto-publish folder (web/slides/auto/ -> auto/index.json)
+  {
+    const EXPORT_DIR = new URL('../web/slides/export/', import.meta.url);
+    const shot = (f) => readFileSync(new URL(f, EXPORT_DIR));
+    const autoDoc = { version: 1, folder: 'web/slides/auto/', slides: [
+      { id: 'auto-test00001', template: 'image', auto: true, active: true, alt: '測試海報 auto', file: '01_測試_直式.png',
+        src: 'slides/auto/01_%E6%B8%AC%E8%A9%A6_p.png', src_landscape: 'slides/auto/01_%E6%B8%AC%E8%A9%A6_l.png', duration: 4 },
+      { id: 'auto-test00002', template: 'image', auto: true, active: true, alt: 'expired', file: 'old.png',
+        src: 'slides/auto/old.png', until: '2020-01-01' },
+    ] };
+    const { context, page } = await newPage(browser, { viewport: PORTRAIT });
+    await page.route('**/slides/auto/index.json*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(autoDoc) }));
+    await page.route('**/slides/auto/*_p.png', (route) => route.fulfill({ contentType: 'image/png', body: shot('report-zh-portrait.png') }));
+    await page.route('**/slides/auto/*_l.png', (route) => route.fulfill({ contentType: 'image/png', body: shot('report-zh-landscape.png') }));
+    await check('auto folder: posters join the playlist after slides.json, expired ones stay out', async () => {
+      await load(page, { play: 0 });
+      const ids = await playlist(page);
+      assert(ids.at(-1) === 'auto-test00001' && !ids.includes('auto-test00002'), ids.join(','));
+      const label = await page.locator('[data-testid="slide-list"] li[data-id="auto-test00001"] .mono').textContent();
+      assert(label.includes('測試海報'), `list label ${label}`);
+      return `${ids.length} slides, last = auto-test00001`;
+    });
+    await check('auto folder: the 直式 file on portrait screens, the 橫式 file on landscape screens', async () => {
+      const visible = () => page.evaluate(() => {
+        const img = [...document.querySelectorAll('.slide.is-active .im-poster')].find((x) => x.getBoundingClientRect().width > 0);
+        return img ? decodeURIComponent(img.currentSrc.split('/').pop()) : '';
+      });
+      await load(page, { only: 'auto-test00001', still: 1 });
+      const p = await visible();
+      await page.setViewportSize(LANDSCAPE);
+      await load(page, { only: 'auto-test00001', still: 1, orient: 'landscape' });
+      const l = await visible();
+      assert(p === '01_測試_p.png' && l === '01_測試_l.png', `${p} / ${l}`);
+      return `${p} / ${l}`;
     });
     await context.close();
   }

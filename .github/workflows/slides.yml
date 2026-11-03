@@ -1,6 +1,7 @@
 name: Health posters (PNG export)
 
-# Renders every active poster of slide.html (web/slides/slides.json, docs/SLIDES.md) as PNG in both orientations
+# Indexes the auto-publish folder web/slides/auto/ (images dropped there become posters), then renders every active
+# poster of slide.html (web/slides/slides.json + auto/index.json, docs/SLIDES.md) as PNG in both orientations
 # (1080x1920, 1920x1080) into web/slides/export/ (PDF: the page's Print / Save as PDF), commits them to main and redeploys
 # Pages. Commits made with GITHUB_TOKEN do not trigger other workflows, hence the explicit deploy dispatch.
 on:
@@ -13,6 +14,7 @@ on:
       - 'web/slide.css'
       - 'web/js/slide*.js'
       - 'scripts/export-slides.mjs'
+      - 'pipeline/slides_auto.py'
       - '.github/workflows/slides.yml'
   workflow_dispatch:
 
@@ -35,6 +37,9 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Index the auto-publish folder web/slides/auto/ (fails on a bad file name, see the annotation)
+        run: python3 -m pipeline.slides_auto web
 
       - name: Validate the poster manifest (stdlib only)
         run: python3 -m pipeline.validate web
@@ -63,14 +68,14 @@ jobs:
           for i in $(seq 1 30); do curl -fsS -o /dev/null http://localhost:8150/slide.html && break; sleep 1; done
           node scripts/export-slides.mjs http://localhost:8150/
 
-      - name: Commit web/slides/export
+      - name: Commit web/slides/export and web/slides/auto/index.json
         id: commit
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A web/slides/export
+          git add -A web/slides/export web/slides/auto/index.json
           if git diff --cached --quiet; then
             echo "No export changes."
             echo "changed=false" >> "$GITHUB_OUTPUT"

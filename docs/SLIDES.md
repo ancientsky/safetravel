@@ -5,6 +5,7 @@
 - 每張海報是 **HTML 即時排版**（文字可改、可翻譯、放大不糊），有短暫的進場動畫（≤ 約 1.5 秒），之後只剩輕微的待機動態。
 - 預設**直式 1080×1920**，也有**橫式 1920×1080** 的獨立版面；畫面會自動縮放置中，適合任何解析度的螢幕。
 - 海報清單在 **`web/slides/slides.json`**，改這一個檔就能新增、下架或排程海報；開著的螢幕**每 5 分鐘**重新讀取，不必重新整理。
+- **最簡單的上架方式**：把海報圖檔丟進 **`web/slides/auto/`** 資料夾就會自動播放，刪掉就下架，不用改任何設定檔（見 2-0）。
 - 每次海報更新後，GitHub Actions 會自動輸出 **PNG（直式＋橫式）**，在設定面板的「下載」可取得；**PDF** 用面板的「列印／存成 PDF」（目的地選「另存為 PDF」）即可。
 
 > English summary at the end.
@@ -26,9 +27,37 @@
 
 ## 2. 新增一張海報
 
-### 2-1. 最快：整張圖片（`image` 樣板）
+### 2-0. 最簡單：把圖檔丟進 `web/slides/auto/`（自動上架）
 
-適合疾管署已經做好的海報檔（PNG / JPG / WebP）。
+不需要編輯 JSON。在 GitHub 網頁開啟 [`web/slides/auto/`](../web/slides/auto/) →「Add file」→「Upload files」→ 拖入圖檔 →「Commit changes」。約 2–3 分鐘後網站更新，開著的螢幕在 5 分鐘內開始播放。
+
+- 支援 PNG / JPG / WebP / GIF / AVIF；建議長邊 2000 px 以內、2 MB 以下（超過 5 MB 會在 Actions 出現警告）。檔名可以用中文、空格。
+- **下架**：刪除檔案。**暫停**（保留檔案）：檔名開頭加 `_`，例如 `_猴痘宣導.png`。
+- 播放順序：在 `slides.json` 的海報之後，依檔名排序；檔名開頭的數字（`01_`、`02_`）只用來排序，不會出現在標題。
+- 其他設定直接寫在**檔名**裡，用 `_` 或空格分隔（全形數字也可以）：
+
+| 檔名裡的字 | 意思 | 英文寫法 |
+|---|---|---|
+| `上架2026-11-10` | 這天起才播放（臺北時間） | `from2026-11-10` |
+| `下架2026-12-31` | 播到這天（含）為止 | `until2026-12-31` |
+| `10秒` | 這張停留秒數（3–60） | `10s` |
+| `直式` / `橫式` | 同一張海報的直式版／橫式版：直式螢幕放直式那張、橫式螢幕放橫式那張 | `portrait` / `landscape` |
+| `中文` / `英文` / `雙語` | 海報語言（給設定「海報語言」篩選用；未標示視為中文） | `zh` / `en` / `bi` |
+| `加頁尾` | 在圖片下方加疾管署頁尾（預設不加，因為完整海報通常已有自己的頁尾） | `brand` |
+
+例：
+
+```
+01_猴痘宣導_下架2026-12-31_10秒_直式.png
+01_猴痘宣導_橫式.png              ← 同一張海報的橫式版（設定寫在任一張即可）
+02_登革熱防蚊_英文.jpg            ← 只有一張：直式、橫式螢幕都用它（自動等比例縮放，兩側以模糊背景補滿）
+```
+
+背後的運作：`python -m pipeline.slides_auto` 掃描資料夾，產生 `web/slides/auto/index.json`（不要手動編輯），網頁把它接在 `slides.json` 後面。海報匯出流程（`slides.yml`）與 Pages 部署都會先執行它。檔名寫錯（例如不存在的日期 `下架2026-02-30`、上架晚於下架、兩個直式版）時，海報匯出流程會失敗並在 Actions 標出是哪個檔案；Pages 部署則只略過那個檔案，其他內容照常上線。修正檔名後重新上傳即可。
+
+### 2-1. 整張圖片寫進 slides.json（`image` 樣板）
+
+適合疾管署已經做好的海報檔（PNG / JPG / WebP），而且想跟其他海報一起排順序、或寫英文說明時使用；只是要上架一張圖，用 2-0 的資料夾更簡單。
 
 1. 把圖檔放到 `web/slides/assets/`（檔名只用英數、`-`、`_`、`.`，例如 `mpox-2027.png`；建議長邊 2000 px 以內、2 MB 以下）。
 2. 在 `slides.json` 的 `slides` 陣列加一筆：
@@ -45,7 +74,7 @@
 }
 ```
 
-圖片會等比例完整顯示（直式海報放在橫式螢幕時，兩側用模糊的同一張圖補滿），並有緩慢的推近（Ken Burns）效果。`alt` 必填（給螢幕報讀與無障礙）。整張圖片的海報通常已有自己的頁尾，所以預設不加疾管署頁尾；要加的話寫 `"brand": true`。
+圖片會等比例完整顯示（直式海報放在橫式螢幕時，兩側用模糊的同一張圖補滿），並有緩慢的推近（Ken Burns）效果。`alt` 必填（給螢幕報讀與無障礙）。另有橫式版時加 `"src_landscape": "slides/assets/mpox-2027-wide.png"`，橫式螢幕就會改放那一張。整張圖片的海報通常已有自己的頁尾，所以預設不加疾管署頁尾；要加的話寫 `"brand": true`。
 
 ### 2-2. 用樣板（文字可改、雙語、直橫式各自排版）
 
@@ -212,7 +241,8 @@ CHROMIUM_PATH=/opt/pw-browsers/chromium node scripts/export-slides.mjs http://lo
 `web/slide.html` is an auto-advancing, data-driven carousel of Taiwan CDC health-education posters for airport quarantine-station screens: live HTML text, short entrance animations (≤ ~1.5 s) then calm idle motion, portrait 1080×1920 by default plus a separate landscape 1920×1080 layout, scaled to fit any screen.
 
 - **Playlist**: `web/slides/slides.json`. Retire a poster with `"active": false` or an `until` date (Asia/Taipei, inclusive); schedule one with `from`. Open screens re-read the file every 5 minutes and re-check dates on every slide change.
-- **Add a poster**: quickest is the `image` template — drop the file into `web/slides/assets/` and add `{ "id", "template": "image", "active", "lang", "src": "slides/assets/<file>", "alt" }` (shown whole with a slow Ken Burns zoom). Or use a template — `alert`, `symptoms`, `report`, `germs` — with the fields in section 2 (highlights are segment arrays `[{"t": "…", "hl": true}]`, never HTML).
+- **Auto-publish folder**: drop an image into `web/slides/auto/` (GitHub web: Add file → Upload files) and it plays after the manifest's posters, ordered by file name; delete it to retire it, prefix `_` to pause it. Settings ride in the file name, words separated by `_` or spaces: `上架YYYY-MM-DD`/`fromYYYY-MM-DD`, `下架YYYY-MM-DD`/`untilYYYY-MM-DD`, `10秒`/`10s`, `直式`/`橫式` (portrait/landscape versions of one poster), `中文`/`英文`/`雙語` (zh/en/bi), `加頁尾`/`brand`; a leading number only orders. `python -m pipeline.slides_auto` writes `web/slides/auto/index.json` (generated; run by the export workflow, which fails on a bad name, and by the Pages deploy with `--lenient`, which skips the bad file).
+- **Add a poster**: quickest is the `image` template (`src_landscape` optional) — drop the file into `web/slides/assets/` and add `{ "id", "template": "image", "active", "lang", "src": "slides/assets/<file>", "alt" }` (shown whole with a slow Ken Burns zoom). Or use a template — `alert`, `symptoms`, `report`, `germs` — with the fields in section 2 (highlights are segment arrays `[{"t": "…", "hl": true}]`, never HTML).
 - **Settings** (appear on mouse move / tap, hide after 3 s; `S` pins): seconds per poster (default 5, 3–60; a poster's `duration` wins), orientation (portrait / landscape / auto), poster language, per-screen show/hide, print, downloads. Keys: ←/→, Space, F, Esc. URL parameters override stored settings: `?interval=8&orient=landscape&only=id1,id2&lang=en` (`slide=`, `play=0`, `still=1` too). Screen Wake Lock while playing.
 - **Print / PDF**: the browser print outputs every playlist slide, one per page, at the current orientation, final animation state, backgrounds included.
 - **PNG + PDF export**: `.github/workflows/slides.yml` runs `scripts/export-slides.mjs` (Playwright/Chromium against `slide.html?still=1`) on poster changes, commits `web/slides/export/` (PNG per slide and orientation + `index.json`, only when something changed) and dispatches `deploy-pages.yml`. PDF: the page's Print / Save as PDF (or `--pdf-dir DIR` locally); PDFs are not committed because they embed a timestamp and are large.
