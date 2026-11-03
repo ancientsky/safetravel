@@ -435,14 +435,20 @@ body.paused .dots::before { content: ""; width: 14px; height: 18px; border: soli
 .sc-pack { fill: var(--navy); }
 .sc-arm-a path, .sc-arm-b { fill: none; stroke: #3d7fd6; stroke-width: 24; stroke-linecap: round; }
 .sc-arm-a path { stroke: #2f6bbd; }
-.sc-head { fill: #262a3f; }
+.sc-case-grip { fill: #5d6280; }
+.sc-hand, .sc-face { fill: #f6d2b5; }
+.sc-hair { fill: #262a3f; }
+.sc-ear { fill: #e9b896; }
+.sc-eye { fill: #262a3f; }
+.sc-mask { fill: #fff; stroke: #c4d3e6; stroke-width: 3; }
+.sc-strap { fill: none; stroke: #c4d3e6; stroke-width: 3; stroke-linecap: round; }
 .sc-heat-bub { fill: #fff; stroke: #e5262e; stroke-width: 6; }
 .sc-heat-stem { fill: #fff; stroke: var(--navy); stroke-width: 4; }
 .sc-heat-bulb, .sc-heat-fill { fill: #e5262e; }
 .sc-heat-wave { fill: none; stroke: #e5262e; stroke-width: 5; stroke-linecap: round; }
 .sc-leg-a { transform-origin: 596px 420px; }
 .sc-leg-b { transform-origin: 612px 420px; }
-.sc-arm-a { transform-origin: 584px 300px; }
+.sc-arm-a { transform-origin: 586px 300px; }
 .sc-heat { transform-origin: 520px 150px; }
 .sc-bubble { transform-origin: 110px 150px; }
 .slide.is-active .sc-trav { animation: walk-in 1.2s cubic-bezier(.3, .6, .35, 1) .2s both; }
