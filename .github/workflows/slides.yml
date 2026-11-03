@@ -1,0 +1,104 @@
+name: Health posters (PNG export)
+
+# Renders every active poster of slide.html (web/slides/slides.json, docs/SLIDES.md) as PNG in both orientations
+# (1080x1920, 1920x1080) into web/slides/export/ (PDF: the page's Print / Save as PDF), commits them to main and redeploys
+# Pages. Commits made with GITHUB_TOKEN do not trigger other workflows, hence the explicit deploy dispatch.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/slides/**'
+      - '!web/slides/export/**'
+      - 'web/slide.html'
+      - 'web/slide.css'
+      - 'web/js/slide*.js'
+      - 'scripts/export-slides.mjs'
+      - '.github/workflows/slides.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: slides-export
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate the poster manifest (stdlib only)
+        run: python3 -m pipeline.validate web
+
+      - name: Node.js 24 (official nodejs.org build, checksum-pinned)
+        env:
+          NODE_VERSION: v24.22.1
+          NODE_SHA256: 6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/node.tar.xz" "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz"
+          echo "${NODE_SHA256}  $RUNNER_TEMP/node.tar.xz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/node"
+          tar -xJf "$RUNNER_TEMP/node.tar.xz" -C "$RUNNER_TEMP/node" --strip-components=1
+          echo "$RUNNER_TEMP/node/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/node/bin/node" --version
+
+      - name: Install Playwright + Chromium (and heavy CJK fonts for the posters)
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+
+      - name: Export PNG
+        run: |
+          python3 -m http.server -d web 8150 >/dev/null 2>&1 &
+          for i in $(seq 1 30); do curl -fsS -o /dev/null http://localhost:8150/slide.html && break; sleep 1; done
+          node scripts/export-slides.mjs http://localhost:8150/
+
+      - name: Commit web/slides/export
+        id: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A web/slides/export
+          if git diff --cached --quiet; then
+            echo "No export changes."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # checkout ran with persist-credentials: false, so the token is only present in this step
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git commit -m "slides: export PNG $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M') Asia/Taipei"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "push failed (attempt $attempt); rebasing onto origin/main"
+            sleep $((attempt * 5))
+            git pull --rebase -X theirs origin main
+          done
+          echo "could not push after 3 attempts" >&2
+          exit 1
+
+  deploy:
+    needs: export
+    if: ${{ needs.export.outputs.changed == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Redeploy Pages with the new export
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-pages.yml --repo "${GITHUB_REPOSITORY}" --ref main

@@ -628,3 +628,211 @@ def validate_dir(d: Path) -> list[str]:
         except (OSError, ValueError) as e:
             v.err(p.name, f"cannot read/parse: {e}")
     return v.errors
+
+
+# ---------------------------------------------------------------- web/slides/slides.json (slide.html, docs/SLIDES.md)
+SLIDE_ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$", re.I)
+SLIDE_ASSET = re.compile(r"^slides/assets/[A-Za-z0-9._-]+\.(png|webp|jpe?g|svg|gif|avif)$")
+SLIDE_HTML = re.compile(r"<\s*/?\s*[a-zA-Z]")
+SLIDE_BASE = {"id", "template", "active", "lang", "from", "until", "duration", "alt"}
+# template -> (required fields, optional fields)
+SLIDE_FIELDS = {
+    "alert": ({"kicker", "disease", "country", "rule"},
+              {"category", "region_label", "country_en", "iso", "status", "ask", "note"}),
+    "symptoms": ({"title", "symptoms", "steps"}, {"subtitle", "intro", "mascot"}),
+    "report": ({"headline", "symptoms", "cta"}, {"tail", "condition", "sign"}),
+    "germs": ({"headline", "message"}, {"art"}),
+    "image": ({"src", "alt"}, {"brand"}),
+}
+REPORT_ICONS = ("fever", "cough", "breath", "unwell")
+
+
+def _slide_text(v: V, where: str, x, required: bool = True) -> None:
+    """Plain string, or highlight segments [{"t": "...", "hl": true}] — never HTML."""
+    if isinstance(x, str):
+        if required and not x.strip():
+            v.err(where, "empty text")
+        if SLIDE_HTML.search(x):
+            v.err(where, "looks like HTML; text is shown literally (use segments {t, hl} for highlights)")
+        return
+    if isinstance(x, list) and x:
+        for j, seg in enumerate(x):
+            sw = f"{where}[{j}]"
+            if not isinstance(seg, dict) or not isinstance(seg.get("t"), str):
+                v.err(sw, 'segment must be {"t": "text"} or {"t": "text", "hl": true}')
+                continue
+            for k in seg:
+                if k not in ("t", "hl"):
+                    v.err(sw, f"unexpected segment key {k!r}")
+            if "hl" in seg and not isinstance(seg["hl"], bool):
+                v.err(sw, "hl must be true/false")
+            if SLIDE_HTML.search(seg["t"]):
+                v.err(sw, "looks like HTML; text is shown literally")
+        return
+    v.err(where, "expected a string or a non-empty list of segments")
+
+
+def _slide_bi(v: V, where: str, x) -> None:
+    """{"zh": text, "en": text}."""
+    if v.keys(where, x, ["zh", "en"]):
+        _slide_text(v, f"{where}.zh", x["zh"])
+        _slide_text(v, f"{where}.en", x["en"])
+
+
+def _slide_asset(v: V, where: str, p, web: Path) -> None:
+    if not isinstance(p, str) or not SLIDE_ASSET.match(p) or ".." in p:
+        v.err(where, f"{str(p)[:60]!r}: must be slides/assets/<file>.(png|webp|jpg|svg|gif|avif)")
+    elif not (web / p).is_file():
+        v.err(where, f"{p} does not exist under web/")
+
+
+def _slide_date(v: V, where: str, s) -> str | None:
+    import datetime as _dt
+    if not isinstance(s, str) or not DATE.match(s):
+        v.err(where, f"{str(s)[:20]!r} must be YYYY-MM-DD (Asia/Taipei)")
+        return None
+    try:
+        _dt.date.fromisoformat(s)
+    except ValueError:
+        v.err(where, f"{s} is not a calendar date")
+        return None
+    return s
+
+
+def check_slides(v: V, m, web: Path) -> None:
+    w = "slides.json"
+    if not v.keys(w, m, ["version", "slides"], ["interval", "brand"]):
+        return
+    if m["version"] != 1:
+        v.err(w, "version must be 1")
+    if "interval" in m and not (isinstance(m["interval"], int) and not isinstance(m["interval"], bool) and 3 <= m["interval"] <= 60):
+        v.err(w, "interval must be an integer 3..60 (seconds)")
+    b = m.get("brand")
+    if b is not None and v.keys(f"{w}.brand", b, [], ["logo", "org_zh", "org_en", "hotline_zh", "hotline_en", "hotline", "url"]):
+        for k in ("org_zh", "org_en", "hotline_zh", "hotline_en", "hotline"):
+            if k in b:
+                _slide_text(v, f"{w}.brand.{k}", b[k])
+        if "logo" in b:
+            _slide_asset(v, f"{w}.brand.logo", b["logo"], web)
+        if "url" in b and not (isinstance(b["url"], str) and CDC_URL.match(b["url"])):
+            v.err(f"{w}.brand.url", "only https links on cdc.gov.tw are allowed")
+    slides = m["slides"]
+    if not isinstance(slides, list) or not slides:
+        v.err(w, "slides must be a non-empty list")
+        return
+    seen: set[str] = set()
+    for i, s in enumerate(slides):
+        where = f"{w}.slides[{i}]"
+        if not isinstance(s, dict):
+            v.err(where, "expected object")
+            continue
+        sid = s.get("id")
+        if isinstance(sid, str):
+            where = f"{w}[{sid}]"
+        if not isinstance(sid, str) or not SLIDE_ID.match(sid):
+            v.err(where, "id must be 1-64 letters, digits, '-' or '_'")
+        elif sid in seen:
+            v.err(where, "duplicate id")
+        else:
+            seen.add(sid)
+        tpl = s.get("template")
+        if tpl not in SLIDE_FIELDS:
+            v.err(where, f"unknown template {tpl!r} (one of {', '.join(SLIDE_FIELDS)})")
+            continue
+        req, opt = SLIDE_FIELDS[tpl]
+        keys = {k for k in s if not k.startswith("_")}  # "_comment" etc. are ignored
+        for k in sorted(({"id", "template", "active", "lang"} | req) - keys):
+            v.err(where, f"missing key {k!r}")
+        for k in sorted(keys - SLIDE_BASE - req - opt):
+            v.err(where, f"unexpected key {k!r} for template {tpl}")
+        if "active" in s and not isinstance(s["active"], bool):
+            v.err(where, "active must be true/false")
+        if s.get("lang") not in ("zh", "en", "bi"):
+            v.err(where, "lang must be 'zh', 'en' or 'bi'")
+        d1 = _slide_date(v, f"{where}.from", s["from"]) if "from" in s else None
+        d2 = _slide_date(v, f"{where}.until", s["until"]) if "until" in s else None
+        if d1 and d2 and d1 > d2:
+            v.err(where, "from is after until")
+        if "duration" in s and not (isinstance(s["duration"], int) and not isinstance(s["duration"], bool) and 2 <= s["duration"] <= 600):
+            v.err(where, "duration must be an integer 2..600 (seconds)")
+        if "alt" in s and not isinstance(s["alt"], str):
+            v.err(where, "alt must be a string")
+        g = lambda k: s.get(k)  # noqa: E731
+        if tpl == "alert":
+            for k in ("kicker", "disease", "country", "rule", "category", "region_label", "country_en", "status", "ask", "note"):
+                if k in s:
+                    _slide_text(v, f"{where}.{k}", g(k))
+            if "iso" in s and not (isinstance(g("iso"), str) and ISO2.match(g("iso"))):
+                v.err(f"{where}.iso", "must be an ISO 3166 alpha-2 code like 'CD'")
+        elif tpl == "symptoms":
+            for k in ("title", "subtitle"):
+                if k in s:
+                    _slide_text(v, f"{where}.{k}", g(k))
+            if "intro" in s:
+                _slide_bi(v, f"{where}.intro", g("intro"))
+            if "mascot" in s:
+                _slide_asset(v, f"{where}.mascot", g("mascot"), web)
+            if not isinstance(g("symptoms"), list) or not g("symptoms"):
+                v.err(f"{where}.symptoms", "must be a non-empty list")
+            else:
+                for j, x in enumerate(g("symptoms")):
+                    if v.keys(f"{where}.symptoms[{j}]", x, ["icon", "zh", "en"]):
+                        _slide_asset(v, f"{where}.symptoms[{j}].icon", x["icon"], web)
+                        _slide_text(v, f"{where}.symptoms[{j}].zh", x["zh"])
+                        _slide_text(v, f"{where}.symptoms[{j}].en", x["en"])
+            if not isinstance(g("steps"), list) or not g("steps"):
+                v.err(f"{where}.steps", "must be a non-empty list")
+            else:
+                for j, x in enumerate(g("steps")):
+                    if v.keys(f"{where}.steps[{j}]", x, ["zh", "en"], ["note"]):
+                        _slide_text(v, f"{where}.steps[{j}].zh", x["zh"])
+                        _slide_text(v, f"{where}.steps[{j}].en", x["en"])
+                        if "note" in x:
+                            _slide_bi(v, f"{where}.steps[{j}].note", x["note"])
+        elif tpl == "report":
+            for k in ("headline", "cta", "tail", "condition"):
+                if k in s:
+                    _slide_text(v, f"{where}.{k}", g(k))
+            if "sign" in s:
+                _slide_bi(v, f"{where}.sign", g("sign"))
+            if not isinstance(g("symptoms"), list) or not g("symptoms"):
+                v.err(f"{where}.symptoms", "must be a non-empty list")
+            else:
+                for j, x in enumerate(g("symptoms")):
+                    if v.keys(f"{where}.symptoms[{j}]", x, ["icon", "t"]):
+                        if x["icon"] not in REPORT_ICONS:
+                            v.err(f"{where}.symptoms[{j}].icon", f"one of {', '.join(REPORT_ICONS)}")
+                        _slide_text(v, f"{where}.symptoms[{j}].t", x["t"])
+        elif tpl == "germs":
+            _slide_bi(v, f"{where}.headline", g("headline"))
+            _slide_bi(v, f"{where}.message", g("message"))
+            if "art" in s:
+                _slide_asset(v, f"{where}.art", g("art"), web)
+        elif tpl == "image":
+            _slide_asset(v, f"{where}.src", g("src"), web)
+            _slide_text(v, f"{where}.alt", g("alt"))
+            if "brand" in s and not isinstance(g("brand"), bool):
+                v.err(f"{where}.brand", "brand must be true/false")
+
+
+def validate_slides(web: Path) -> list[str]:
+    """Check web/slides/slides.json (the poster carousel manifest). Returns violations (empty = ok)."""
+    web = Path(web)
+    v = V()
+    p = web / "slides" / "slides.json"
+    try:
+        m = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        v.err("slides.json", f"cannot read/parse: {e}")
+        return v.errors
+    check_slides(v, m, web)
+    return v.errors
+
+
+if __name__ == "__main__":  # python -m pipeline.validate [web-dir]: slides manifest only (stdlib, no pipeline deps)
+    import sys
+    errs = validate_slides(Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent / "web"))
+    for e in errs:
+        print("VIOLATION:", e)
+    print("validate slides:", "FAILED" if errs else "ok", f"({len(errs)} violations)")
+    sys.exit(1 if errs else 0)

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="dark" data-orient="portrait">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-41M+yJSuQlisk2d/KtCwIon0w9VNGtINUdo+cQsYY3o='; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>衛教海報輪播 · SafeTravel TW</title>
+  <meta name="description" content="機場檢疫站螢幕用的疾管署衛教海報輪播（直式／橫式、可列印與下載）。Taiwan CDC health-education poster carousel for airport quarantine-station screens.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#050a07">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <!-- theme / language / orientation before first paint: external file, so the CSP needs no extra hash -->
+  <script src="js/slide-boot.js"></script>
+  <link rel="stylesheet" href="slide.css">
+  <script src="vendor/d3.min.js" defer></script>
+  <script src="vendor/topojson-client.min.js" defer></script>
+  <script type="module" src="js/slide.js"></script>
+</head>
+<body>
+  <main class="viewport" data-testid="viewport">
+    <div id="stage" class="stage" data-testid="stage" role="region" aria-roledescription="carousel" data-i18n-attr="aria-label:stage_label" aria-live="off">
+      <div class="slides"></div>
+      <div class="chrome" aria-hidden="true">
+        <div class="progress" data-testid="progress"><i></i></div>
+        <ol class="dots" data-testid="dots"></ol>
+      </div>
+      <p class="stage-msg" role="status" hidden></p>
+    </div>
+  </main>
+
+  <button type="button" class="ctl-open" data-testid="settings-open" aria-controls="ctl" aria-expanded="false" data-i18n-attr="title:settings_title;aria-label:settings_title">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
+  </button>
+
+  <aside id="ctl" class="ctl" data-testid="settings" role="dialog" aria-labelledby="ctl-title" hidden>
+    <div class="ctl-head">
+      <h1 id="ctl-title"><span class="ctl-kicker">SafeTravel TW</span><span data-i18n="stage_label">衛教海報輪播</span></h1>
+      <div class="ctl-tg">
+        <button type="button" class="btn lang-toggle" data-testid="lang-toggle" data-i18n-attr="title:lang_toggle_label;aria-label:lang_toggle_label"><span data-i18n="lang_toggle">EN</span></button>
+        <button type="button" class="btn theme-toggle" data-testid="theme-toggle" data-i18n-attr="title:theme_label"><span class="theme-text"></span></button>
+        <button type="button" class="btn ctl-close" data-i18n-attr="title:close;aria-label:close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+    </div>
+
+    <div class="ctl-transport">
+      <button type="button" class="btn btn-ic" data-act="prev" data-testid="prev" data-i18n-attr="title:prev;aria-label:prev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5l-8 7 8 7M7 5v14"/></svg></button>
+      <button type="button" class="btn btn-ic btn-play" data-act="play" data-testid="play" aria-pressed="true">
+        <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+        <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>
+        <span class="sr-only play-label"></span>
+      </button>
+      <button type="button" class="btn btn-ic" data-act="next" data-testid="next" data-i18n-attr="title:next;aria-label:next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5l8 7-8 7M17 5v14"/></svg></button>
+      <p class="ctl-counter" data-testid="counter" aria-live="polite"></p>
+      <button type="button" class="btn btn-ic" data-act="fullscreen" data-testid="fullscreen" data-i18n-attr="title:fullscreen;aria-label:fullscreen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button type="button" class="btn btn-ic" data-act="print" data-testid="print" data-i18n-attr="title:print;aria-label:print"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5M7 17H4v-7h16v7h-3"/><path d="M7 14h10v6H7z"/></svg></button>
+    </div>
+
+    <div class="ctl-grid">
+      <label class="field"><span data-i18n="interval">每張秒數</span>
+        <input type="number" min="3" max="60" step="1" inputmode="numeric" data-testid="interval"></label>
+      <label class="field"><span data-i18n="orient">螢幕方向</span>
+        <select data-testid="orient">
+          <option value="portrait" data-i18n="orient_portrait">直式 1080×1920</option>
+          <option value="landscape" data-i18n="orient_landscape">橫式 1920×1080</option>
+          <option value="auto" data-i18n="orient_auto">自動（依螢幕）</option>
+        </select></label>
+      <label class="field"><span data-i18n="poster_lang">海報語言</span>
+        <select data-testid="poster-lang">
+          <option value="all" data-i18n="poster_lang_all">全部</option>
+          <option value="zh" data-i18n="poster_lang_zh">中文（含雙語）</option>
+          <option value="en" data-i18n="poster_lang_en">英文（含雙語）</option>
+        </select></label>
+      <p class="hint" data-i18n="interval_hint"></p>
+    </div>
+
+    <section class="ctl-sec">
+      <h2 data-i18n="slides_heading">本螢幕播放的海報</h2>
+      <ul class="ctl-list" data-testid="slide-list"></ul>
+      <p class="hint" data-i18n="slides_hint"></p>
+    </section>
+
+    <section class="ctl-sec">
+      <h2 data-i18n="downloads">下載</h2>
+      <div class="ctl-dl" data-testid="downloads"></div>
+    </section>
+
+    <section class="ctl-sec">
+      <h2 data-i18n="links">其他頁面</h2>
+      <p class="ctl-links">
+        <a href="index.html" data-testid="link-radar" data-i18n="link_radar">全球旅遊疫情情報板</a>
+        <a href="trip.html" data-testid="link-trip" data-i18n="link_trip">出國前旅遊安全查詢</a>
+        <a href="https://github.com/ancientsky/safetravel/blob/main/docs/SLIDES.md" target="_blank" rel="noopener noreferrer" data-i18n="link_docs">海報維護說明</a>
+      </p>
+      <p class="hint mono" data-i18n="url_hint"></p>
+    </section>
+  </aside>
+
+  <noscript><p class="noscript">This carousel needs JavaScript. 本頁需要啟用 JavaScript。</p></noscript>
+</body>
+</html>

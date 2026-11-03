@@ -266,4 +266,7 @@ export default {
   tab_mofa_short: 'Warnings',
   tab_cdc_short: 'Health',
   tab_wx_short: 'Weather',
+  nav_slides: 'Health posters',
+  nav_slides_title: 'Taiwan CDC health-poster carousel for airport quarantine-station screens',
+  foot_slides: 'Airport quarantine health-poster carousel',
 };

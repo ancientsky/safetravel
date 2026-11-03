@@ -840,3 +840,7 @@ button.chg:hover { background: var(--surface-2); border-color: var(--border); }
   .dest-table tbody tr:hover { background: none; }
   .t-wrap { border: 0; }
 }
+
+/* jump-nav link that leaves the page: the health-poster carousel (slide.html) */
+.jump a.jump-ext { border-style: dashed; }
+.jump a.jump-ext::after { content: " →"; }

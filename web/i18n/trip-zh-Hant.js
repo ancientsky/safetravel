@@ -266,4 +266,7 @@ export default {
   tab_mofa_short: '旅遊警示',
   tab_cdc_short: '疫情建議',
   tab_wx_short: '天氣',
+  nav_slides: '衛教海報輪播',
+  nav_slides_title: '機場檢疫站螢幕用的疾管署衛教海報輪播',
+  foot_slides: '機場檢疫站衛教海報輪播',
 };

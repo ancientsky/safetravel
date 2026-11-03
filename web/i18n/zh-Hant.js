@@ -321,4 +321,8 @@ export default {
   footer_weather: '天氣：',
   footer_cwa: '中央氣象署',
   footer_cwa_title: '中央氣象署 全球都市天氣預報（F-C0032-007）',
+  slides_link: '衛教輪播',
+  slides_link_title: '衛教海報輪播：機場檢疫站螢幕用的疾管署衛教海報（直式／橫式、可列印與下載）',
+  arr_slides: '衛教',
+  footer_slides: '衛教海報輪播',
 };

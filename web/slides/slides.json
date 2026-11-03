@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "interval": 5,
+  "brand": {
+    "logo": "slides/assets/cdc-logo.png",
+    "org_zh": "衛生福利部疾病管制署",
+    "org_en": "TAIWAN CDC",
+    "hotline_zh": "疫情通報及關懷專線",
+    "hotline_en": "Communicable Disease Reporting and Consultation Hotline",
+    "hotline": "1922",
+    "url": "https://www.cdc.gov.tw/"
+  },
+  "slides": [
+    {
+      "id": "ebola-drc-zh",
+      "template": "alert",
+      "lang": "zh",
+      "active": true,
+      "from": "2026-10-01",
+      "kicker": "請注意",
+      "category": "國際疫情",
+      "disease": "伊波拉",
+      "region_label": "流行地區",
+      "country": "剛果民主共和國",
+      "country_en": "Democratic Republic of the Congo (DRC)",
+      "iso": "CD",
+      "status": "WHO 列為「國際關注公共衛生緊急事件」",
+      "ask": [{ "t": "過去 " }, { "t": "21 天內", "hl": true }, { "t": "曾到過剛果民主共和國？" }],
+      "rule": [{ "t": "須主動向" }, { "t": "疾管署檢疫站報到", "hl": true }, { "t": "\n並配合入境後自主健康管理 21 天" }],
+      "note": "依據臺灣法令規定"
+    },
+    {
+      "id": "healthy-travel",
+      "template": "symptoms",
+      "lang": "bi",
+      "active": true,
+      "duration": 10,
+      "title": "台灣美 健康玩",
+      "subtitle": "Beautiful Taiwan, healthy traveling",
+      "intro": { "zh": "有以下任何一項症狀？", "en": "Any of these symptoms?" },
+      "symptoms": [
+        { "icon": "slides/assets/sym-fever.webp", "zh": "發燒", "en": "Fever" },
+        { "icon": "slides/assets/sym-respiratory.webp", "zh": "呼吸道疾病", "en": "Respiratory illness" },
+        { "icon": "slides/assets/sym-rash.webp", "zh": "發疹", "en": "Rash" },
+        { "icon": "slides/assets/sym-vomiting.webp", "zh": "持續嘔吐", "en": "Persistent vomiting" },
+        { "icon": "slides/assets/sym-diarrhea.webp", "zh": "持續腹瀉", "en": "Persistent diarrhea" },
+        { "icon": "slides/assets/sym-aches.webp", "zh": "骨頭肌肉疼痛", "en": "Bone and muscle aches" },
+        { "icon": "slides/assets/sym-lymph.webp", "zh": "淋巴結腫大", "en": "Swollen lymph nodes" }
+      ],
+      "steps": [
+        {
+          "zh": [{ "t": "儘速就醫", "hl": true }, { "t": "，或告知隨團領隊及導遊" }],
+          "en": [{ "t": "Seek medical care", "hl": true }, { "t": " and tell your tour guide" }],
+          "note": { "zh": "就醫時請告知醫師最近的旅遊史及接觸史", "en": "Tell your doctor about your recent travel and contact history" }
+        },
+        {
+          "zh": [{ "t": "撥打免付費諮詢專線 " }, { "t": "1922", "hl": true }],
+          "en": [{ "t": "Call the Taiwan CDC hotline " }, { "t": "1922", "hl": true }],
+          "note": { "zh": "或聯絡當地衛生單位", "en": "or contact the nearest local health authority" }
+        }
+      ],
+      "mascot": "slides/assets/mascots.webp"
+    },
+    {
+      "id": "report-en",
+      "template": "report",
+      "lang": "en",
+      "active": true,
+      "headline": "CAUTION",
+      "symptoms": [
+        { "icon": "fever", "t": "Fever" },
+        { "icon": "cough", "t": "Cough" },
+        { "icon": "breath", "t": "Shortness of breath" }
+      ],
+      "tail": "upon arrival?",
+      "condition": [{ "t": "Even if you have taken " }, { "t": "fever or cough medicine", "hl": true }],
+      "cta": [{ "t": "Please inform " }, { "t": "quarantine officers", "hl": true }, { "t": " at the airport " }, { "t": "immediately", "hl": true }],
+      "sign": { "zh": "旅客檢疫", "en": "Quarantine" }
+    },
+    {
+      "id": "report-zh",
+      "template": "report",
+      "lang": "zh",
+      "active": true,
+      "headline": "入境旅客請注意",
+      "symptoms": [
+        { "icon": "fever", "t": "發燒" },
+        { "icon": "cough", "t": "咳嗽" }
+      ],
+      "tail": "等身體不適",
+      "condition": [{ "t": "無論是否服用" }, { "t": "退燒藥、止咳藥", "hl": true }],
+      "cta": [{ "t": "主動", "hl": true }, { "t": "向機場／港口" }, { "t": "檢疫人員報到", "hl": true }],
+      "sign": { "zh": "旅客檢疫", "en": "Quarantine" }
+    },
+    {
+      "id": "ebola-drc-en",
+      "template": "alert",
+      "lang": "en",
+      "active": true,
+      "from": "2026-10-01",
+      "kicker": "Attention",
+      "category": "International epidemic",
+      "disease": "Ebola",
+      "region_label": "Affected country",
+      "country": "Democratic Republic of the Congo",
+      "country_en": "(DRC)",
+      "iso": "CD",
+      "status": "WHO: Public Health Emergency of International Concern",
+      "ask": [{ "t": "Been to the DRC within the " }, { "t": "past 21 days", "hl": true }, { "t": "?" }],
+      "rule": [{ "t": "You shall " }, { "t": "report to quarantine officers at the airport immediately", "hl": true }, { "t": "\nand follow the health instructions for 21 days." }],
+      "note": "According to Taiwan's regulations"
+    },
+    {
+      "id": "no-germs",
+      "template": "germs",
+      "lang": "bi",
+      "active": true,
+      "headline": { "zh": "小心別把病菌帶回國", "en": "Don’t bring germs back to Taiwan" },
+      "message": {
+        "zh": [{ "t": "入境時如身體不適，請" }, { "t": "主動通知檢疫人員", "hl": true }],
+        "en": [{ "t": "Feeling unwell upon arrival? Please " }, { "t": "inform quarantine officers", "hl": true }, { "t": " at the airport immediately." }]
+      },
+      "art": "slides/assets/pests.webp"
+    }
+  ]
+}

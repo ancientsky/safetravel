@@ -1644,3 +1644,13 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
   .lg-wx-mini .lg-wx-v { font-size: 9.5px; }
 }
 .foot-nw { white-space: nowrap; }
+
+/* link to the health-poster carousel (slide.html): label only on wide screens, hidden on phones (header is full) */
+.slides-link, .arr-slides { color: var(--fg); text-decoration: none; }
+@media (max-width: 1799px) { :root[lang="en"] .slides-link span[data-i18n] { display: none; } } /* longer English header labels */
+@media (max-width: 1599px) {
+  .slides-link span[data-i18n] { display: none; }
+  .hud-right .slides-link { min-width: 32px; padding: 0 7px; }
+  .hud-right .toggles { gap: 4px; }
+}
+@media (max-width: 760px) { .slides-link { display: none; } }

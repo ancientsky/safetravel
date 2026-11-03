@@ -29,8 +29,10 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
 | `web/` | frontend | The static site served by GitHub Pages (root = `web/`) |
 | `web/data/` | pipeline export | JSON consumed by the browser. Overwritten every run. `epidemics.json` is a slim index; full texts are lazy-loaded from `web/data/epidemics/<ISO2>.json` (+ `_global.json`). `world.json` (50m) and `world-110m.json` (narrow screens) are built by `build_geo.py`. |
 | `web/vendor/` | npm (vendored, `npm run vendor`) | `d3.min.js` (only the d3 functions listed in `scripts/d3-entry.mjs`, bundled by esbuild; the Pages deploy runs `scripts/check-d3.mjs` and fails if `web/` calls a d3 function outside that list), `topojson-client.min.js` — no CDN at runtime |
-| `.github/workflows/` | ops | `update-data.yml` (cron) · `deploy-pages.yml` (on push to main, web/**) · `arrivals.yml` (arrivals board, external trigger) |
-| `docs/` | — | This file + `DATA_CONTRACT.md` + `ARRIVALS.md` (arrivals board spec) + `ARRIVALS_SETUP.md` (owner setup, zh-Hant) |
+| `web/slides/` | humans + Actions | Health-poster carousel (`slide.html`): `slides.json` playlist, `assets/` artwork, `export/` PNG + PDF written by `slides.yml`. Spec: `SLIDES.md` |
+| `scripts/slide-sources/` | humans | Original Taiwan CDC posters + seal; `scripts/crop-slide-assets.py` cuts the artwork into `web/slides/assets/` |
+| `.github/workflows/` | ops | `update-data.yml` (cron) · `deploy-pages.yml` (on push to main, web/**) · `arrivals.yml` (arrivals board, external trigger) · `slides.yml` (poster PNG/PDF export → commit → dispatch deploy) |
+| `docs/` | — | This file + `DATA_CONTRACT.md` + `SLIDES.md` (poster carousel) + `ARRIVALS.md` (arrivals board spec) + `ARRIVALS_SETUP.md` (owner setup, zh-Hant) |
 
 ## Data sources
 
@@ -101,3 +103,19 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
   overridden by `?wx=1` / `?wx=0`. Markers are HTML buttons in their own layer (above the map, flights canvas and route watch,
   below the HUD), placed in screen pixels on every zoom/pan frame and kept clear of the HUD cards.
 
+## Health-poster carousel (slide.html)
+
+Kiosk page for airport quarantine-station screens; maintenance guide in `docs/SLIDES.md` (zh-Hant, English summary).
+- `web/slide.html` (same CSP as `trip.html`) + `js/slide-boot.js` (theme / language / orientation before first paint) +
+  `js/slide.js` (playlist, timer, settings panel, wake lock, 5-minute manifest refresh) + `js/slide-templates.js`
+  (one renderer per template: `alert`, `symptoms`, `report`, `germs`, `image`; DOM built with `createElement` /
+  `textContent`, highlights as `{t, hl}` segments, only `https://…cdc.gov.tw` links) + `slide.css` (fixed 1080×1920 /
+  1920×1080 canvas scaled with `transform`, layouts per orientation, `@media print` with named `@page`s).
+- Entrance animations only animate *from* a start state, so print, `?still=1` (export) and `prefers-reduced-motion`
+  show the final state by switching animations off.
+- The `alert` map uses the vendored d3 (`geoNaturalEarth1`, `geoPath`) + topojson with `web/data/world-110m.json`.
+- `pipeline/validate.py` checks `web/slides/slides.json` as part of `python -m pipeline validate` (all Pages deploy
+  paths) and standalone with `python -m pipeline.validate` (stdlib only, used by `slides.yml`).
+- `.github/workflows/slides.yml`: on poster changes, `scripts/export-slides.mjs` renders PNGs and PDFs with Playwright,
+  commits `web/slides/export/` with the bot identity and dispatches `deploy-pages.yml` (GITHUB_TOKEN commits do not
+  trigger workflows).

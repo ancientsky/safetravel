@@ -36,6 +36,8 @@ jobs:
         run: pip install --require-hashes -r pipeline/requirements.lock
       - name: Validate web/data before publishing
         run: python -m pipeline validate
+      - name: Validate the health-poster manifest (web/slides/slides.json)
+        run: python -m pipeline.validate web
       - name: Node.js 24 (official nodejs.org build, checksum-pinned)
         env:
           NODE_VERSION: v24.22.1

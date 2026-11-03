@@ -323,4 +323,8 @@ export default {
   footer_weather: 'Weather: ',
   footer_cwa: 'CWA',
   footer_cwa_title: 'Central Weather Administration world city forecast (F-C0032-007)',
+  slides_link: 'Health posters',
+  slides_link_title: 'Health poster carousel: Taiwan CDC health-education posters for airport quarantine-station screens (portrait / landscape, printable)',
+  arr_slides: 'Posters',
+  footer_slides: 'Health posters',
 };
