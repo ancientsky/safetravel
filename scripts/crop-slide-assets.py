@@ -28,11 +28,11 @@ OUT = ROOT / "web" / "slides" / "assets"
 SYMPTOMS = {
     "vomiting": ((70, 1630, 515, 2050), False),
     "aches": ((560, 1560, 990, 2032), False),
-    "lymph": ((1070, 1570, 1500, 2003), False),
+    "lymph": ((1070, 1570, 1500, 2035), False),
     "respiratory": ((100, 2300, 540, 2740), True),
     "fever": ((610, 2130, 1040, 2722), True),
-    "rash": ((130, 2975, 540, 3420), True),
-    "diarrhea": ((600, 2930, 1010, 3402), True),
+    "rash": ((130, 2915, 540, 3420), True),
+    "diarrhea": ((600, 2860, 1010, 3402), True),
 }
 
 

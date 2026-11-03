@@ -271,6 +271,7 @@ async function run(browser) {
   // ------------------------------------------------------------ orientations: fit + layout per orientation
   {
     const pos = {};
+    const bars = {};
     for (const [orient, vp] of [['portrait', PORTRAIT], ['landscape', LANDSCAPE]]) {
       const { context, page } = await newPage(browser, { viewport: vp });
       await check(`${orient}: every slide fits ${vp.width}x${vp.height} without overflow`, async () => {
@@ -281,6 +282,11 @@ async function run(browser) {
           assert(Math.round(r.w) === vp.width && Math.round(r.h) === vp.height, `${id}: canvas ${r.w}x${r.h}`);
           if (r.bad.length) issues.push(`${id}: ${[...new Set(r.bad)].slice(0, 4).join(', ')}`);
           await page.screenshot({ path: path.join(SHOTS_DIR, `slide-${id}-${orient}.png`) });
+          bars[`${orient}:${id}`] = await page.evaluate(() => {
+            const f = document.querySelector('.slide.is-active .brand');
+            const r2 = f.getBoundingClientRect();
+            return [Math.round(r2.top), Math.round(r2.height), f.innerText.replace(/\s+/g, ' ').trim()];
+          });
           pos[`${orient}:${id}`] = await page.evaluate(() => {
             const k = document.querySelector('.slide.is-active h2, .slide.is-active .al-disease');
             const r2 = k.getBoundingClientRect();
@@ -292,6 +298,14 @@ async function run(browser) {
       });
       await context.close();
     }
+    await check('CDC bar is identical on every slide (position, height, text) in each orientation', async () => {
+      for (const orient of ['portrait', 'landscape']) {
+        const seen = new Set(ACTIVE.map((id) => JSON.stringify(bars[`${orient}:${id}`])));
+        assert(seen.size === 1, `${orient}: ${[...seen].join(' ≠ ')}`);
+      }
+      const [top, height] = bars[`portrait:${ACTIVE[0]}`];
+      return `portrait top ${top} h ${height}; landscape h ${bars[`landscape:${ACTIVE[0]}`][1]}`;
+    });
     await check('landscape has its own layout (headline positions differ from portrait)', async () => {
       const differ = ACTIVE.filter((id) => JSON.stringify(pos[`portrait:${id}`]) !== JSON.stringify(pos[`landscape:${id}`]));
       assert(differ.length === ACTIVE.length, `same layout for ${ACTIVE.filter((x) => !differ.includes(x))}`);

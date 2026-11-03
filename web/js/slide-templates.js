@@ -64,12 +64,11 @@ const plain = (v) => (typeof v === 'string' ? v : Array.isArray(v) ? v.map((x) =
 const pick = (v, k) => (v && typeof v === 'object' && !Array.isArray(v) ? v[k] : v);
 
 // ---------------------------------------------------------------- brand bar (every slide)
-function brandBar(brand, lang) {
+// Identical on every slide whatever its language, so the bar never shifts while the carousel plays.
+function brandBar(brand) {
   const b = brand || {};
   const logo = assetSrc(b.logo);
   const url = cdcHref(b.url);
-  const zh = lang !== 'en';
-  const en = lang !== 'zh';
   return h('footer', { class: 'brand' },
     h('div', { class: 'brand-org' },
       logo ? h('span', { class: 'brand-seal' }, h('img', { src: logo, alt: '', width: 512, height: 512, decoding: 'async' })) : null,
@@ -79,8 +78,8 @@ function brandBar(brand, lang) {
         url ? h('a', { class: 'brand-url', href: url, target: '_blank', rel: 'noopener noreferrer', lang: 'en', text: url.replace(/^https:\/\/|\/$/g, '') }) : null)),
     h('div', { class: 'brand-line' },
       h('span', { class: 'brand-hl' },
-        zh ? h('span', { class: 'brand-hl-zh', lang: 'zh-Hant', text: b.hotline_zh || '' }) : null,
-        en ? h('span', { class: 'brand-hl-en', lang: 'en', text: b.hotline_en || '' }) : null),
+        h('span', { class: 'brand-hl-zh', lang: 'zh-Hant', text: b.hotline_zh || '' }),
+        h('span', { class: 'brand-hl-en', lang: 'en', text: b.hotline_en || '' })),
       h('span', { class: 'brand-tel' }, phoneIcon(), h('b', { lang: 'en', text: b.hotline || '' }))));
 }
 function phoneIcon() {
@@ -176,7 +175,7 @@ async function drawMap(box, iso) {
   const arcD = `M${x1.toFixed(1)} ${y1.toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
   const land = all.filter((f) => f !== target).map((f) => path(f)).filter(Boolean).join('');
   const plane = s('g', { class: 'map-plane' },
-    s('path', { d: 'M-20 -3 4 -3 14 -16h6l-5 13h9l4-5h4l-3 8 3 8h-4l-4-5h-9l5 13h-6L4 3h-24z' }));
+    s('path', { d: 'M-20 -3 4 -3 14 -16h6l-5 13h9l4-5h4l-3 8 3 8h-4l-4-5h-9l5 13h-6L4 3h-24z', transform: 'scale(-1 1)' }));  // nose to +x, the direction of travel
   const svg = s('svg', { class: 'map-svg', viewBox: `0 0 ${W} ${H}`, 'aria-hidden': 'true', preserveAspectRatio: 'xMidYMid meet' },
     s('path', { class: 'map-land', d: land }),
     s('path', { class: 'map-target', d: path(target) }),
@@ -400,6 +399,6 @@ export function renderSlide(d, brand, ctx) {
     'aria-label': d.alt || plain(d.headline?.zh ?? d.headline) || plain(d.disease) || plain(d.title) || d.id,
   });
   sec.append(h('div', { class: 'slide-body' }, RENDER[d.template]({ ...d, lang }, ctx)));
-  if (d.template !== 'image' || d.brand === true) sec.append(brandBar(brand, lang));
+  if (d.template !== 'image' || d.brand === true) sec.append(brandBar(brand));
   return sec;
 }

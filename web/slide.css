@@ -138,7 +138,6 @@ body.paused .dots::before { content: ""; width: 14px; height: 18px; border: soli
 .brand-hl { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .brand-hl-zh { font-size: 27px; font-weight: 800; white-space: nowrap; }
 .brand-hl-en { font: 700 16px/1.2 var(--latin); color: #4b5565; max-width: 250px; }
-.l-en .brand-hl-en { font-size: 21px; max-width: 300px; color: #1d2433; }
 .brand-tel { display: flex; align-items: center; gap: 4px; color: #d1102b; }
 .brand-tel b { font: 900 78px/1 var(--latin); letter-spacing: -.01em; }
 .ico-tel { width: 52px; height: 52px; fill: currentColor; }
@@ -151,7 +150,6 @@ body.paused .dots::before { content: ""; width: 14px; height: 18px; border: soli
 [data-orient="landscape"] .brand-tel b { font-size: 74px; }
 [data-orient="landscape"] .brand-hl-zh { font-size: 30px; }
 [data-orient="landscape"] .brand-hl-en { max-width: 560px; font-size: 19px; }
-[data-orient="landscape"] .l-en .brand-hl-en { font-size: 23px; max-width: 560px; }
 [data-orient="landscape"] .brand-line { gap: 22px; }
 
 /* ---------------------------------------------------------------- shared motion */
