@@ -29,7 +29,8 @@ async function open(context, url) {
   const p = await context.newPage();
   const errors = [];
   p.on('pageerror', (e) => errors.push(e.message));
-  p.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  // a missing slides/export/* (this script's own output, e.g. index.json on the very first run) is expected
+  p.on('console', (m) => { if (m.type() === 'error' && !/\/slides\/export\//.test(m.location()?.url || '')) errors.push(m.text()); });
   const r = await p.goto(url, { waitUntil: 'load' });
   if (!r || !r.ok()) throw new Error(`${url}: HTTP ${r && r.status()}`);
   await p.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 20000 });
