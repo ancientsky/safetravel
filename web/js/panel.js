@@ -7,11 +7,21 @@ import {
   badge, fmtDay, fmtAge, fmtNum, pick, wLevelShort, wLevelFull, wbadge,
 } from './i18n.js';
 import {
-  esc, clean, reducedMotion, safeUrl, levelNum, $,
+  esc, clean, reducedMotion, safeUrl, levelNum, $, storageGet, storageSet, todayTaipei,
 } from './util.js';
 import { toast } from './toast.js';
 
 const PAGE = 20;
+// Epidemic timeline range in months (the data covers two years). Default 6; per-screen choice in localStorage;
+// ?months=3|6|12|24 overrides it for a kiosk without being stored.
+const RANGES = [3, 6, 12, 24];
+const RANGE_KEY = 'safetravel.timelineMonths';
+function initialRange() {
+  const q = Number(new URLSearchParams(location.search).get('months'));
+  if (RANGES.includes(q)) return q;
+  const v = Number(storageGet(RANGE_KEY));
+  return RANGES.includes(v) ? v : 6;
+}
 const GROUPS_SHOWN = 5; // advisory groups visible before "show all"
 const AREA_CHIPS = 6; // area chips visible per group before "+N"
 
@@ -20,6 +30,7 @@ export function createPanel({ root, map }) {
   const head = $('.panel-head', root);
   let iso = null;
   let shown = PAGE;
+  let months = initialRange();
   let typer = null;
   let lastFocus = null;
   let hideTimer = 0;
@@ -183,7 +194,7 @@ export function createPanel({ root, map }) {
       ${renderRates()}
       <dl class="panel-stats">
         <div><dt>${esc(t('panel_stat_advisories'))}</dt><dd class="mono">${fmtNum(alertsOf(iso).length)}</dd></div>
-        <div><dt>${esc(t('panel_stat_epidemics'))}</dt><dd class="mono">${items ? fmtNum(items.length) : state.epidemicsStatus === 'loading' ? '…' : state.epidemicsStatus === 'ready' ? '0' : '—'}</dd></div>
+        <div><dt>${esc(t('panel_stat_epidemics'))} <span class="dt-sub">${esc(t('panel_range_short', { m: months }))}</span></dt><dd class="mono">${items ? fmtNum(timelineItems().length) : state.epidemicsStatus === 'loading' ? '…' : state.epidemicsStatus === 'ready' ? '0' : '—'}</dd></div>
         <div><dt>${esc(t('panel_stat_flights'))}</dt><dd class="mono">${fmtNum(dep)}</dd></div>
       </dl>`;
   }
@@ -324,8 +335,18 @@ export function createPanel({ root, map }) {
       </section>`;
   }
 
-  function timelineItems() {
+  /** All digests of the country (two years, newest first). */
+  function allItems() {
     return state.byCountry.get(iso) || [];
+  }
+  /** The digests inside the chosen range. */
+  function timelineItems() {
+    const all = allItems();
+    if (months >= 24) return all;
+    const from = todayTaipei();
+    from.setUTCMonth(from.getUTCMonth() - months);
+    const cut = from.toISOString().slice(0, 10);
+    return all.filter((it) => String(it.date || '') >= cut);
   }
 
   function renderTimelineList(from, to) {
@@ -357,16 +378,41 @@ export function createPanel({ root, map }) {
         : '<div class="skeleton" aria-busy="true"><span></span><span></span><span></span><span></span></div>';
     } else {
       const items = timelineItems();
+      const total = allItems().length;
       inner = items.length
         ? `<ol class="timeline">${renderTimelineList(0, shown)}</ol>${items.length > shown ? `<button type="button" class="btn more-btn">${esc(t('panel_more', { n: items.length - shown }))}</button>` : ''}`
-        : `<p class="empty">${esc(t('panel_timeline_none'))}</p>`;
+        : total
+          ? `<p class="empty">${esc(t('panel_timeline_none_range', { range: t('panel_range_short', { m: months }) }))}</p><button type="button" class="btn tl-widen" data-months="24">${esc(t('panel_timeline_widen', { n: total }))}</button>`
+          : `<p class="empty">${esc(t('panel_timeline_none'))}</p>`;
     }
     const n = state.epidemicsStatus === 'ready' ? timelineItems().length : null;
+    const range = RANGES.map((m) => `<button type="button" class="tl-range-btn mono" data-months="${m}" aria-pressed="${m === months}">${esc(t('panel_range_opt', { m }))}</button>`).join('');
     return `
-      <section class="psec psec-tl" aria-labelledby="psec-${idx.toLowerCase()}">
-        ${secHead(idx, 'panel_sec_timeline', n != null ? `<span class="count mono">${esc(t('panel_timeline_count', { n }))}</span>` : '')}
+      <section class="psec psec-tl" aria-labelledby="psec-${idx.toLowerCase()}" data-idx="${idx}">
+        <h3 id="psec-${idx.toLowerCase()}"><span class="psec-idx mono">${idx}</span>${esc(t('panel_sec_timeline_range', { m: months }))}${n != null ? `<span class="count mono">${esc(t('panel_timeline_count', { n }))}</span>` : ''}</h3>
+        <div class="tl-range" role="group" aria-label="${esc(t('panel_range_label'))}" data-testid="timeline-range">${range}</div>
         ${inner}
       </section>`;
+  }
+
+  /** Range buttons, "show more" and "show two years" inside the (re-)rendered timeline section. */
+  function bindTimeline() {
+    const more = $('.more-btn', body);
+    if (more) more.addEventListener('click', onMore);
+    body.querySelectorAll('.psec-tl [data-months]').forEach((b) => b.addEventListener('click', () => setRange(+b.dataset.months)));
+  }
+
+  function setRange(m) {
+    if (!RANGES.includes(m) || m === months) return;
+    months = m;
+    storageSet(RANGE_KEY, String(m));
+    shown = PAGE;
+    renderHead(); // the digest count follows the range
+    const sec = $('.psec-tl', body);
+    if (!sec) return;
+    sec.outerHTML = renderTimeline(sec.dataset.idx || 'C');
+    bindTimeline();
+    $('.psec-tl [aria-pressed="true"]', body)?.focus({ preventScroll: true });
   }
 
   function startTypewriter() {
@@ -419,8 +465,7 @@ export function createPanel({ root, map }) {
     body.innerHTML = secs.map((fn, i) => fn('ABCDEF'[i])).join('');
     if (wtext.status !== 'idle') fillWarnText();
     startTypewriter();
-    const more = $('.more-btn', body);
-    if (more) more.addEventListener('click', onMore);
+    bindTimeline();
   }
 
   function onMore(ev) {

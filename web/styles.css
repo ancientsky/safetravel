@@ -661,6 +661,7 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 .panel-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 0; }
 .panel-stats div { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: rgba(var(--accent-rgb), .03); }
 .panel-stats dt { font-size: 10.5px; color: var(--fg-mute); }
+.panel-stats .dt-sub { font-size: 9.5px; opacity: .8; white-space: nowrap; }
 .panel-stats dd { margin: 0; font-size: 18px; font-weight: 600; }
 
 .panel-body { flex: 1; overflow-y: auto; padding: 6px 18px 18px; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
@@ -673,6 +674,15 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 }
 .psec h3 .count { margin-left: auto; font-size: 11px; color: var(--fg-mute); font-weight: 400; }
 .psec h3 .chip + .count, .psec h3 .count + .chip { margin-left: 8px; }
+/* epidemic timeline range (3 / 6 / 12 / 24 months) */
+.tl-range { display: flex; gap: 6px; margin: -2px 0 12px; }
+.tl-range-btn {
+  height: 24px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: transparent;
+  color: var(--fg-dim); font-size: 11px; cursor: pointer; transition: background .2s, border-color .2s, color .2s;
+}
+.tl-range-btn:hover { border-color: var(--border-strong); color: var(--fg); }
+.tl-range-btn[aria-pressed="true"] { border-color: var(--accent); background: rgba(var(--accent-rgb), .14); color: var(--accent); }
+.tl-widen { margin-top: 4px; }
 .empty { color: var(--fg-dim); font-size: 13px; margin: 4px 0; }
 
 .adv-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -934,6 +944,9 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 .pa-progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; overflow: hidden; }
 .pa-progress b { display: block; height: 100%; transform-origin: left; transform: scaleX(0); background: linear-gradient(90deg, var(--accent), var(--cyan)); transition: transform .1s linear; }
 .panel:has(.panel-autobar:not([hidden])) .panel-close { top: 4px; }
+.pa-tools { margin-left: auto; display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.pa-scroll label { font-size: 11px; }
+.pa-compact { width: auto; height: 24px; margin: 0; padding: 0 9px; font-size: 11px; line-height: 1; white-space: nowrap; }
 
 /* ---------- grouped advisories ---------- */
 .adv.is-extra { display: none; }

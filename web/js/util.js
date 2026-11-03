@@ -59,6 +59,9 @@ export function elapsed(dateStr, now = new Date()) {
   return { days, months: Math.max(0, months) };
 }
 
+/** Auto-scroll pace shared by the wall-screen lists (arrivals board, country panel), px per second. */
+export const AUTO_SCROLL_PX_S = 28;
+
 export function storageGet(key) {
   try { return localStorage.getItem(key); } catch { return null; }
 }

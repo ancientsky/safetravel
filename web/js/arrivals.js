@@ -6,7 +6,7 @@ import {
   t, isEn, countryName, diseaseName, badge, levelShort,
 } from './i18n.js';
 import {
-  esc, storageGet, storageSet, debounce, clamp, levelNum, reducedMotion,
+  esc, storageGet, storageSet, debounce, clamp, levelNum, reducedMotion, AUTO_SCROLL_PX_S,
 } from './util.js';
 
 const d3 = window.d3;
@@ -17,7 +17,7 @@ const WINDOW_MS = 60 * 60 * 1000;
 const POLL_MS = 60 * 1000;
 const TICK_MS = 20 * 1000;
 // unattended wall screens: the list glides down at a reading pace, rests at both ends, then starts over
-const SCROLL_PX_S = 28;
+const SCROLL_PX_S = AUTO_SCROLL_PX_S; // same pace as the country panel's auto-scroll (util.js)
 const REST_TOP_MS = 5000;
 const REST_BOTTOM_MS = 6000;
 const HOLD_MS = 15000; // pause after a person touches / scrolls / clicks the list

@@ -425,6 +425,59 @@ async function run(browser) {
     return `on: ${on} markers; off: no fetch; URL synced`;
   });
 
+  await check('timeline range: 6 months by default, 3/6/12/24 switch the list, choice remembered, ?months= overrides', async () => {
+    const pr = await context.newPage();
+    const errs = [];
+    pr.on('pageerror', (e) => errs.push(e.message));
+    const ready = () => pr.waitForFunction(() => document.querySelectorAll('.psec-tl .tl-range-btn').length === 4 && !document.querySelector('.psec-tl .skeleton'), null, { timeout: 40000 });
+    const st = () => pr.evaluate(() => ({
+      pressed: +document.querySelector('.tl-range-btn[aria-pressed="true"]').dataset.months,
+      count: +(document.querySelector('.psec-tl h3 .count')?.textContent.match(/\d+/)?.[0] ?? -1),
+      stat: +document.querySelectorAll('.panel-stats dd')[1].textContent,
+      stored: localStorage.getItem('safetravel.timelineMonths'),
+    }));
+    await pr.goto(`${BASE_URL}#/country/DE`, { waitUntil: 'load' });
+    await ready();
+    const d = await st();
+    await pr.click('.tl-range-btn[data-months="24"]');
+    const all = await st();
+    await pr.goto(`${BASE_URL}?months=3#/country/DE`, { waitUntil: 'load' });
+    await ready();
+    const q = await st();
+    await pr.evaluate(() => localStorage.removeItem('safetravel.timelineMonths'));
+    await pr.close();
+    assert(d.pressed === 6 && d.count === d.stat, `default ${JSON.stringify(d)}`);
+    assert(all.pressed === 24 && all.count >= d.count && all.stored === '24' && all.stat === all.count, `24 months ${JSON.stringify(all)}`);
+    assert(q.pressed === 3 && q.count <= d.count && q.stored === '24', `?months=3 ${JSON.stringify(q)}`);
+    assert(!errs.length, errs[0]);
+    return `DE: 6 mo ${d.count}, 2 yr ${all.count}, ?months=3 ${q.count}`;
+  });
+
+  await check('auto tour bar in the open panel: auto-scroll switch + "compact" back to the card view', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1440, height: 900 } });
+    await ctx.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('safetravel.spotlightAutoOpen', 'on'); } });
+    const pr = await ctx.newPage();
+    const errs = [];
+    pr.on('pageerror', (e) => errs.push(e.message));
+    await pr.goto(BASE_URL, { waitUntil: 'load' });
+    await pr.waitForFunction(() => !document.querySelector('#panel').hidden && !document.querySelector('.panel-autobar').hidden, null, { timeout: 45000 });
+    const sw = '[data-testid="panel-autoscroll"]';
+    const before = await pr.getAttribute(sw, 'aria-checked');
+    await pr.click(sw);
+    const flipped = await pr.evaluate(() => [document.querySelector('[data-testid="panel-autoscroll"]').getAttribute('aria-checked'), document.querySelector('[data-testid="spotlight-autoscroll"]').getAttribute('aria-checked')]);
+    await pr.click(sw);
+    await pr.click('[data-testid="panel-compact"]');
+    await pr.waitForFunction(() => document.querySelector('#panel').hidden, null, { timeout: 3000 });
+    await pr.evaluate(() => window.__safetravel.spotlight.next());
+    await pr.waitForTimeout(1500);
+    const after = await pr.evaluate(() => ({ hidden: document.querySelector('#panel').hidden, auto: document.querySelector('[data-testid="spotlight-autoopen"]').getAttribute('aria-checked'), stored: localStorage.getItem('safetravel.spotlightAutoOpen') }));
+    await ctx.close();
+    assert(before === 'true' && flipped[0] === 'false' && flipped[1] === 'false', `switch ${before} -> ${flipped}`);
+    assert(after.hidden && after.auto === 'false' && after.stored === 'off', `compact ${JSON.stringify(after)}`);
+    assert(!errs.length, errs[0]);
+    return 'switch mirrors the card setting; compact closes the panel and the tour continues on the card';
+  });
+
   await check('kiosk self-reload: new site code (version.json) reloads the map page at a quiet moment', async () => {
     const pr = await context.newPage();
     const errs = [];

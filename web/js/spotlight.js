@@ -6,15 +6,15 @@ import {
   t, countryName, countryAltName, diseaseName, badge, fmtDay, pick, isEn,
 } from './i18n.js';
 import {
-  esc, clean, truncate, weightedPick, reducedMotion, storageGet, storageSet, clamp, levelNum, $,
+  esc, clean, truncate, weightedPick, reducedMotion, storageGet, storageSet, clamp, levelNum, $, AUTO_SCROLL_PX_S,
 } from './util.js';
 
 const INTERVAL = 15000;
 const SCROLL_DELAY = 2500; // let the header/advisories be read first
 const SCROLL_LEAD = 1000; // reach the bottom this long before the next country
-// Auto-scroll glides at a constant, readable pace regardless of how long the panel is; the cycle
-// stretches to fit (see cycleLength), bounded by MAX_GLIDE so one country never monopolises the tour.
-const SCROLL_SPEED = 60; // px per second
+// Auto-scroll glides at the arrivals board's constant reading pace (util.js AUTO_SCROLL_PX_S); the cycle stretches
+// to fit (see cycleLength), bounded by MAX_GLIDE so one country never monopolises the tour: a panel longer than
+// that is read as far as the pace allows, never sped up.
 const MAX_GLIDE = 75000; // ms
 const TICK = 100;
 const USER_COOLDOWN = 15000;
@@ -32,6 +32,9 @@ export function createSpotlight({ root, map, panel }) {
   const autobarFill = autobar?.querySelector('.pa-progress b');
   const autobarBtn = autobar?.querySelector('.pa-toggle');
   const scrollBtn = $('[data-testid="spotlight-autoscroll"]', root);
+  // the same two settings inside the open panel's auto-tour bar (the corner card is covered by the panel there)
+  const paScrollBtn = autobar?.querySelector('[data-testid="panel-autoscroll"]');
+  const paCompactBtn = autobar?.querySelector('[data-testid="panel-compact"]');
   const scrollWrap = scrollBtn.closest('.spot-auto');
   state.spotlight.autoOpen = storageGet(AUTO_KEY) === 'on';
   state.spotlight.autoScroll = storageGet(SCROLL_KEY) !== 'off';
@@ -111,7 +114,7 @@ export function createSpotlight({ root, map, panel }) {
 
   /** Length of the current cycle: 15 s, or longer while an auto-scroll glide is running. */
   function glideMs(max) {
-    return Math.min(MAX_GLIDE, (max / SCROLL_SPEED) * 1000);
+    return Math.min(MAX_GLIDE, (max / AUTO_SCROLL_PX_S) * 1000);
   }
 
   function cycleLength() {
@@ -134,9 +137,10 @@ export function createSpotlight({ root, map, panel }) {
     if (max > 2) { // content that fits needs no scrolling
       // interpolate between 100 ms ticks for a smooth, linear glide
       const e = elapsed + (paused() ? 0 : Math.min(TICK, performance.now() - lastTickAt));
+      const reach = Math.min(max, (AUTO_SCROLL_PX_S * MAX_GLIDE) / 1000); // constant pace: stop where time runs out
       let p = clamp((e - SCROLL_DELAY) / glideMs(max), 0, 1);
       if (reducedMotion()) p = Math.floor(p * 3 + 1e-6) / 3; // three discrete jumps, no glide
-      const target = Math.round(p * max);
+      const target = Math.round(p * reach);
       if (Math.abs(el.scrollTop - target) >= 1) el.scrollTop = target;
     }
     scrollRaf = requestAnimationFrame(stepScroll);
@@ -206,6 +210,7 @@ export function createSpotlight({ root, map, panel }) {
     scrollBtn.title = t('spot_autoscroll');
     scrollWrap.hidden = !state.spotlight.autoOpen; // only meaningful with full details on
     scrollBtn.disabled = !state.spotlight.autoOpen;
+    paScrollBtn?.setAttribute('aria-checked', String(state.spotlight.autoScroll));
     if (autobarBtn) {
       autobarBtn.dataset.state = playing ? 'playing' : 'paused';
       autobarBtn.setAttribute('aria-label', playing ? t('panel_auto_pause') : t('panel_auto_play'));
@@ -250,10 +255,28 @@ export function createSpotlight({ root, map, panel }) {
     storageSet(AUTO_KEY, state.spotlight.autoOpen ? 'on' : 'off');
     syncButtons();
   });
-  scrollBtn.addEventListener('click', () => {
+  function toggleScroll() {
     state.spotlight.autoScroll = !state.spotlight.autoScroll;
     storageSet(SCROLL_KEY, state.spotlight.autoScroll ? 'on' : 'off');
     syncButtons();
+  }
+  scrollBtn.addEventListener('click', toggleScroll);
+  paScrollBtn?.addEventListener('click', () => {
+    toggleScroll();
+    // pressing a control in the panel counts as "user touched the panel" (pointerdown): undo that here,
+    // so turning auto-scroll on resumes the glide right away instead of after the cooldown
+    scrollCancelled = false;
+    userUntil = 0;
+    ensureScroll();
+  });
+  // "Compact": back to the default view — full details off, panel closed, the corner card keeps touring
+  paCompactBtn?.addEventListener('click', () => {
+    state.spotlight.autoOpen = false;
+    storageSet(AUTO_KEY, 'off');
+    autoIso = null;
+    syncButtons();
+    panel.close();
+    userUntil = 0; // no hand-close hold: the compact tour simply continues
   });
   autobarBtn?.addEventListener('click', () => {
     state.spotlight.playing = !state.spotlight.playing;
