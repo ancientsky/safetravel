@@ -638,7 +638,7 @@ SLIDE_BASE = {"id", "template", "active", "lang", "from", "until", "duration", "
 # template -> (required fields, optional fields)
 SLIDE_FIELDS = {
     "alert": ({"kicker", "disease", "country", "rule"},
-              {"category", "region_label", "country_en", "iso", "status", "ask", "note", "routes"}),
+              {"category", "region_label", "country_en", "iso", "status", "ask", "note", "routes", "route_labels"}),
     "symptoms": ({"title", "symptoms", "steps"}, {"subtitle", "intro", "mascot"}),
     "report": ({"headline", "symptoms", "cta"}, {"tail", "condition", "sign"}),
     "germs": ({"headline", "message"}, {"art"}),
@@ -785,6 +785,8 @@ def check_slides(v: V, m, web: Path) -> None:
                 v.err(f"{where}.iso", "must be an ISO 3166 alpha-2 code like 'CD'")
             if "routes" in s:
                 _slide_routes(v, f"{where}.routes", g("routes"), web)
+            if "route_labels" in s and not isinstance(g("route_labels"), bool):
+                v.err(f"{where}.route_labels", "route_labels must be true/false")
         elif tpl == "symptoms":
             for k in ("title", "subtitle"):
                 if k in s:

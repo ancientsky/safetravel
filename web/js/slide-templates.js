@@ -184,7 +184,7 @@ const PLANE_D = 'M-20 -3 4 -3 14 -16h6l-5 13h9l4-5h4l-3 8 3 8h-4l-4-5h-9l5 13h-6
  * Taiwan; with routes (e.g. [["FIH","CDG","TPE"],["FIH","AUH","TPE"]]) each route is a multi-leg flight through its
  * hub, airports dotted and labelled, one plane per route. Needs vendored d3 + topojson; silently omitted otherwise.
  */
-async function drawMap(box, iso, routes, lang) {
+async function drawMap(box, iso, routes, lang, showLabels = false) {
   if (!iso || typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
   const [world, airports] = await Promise.all([loadWorld(), Array.isArray(routes) && routes.length ? loadAirports() : {}]);
   if (!world?.objects?.countries) return;
@@ -227,9 +227,10 @@ async function drawMap(box, iso, routes, lang) {
     const below = origin;
     return s('g', { class: `map-ap${dest ? ' is-dest' : ''}${origin ? ' is-origin' : ''}` },
       s('circle', { class: 'map-ap-dot', cx: x, cy: y, r: 7 }),
-      s('text', { class: 'map-ap-label', x: x + (right ? 14 : -14), y: y + (below ? 34 : -14), 'text-anchor': right ? 'start' : 'end' },
+      // place names are opt-in ("route_labels": true): naming the cities next to an outbreak can stigmatise them
+      showLabels ? s('text', { class: 'map-ap-label', x: x + (right ? 14 : -14), y: y + (below ? 34 : -14), 'text-anchor': right ? 'start' : 'end' },
         s('tspan', { class: 'map-ap-city', text: zh ? ap(c).zh : ap(c).en }),
-        s('tspan', { class: 'map-ap-code', dx: 8, text: c })));
+        s('tspan', { class: 'map-ap-code', dx: 8, text: c })) : null);
   });
   const svg = s('svg', { class: `map-svg${legs.length ? ' has-routes' : ''}`, viewBox: `0 0 ${W} ${H}`, 'aria-hidden': 'true', preserveAspectRatio: 'xMidYMid meet' },
     s('path', { class: 'map-land', d: land }),
@@ -315,7 +316,7 @@ function alert(d, ctx) {
       d.ask ? h('p', { class: 'al-ask fx-rise', style: delay(0.74) }, rich(d.ask)) : null,
       h('p', { class: 'al-must fx-rise', style: delay(0.84) }, rich(d.rule, 1)),
       d.note ? h('p', { class: 'al-note fx-rise', style: delay(0.94), text: d.note }) : null));
-  ctx.wait.push(drawMap(map, typeof d.iso === 'string' ? d.iso.toUpperCase() : '', d.routes, d.lang));
+  ctx.wait.push(drawMap(map, typeof d.iso === 'string' ? d.iso.toUpperCase() : '', d.routes, d.lang, d.route_labels === true));
   return el;
 }
 function pinIcon() {
