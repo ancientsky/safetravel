@@ -98,7 +98,8 @@ def test_validate_passes_and_catches_violations(loaded):
 
 
 def test_overview_and_translation_used_when_present(loaded):
-    row = loaded.execute("SELECT * FROM epidemics ORDER BY effective DESC LIMIT 1").fetchone()
+    # the newest item that names a country (the live CSV fixture can start with a global, country-less item)
+    row = loaded.execute("SELECT * FROM epidemics WHERE isos != '' ORDER BY effective DESC LIMIT 1").fetchone()
     db.put_translation(loaded, row["content_hash"], headline_en="H", summary_zh="摘要", summary_en="Sum", description_en="Desc", model="m")
     iso = row["isos"].split(",")[0]
     db.put_overview(loaded, iso, "x", "概況", "Overview", 1, "m")
