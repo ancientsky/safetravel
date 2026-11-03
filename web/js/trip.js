@@ -13,6 +13,7 @@ import { renderChanges } from './trip-changes.js';
 import { createSearch } from './trip-search.js';
 import { createWeather, loadWeather } from './trip-weather.js';
 import { createWxMap } from './trip-wxmap.js';
+import { autoReload } from './autoreload.js';
 
 const THEME_KEY = 'safetravel.trip.theme';
 const TABS = ['mofa', 'cdc', 'wx'];
@@ -262,6 +263,9 @@ async function main() {
   await initMap();
   await wxDone;
   document.body.dataset.ready = '1';
+  // kiosks: pick up new data and new site code by themselves, but only after 5 minutes without any input,
+  // so nobody loses a search or a card they are reading (the #country in the address survives the reload)
+  autoReload({ data: true, idleMs: 5 * 60_000 });
 }
 
 main().catch((err) => {

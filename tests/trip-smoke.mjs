@@ -510,6 +510,40 @@ async function run(page, context) {
     return 'notice shown, table + map + card fine, weather tab explains';
   });
 
+  await check('kiosk self-reload: new site code / new data reload only after 5 min without input', async () => {
+    const pr = await context.newPage();
+    const errs = [];
+    pr.on('pageerror', (e) => errs.push(e.message));
+    let code = 'aaaa1111';
+    let gen = '2026-01-01T11:00:00+08:00';
+    await pr.route('**/version.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ code }) }));
+    await pr.route('**/data/meta.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ generated_at: gen }) }));
+    await pr.clock.install();
+    await pr.goto(`${PAGE_URL.split('#')[0]}?refreshEvery=1#JP`, { waitUntil: 'load' });
+    await pr.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+    await pr.evaluate(() => { window.__marker = 1; });
+    await pr.waitForTimeout(2500);
+    assert(await pr.evaluate(() => !document.documentElement.dataset.reloadPending), 'reload pending without any change');
+    code = 'bbbb2222';
+    await pr.waitForFunction(() => document.documentElement.dataset.reloadPending === 'code', null, { timeout: 8000 });
+    await pr.mouse.move(40, 40); // someone is using the page
+    await pr.clock.fastForward('04:00');
+    await pr.waitForTimeout(1500);
+    assert(await pr.evaluate(() => window.__marker === 1), 'reloaded within 5 min of input');
+    const reloaded = pr.waitForEvent('load', { timeout: 15000 });
+    await pr.clock.fastForward('02:00');
+    await reloaded;
+    await pr.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+    const after = await pr.evaluate(() => ({ marker: window.__marker, hash: location.hash, title: document.querySelector('#card-title')?.textContent || '' }));
+    assert(after.marker === undefined && after.hash === '#JP' && after.title.includes('日本'), `after reload: ${JSON.stringify(after)}`);
+    await pr.waitForTimeout(2500); // let the reloaded page read its new baseline first
+    gen = '2026-01-01T21:00:00+08:00'; // a data refresh is detected too
+    await pr.waitForFunction(() => document.documentElement.dataset.reloadPending === 'data', null, { timeout: 8000 });
+    await pr.close();
+    assert(!errs.length, errs[0]);
+    return 'code change: waits for 5 idle minutes, reloads with #JP kept; data change detected';
+  });
+
   await check('no console errors during the run', async () => {
     assert(consoleErrors.length === 0, `${consoleErrors.length}: ${consoleErrors[0]}`);
     return '';

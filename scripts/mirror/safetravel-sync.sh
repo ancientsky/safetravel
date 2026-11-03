@@ -168,6 +168,16 @@ if bad:
 PY
 }
 
+# version.json: open pages (web/js/autoreload.js) reload when "code" changes. Same hash as the GitHub deploys
+# compute (.github/scripts/stamp-version.sh): the site's code files only, data left out — keep the two in step.
+# Written as a new file + rename: release files may be hard links shared with older releases.
+stamp_version() { # stamp_version <release dir>
+  local code
+  code=$(git -C "$REPO" ls-tree -r HEAD -- web | grep -vE $'\tweb/(data|slides)/|\tweb/version\\.json$' | sha256sum | cut -c1-16)
+  printf '{"code": "%s", "commit": "%s"}\n' "$code" "$COMMIT" > "$1/version.json.new"
+  mv -f "$1/version.json.new" "$1/version.json"
+}
+
 switch_to() { # switch_to <release name>: rename(2) over the symlink, so a request sees the old or the new tree
   ln -sfn "../releases/$1" "$WWW/.safetravel.new"
   mv -Tf "$WWW/.safetravel.new" "$LIVE"
@@ -182,8 +192,10 @@ build_release() {
   # unchanged files become hard links to the previous release: a new release costs almost no disk or time
   rsync -a --exclude='.git*' ${prev:+--link-dest="$prev"} "$REPO/web/" "$TMP/release/"
   if [ -f "$STATE/arrivals.json" ]; then
+    rm -f "$TMP/release/data/arrivals.json"   # never write through a hard link into an older release
     install -m 644 "$STATE/arrivals.json" "$TMP/release/data/arrivals.json"
   fi
+  stamp_version "$TMP/release"
   check_release "$TMP/release" || { rm -rf "$TMP/release"; fail "new release failed its checks; still serving $(basename "${prev:-none}")"; }
   mv "$TMP/release" "$new"
   switch_to "$RELEASE_NAME"

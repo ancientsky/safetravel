@@ -83,7 +83,7 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 
 - **橫式**：入境航班看板停靠在左側，地圖自動移到右邊，國家面板從右側打開，兩者並排。
 - **直式**：看板停靠在上方，地圖重新排在下方；國家面板打開時看板會縮到面板左側，輪播放大的國家也會避開看板。
-- 開啟「查看完整資訊」與「自動捲動」即可無人值守輪播。疫情資料更新時頁面會自動重新載入（入境航班的 10 分鐘更新不會重新載入頁面）；**網站程式更新後請手動重新整理一次**。
+- 開啟「查看完整資訊」與「自動捲動」即可無人值守輪播。疫情資料更新或網站程式更新時，頁面都會在不打擾使用的時機自動重新載入（入境航班的 10 分鐘更新不會重新載入頁面）。出國前查詢頁（無人操作 5 分鐘後）與海報輪播（換下一張海報時）也一樣會自動更新。
 
 ### 資料更新排程
 
@@ -241,7 +241,7 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 - **Inbound board**: pick the airport and checkpoint; click a row to open the origin country; hover to highlight its route. *Auto-scroll* (on by default) glides through the list and pauses for 8 s after the mouse moves or 15 s after a touch/wheel/click — a parked cursor does not stop it. *Large* is for wall screens. Drag the title bar to float the board (position remembered per orientation); *Dock* restores it. Data refreshes every 10 minutes (every 30 minutes from 00:00 to 04:59 Taipei).
 - **Outbreak route watch**: Outbreak routes → switch on *Irkutsk IKT* and/or *Kinshasa FIH*. Line width shows monthly flights; cyan marks destinations with direct flights to Taoyuan; a red warning ring marks a reported exported case (Kinshasa → Nairobi); faint dashed lines are listed routes without scheduled flights this month. While a watch is on, the spotlight tour no longer moves the map.
 - **Deep links**: `#/country/CD` (country panel) · `?arr=TPE-C` (board for Taoyuan checkpoint C; `TPE-A`…`TPE-D`, or `TSA`, `KHH`, `RMQ`…) · `&big=1` (large type) · `?watch=irkutsk`, `?watch=kinshasa` or `?watch=irkutsk,kinshasa` (route watch) · `?layer=mofa` (travel-warning layer) · `?wx=1` (weather overlay on; `?wx=0` off) · `trip.html#KH` (pre-trip page with a destination card) · `slide.html?interval=8&orient=landscape` (poster carousel: 8 s per poster, landscape; `orient=portrait|auto`, `only=id1,id2`, `lang=zh|en`). Parameters combine, e.g. `?arr=TPE-C&big=1&watch=irkutsk`.
-- **Wall screens**: in landscape the board docks left and the map shifts right, beside the country panel; in portrait it docks on top, the map refits below, the board narrows beside an open panel and spotlight zooms avoid it. New epidemic data reloads the page automatically; after a site code update, reload once by hand.
+- **Wall screens**: in landscape the board docks left and the map shifts right, beside the country panel; in portrait it docks on top, the map refits below, the board narrows beside an open panel and spotlight zooms avoid it. New epidemic data and new site code (the deploy stamps `version.json`) reload the page automatically at a quiet moment; `trip.html` (after 5 idle minutes) and `slide.html` (at the next poster) do the same.
 
 ### Refresh schedule
 

@@ -16,6 +16,7 @@ import path from 'node:path';
 const BASE_URL = new URL(process.argv[2] || 'http://localhost:8080/').href;
 const SHOTS_DIR = path.resolve(process.env.SHOTS_DIR || path.join('tests', 'shots'));
 const MAP_SELECTOR = '[data-testid="map"] path.country';
+function assert(cond, msg) { if (!cond) throw new Error(msg); }
 const PANEL = '[data-testid="country-panel"]';
 const LANG_TOGGLE = '[data-testid="lang-toggle"]';
 const THEME_TOGGLE = '[data-testid="theme-toggle"]';
@@ -422,6 +423,30 @@ async function run(browser) {
     if (url !== '?wx=1') throw new Error(`URL after toggle ${url}`);
     if (errs.length) throw new Error(errs[0]);
     return `on: ${on} markers; off: no fetch; URL synced`;
+  });
+
+  await check('kiosk self-reload: new site code (version.json) reloads the map page at a quiet moment', async () => {
+    const pr = await context.newPage();
+    const errs = [];
+    pr.on('pageerror', (e) => errs.push(e.message));
+    let code = 'aaaa1111';
+    await pr.route('**/version.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ code }) }));
+    await pr.clock.install();
+    await pr.goto(`${BASE_URL}?refreshEvery=1`, { waitUntil: 'load' });
+    await pr.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    await pr.evaluate(() => { window.__marker = 1; });
+    await pr.waitForTimeout(2500);
+    assert(await pr.evaluate(() => !window.__safetravel.refresh.pending), 'pending without a change');
+    code = 'bbbb2222';
+    await pr.waitForFunction(() => window.__safetravel.refresh.pending?.reason === 'code', null, { timeout: 8000 });
+    const reloaded = pr.waitForEvent('load', { timeout: 20000 });
+    await pr.clock.fastForward('02:00');
+    await reloaded;
+    const marker = await pr.evaluate(() => window.__marker);
+    await pr.close();
+    assert(marker === undefined, 'page did not reload');
+    assert(!errs.length, errs[0]);
+    return 'code change detected and reloaded';
   });
 
   await check('phone 390 px with the overlay on: no overflow, tap shows the forecast, second tap opens the panel', async () => {

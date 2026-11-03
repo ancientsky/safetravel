@@ -310,6 +310,31 @@ async function run(browser) {
     await context.close();
   }
 
+  // ------------------------------------------------------------ self-reload when the site code changes (version.json)
+  {
+    const { context, page } = await newPage(browser, { viewport: PORTRAIT });
+    let code = 'aaaa1111';
+    await page.route('**/version.json*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ code }) }));
+    await check('new site code: the carousel reloads itself at the next poster change', async () => {
+      await load(page, { interval: 4, refreshEvery: 1 });
+      await page.evaluate(() => { window.__marker = 1; });
+      await page.waitForTimeout(2000);
+      assert(await page.evaluate(() => !document.documentElement.dataset.reloadPending), 'pending without a change');
+      code = 'bbbb2222';
+      await page.waitForFunction(() => document.documentElement.dataset.reloadPending === 'code', null, { timeout: 6000 });
+      const from = await current(page);
+      const reloaded = page.waitForEvent('load', { timeout: 8000 });
+      await reloaded;
+      await page.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+      const marker = await page.evaluate(() => window.__marker);
+      assert(marker === undefined, 'no reload');
+      await page.waitForTimeout(2500); // the new code is the new baseline: no reload loop
+      assert(await page.evaluate(() => !document.documentElement.dataset.reloadPending), 'reload loop');
+      return `pending while showing ${from}, reloaded at the poster change`;
+    });
+    await context.close();
+  }
+
   // ------------------------------------------------------------ orientations: fit + layout per orientation
   {
     const pos = {};

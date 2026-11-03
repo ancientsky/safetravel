@@ -35,6 +35,16 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
 | `.github/workflows/` | ops | `update-data.yml` (cron) · `deploy-pages.yml` (on push to main, web/**) · `arrivals.yml` (arrivals board, external trigger) · `slides.yml` (poster PNG/PDF export → commit → dispatch deploy) |
 | `docs/` | — | This file + `DATA_CONTRACT.md` + `SLIDES.md` (poster carousel) + `ARRIVALS.md` (arrivals board spec) + `ARRIVALS_SETUP.md` (owner setup, zh-Hant) |
 
+## Self-reload of open pages (kiosks)
+
+Every deploy (deploy-pages, update-data, arrivals publish) runs `.github/scripts/stamp-version.sh`, which writes
+`web/version.json` `{"code": <hash of git ls-tree of web/ minus data/, slides/ and itself>, "commit"}` into the Pages
+artifact; the intranet mirror computes the same hash. The committed file says `"dev"` (local preview never reloads).
+`web/js/autoreload.js` polls it (and, for `trip.html`, `data/meta.json`) every 5 minutes and marks a reload pending;
+the page reloads at a harmless moment: `index.html` via `refresh.js` (spotlight boundary or 60 s; activity defers it by at most 2 min),
+`slide.html` at the next poster change (paused: 60 s idle), `trip.html` after 5 minutes without input. Hidden tabs do
+not poll; `?refreshEvery=<s>` shortens the poll for tests.
+
 ## Data sources
 
 1. **Travel alert levels** (國際旅遊疫情建議等級, all history)

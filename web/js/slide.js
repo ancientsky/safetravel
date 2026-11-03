@@ -4,6 +4,7 @@
 import zhDict from '../i18n/slide-zh-Hant.js';
 import enDict from '../i18n/slide-en.js';
 import { renderSlide, TEMPLATES, assetSrc, h } from './slide-templates.js';
+import { autoReload } from './autoreload.js';
 
 const MANIFEST = 'slides/slides.json';
 const EXPORT_INDEX = 'slides/export/index.json';
@@ -168,7 +169,9 @@ function recheck() {
 }
 
 let leaveTimer = 0;
+let reloader = null; // site updated -> reload between two posters (autoreload.js)
 function show(i) {
+  if (reloader?.reloadIfPending()) return;
   const n = st.sections.length;
   clearTimeout(st.timer);
   if (!n) { stage.dataset.current = ''; updateCounter(); return; }
@@ -467,6 +470,8 @@ function bind() {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') wake(); });
   document.addEventListener('slides:refresh', () => { refresh(); }); // test / ops hook: re-read slides.json now
   setInterval(refresh, REFRESH_MS);
+  // new site code (or a day of uptime): reload at the next poster change; when paused, after a minute without input
+  if (!STILL) reloader = autoReload({ idleMs: 60_000, quiet: () => !st.playing });
 }
 
 async function main() {

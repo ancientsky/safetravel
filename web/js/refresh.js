@@ -1,8 +1,9 @@
-// Unattended auto-refresh: poll meta.json and reload the page at a quiet moment when new data
-// has been published (or once the page has been open for more than a day).
+// Unattended auto-refresh: poll meta.json and version.json, and reload the page at a quiet moment when new data
+// or new site code has been published (or once the page has been open for more than a day).
 import { on, emit } from './state.js';
 import { t } from './i18n.js';
 import { toast } from './toast.js';
+import { readCodeVersion } from './autoreload.js';
 
 const CHECK_EVERY_S = 300; // poll interval; override with ?refreshEvery=<seconds> for manual testing
 const FALLBACK_MS = 60_000; // reload after this long if no spotlight cycle comes along
@@ -17,12 +18,19 @@ export function startRefresh({ generatedAt, reload = () => location.reload() } =
   const bootAt = Date.now();
   let lastActivity = 0;
   let lastMeta = generatedAt || null;
+  let lastCode = null; // version.json "code": changes when a deploy changes the site's code
+  readCodeVersion().then((c) => { lastCode = c; });
   let pending = null; // { reason, since, cycled, deferStart }
   let gate = 0;
 
   ACTIVITY_EVENTS.forEach((type) => window.addEventListener(type, () => { lastActivity = Date.now(); }, { capture: true, passive: true }));
 
   async function check() {
+    const code = await readCodeVersion();
+    if (code && code !== 'dev') {
+      if (!lastCode || lastCode === 'dev') lastCode = code;
+      else if (code !== lastCode) { schedule('code'); return true; }
+    }
     try {
       const res = await fetch(`data/meta.json?t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) return false;

@@ -30,8 +30,9 @@ GitHub repo（main 分支 web/：程式＋整理好的資料）   GitHub Pages�
 2. 從 GitHub Pages 下載 `data/arrivals.json`（入境航班，不在 git 裡；約 50 KB）。失敗時保留上一份，不影響其他內容。
 3. 兩者都沒變 → 什麼都不做（大多數的 5 分鐘都是這樣）。
 4. 有變動 → 在 `releases/` 建一個新版本目錄：沒變的檔案用硬連結（幾乎不占空間、不到 1 秒），再檢查：必要檔案都在、**所有 JSON 都能解析**。
-5. 檢查通過才用 `rename(2)` 原子切換 `www/safetravel` 這個連結；任何一個請求看到的不是完整舊版就是完整新版，不會讀到更新一半的檔案（實測 600 次切換期間 600 個請求全部 200）。檢查不通過 → 繼續提供舊版，並記錄錯誤。
-6. 保留最近 12 個版本（可回復），其餘刪除；寫出狀態檔 `state/status.json`。
+5. 寫入 `version.json`（網站程式檔的雜湊，與 GitHub Pages 部署時算出的完全相同），kiosk 據此判斷要不要自動重新載入（見第 5 節）。
+6. 檢查通過才用 `rename(2)` 原子切換 `www/safetravel` 這個連結；任何一個請求看到的不是完整舊版就是完整新版，不會讀到更新一半的檔案（實測 600 次切換期間 600 個請求全部 200）。檢查不通過 → 繼續提供舊版，並記錄錯誤。
+7. 保留最近 12 個版本（可回復），其餘刪除；寫出狀態檔 `state/status.json`。
 
 ---
 
@@ -156,10 +157,11 @@ MIME 類型：網站需要 `.json`（`application/json`）、`.js`（`applicatio
 - **為什麼要 HTTPS**：海報輪播用瀏覽器的 Screen Wake Lock 防止螢幕休眠，這個功能只在 HTTPS（安全連線）下可用；請在 kiosk 上安裝署內 CA 憑證。若暫時只能用 HTTP，請在 kiosk 作業系統把「螢幕關閉／睡眠」設為「永不」。
 - **校時**：海報的上架／下架日期與航班時間窗都依 kiosk 本機時間（臺北時區）判斷，kiosk 請開啟 NTP。
 - **瀏覽器**：Chrome／Edge 的 kiosk 模式（例如 `--kiosk https://…`），關閉自動翻譯提示與「還原分頁」提示。
-- **自動更新**：
-  - 疫情地圖（首頁）：資料更新時自己重新載入，另外每 24 小時自動重新載入一次，網站程式的更新也會在一天內帶入。
-  - 海報輪播：每 5 分鐘重新讀取海報清單，上架／下架不必重新整理；但網站程式（版面、動畫）更新後要重新整理一次。
-  - 出國前查詢頁：不會自動重新載入，建議 kiosk 每天定時重新啟動瀏覽器（或搭配 kiosk 管理軟體的定時重新整理）。
+- **自動更新**（不需要人去按重新整理）：同步程式會為每個版本寫入 `version.json`（網站程式檔的雜湊，資料不算在內），三個頁面每 5 分鐘檢查一次，有變動時在不打擾使用的時機自動重新載入：
+  - 疫情地圖（首頁）：資料或程式更新時，在下一次焦點輪播切換（或偵測後 1 分鐘）重新載入；有人正在操作時會延後，最多延後 2 分鐘（與原本的資料更新行為相同）。
+  - 海報輪播：程式更新時在換下一張海報的瞬間重新載入；海報上架／下架則是每 5 分鐘直接更新，不必重新載入。暫停播放時改為 1 分鐘無人操作後重新載入。
+  - 出國前查詢頁：資料或程式更新時，**連續 5 分鐘沒有任何操作**才重新載入，正在查詢的人不會被打斷；網址中的國家（例如 `#JP`）會保留。
+  - 三個頁面開著超過 24 小時也會在同樣的時機重新載入一次（長時間執行的保險）。
 - **時效**：署內版比 GitHub Pages 最多晚約 5 分鐘（同步間隔），kiosk 再於 5 分鐘內偵測到並重新載入。
 
 ---
@@ -239,4 +241,4 @@ An intranet mirror that serves the whole site from a Linux host with nginx **wit
 - `scripts/mirror/safetravel-sync.sh` (systemd timer, every 5 min, user `safetravel`): shallow, sparse, blob-less `git fetch` of `web/` on `main`, plus `data/arrivals.json` from GitHub Pages (the only file not in git). Nothing new → no-op. Otherwise it builds `releases/<UTC time>-<commit>` with `rsync --link-dest` (unchanged files hard-linked), checks required files and that every JSON parses, then switches `www/safetravel` with an atomic rename (600/600 requests returned 200 during 600 switches). A failed check keeps the current release. Keeps 12 releases; `--rollback` serves the previous one; `--check` is a Nagios/Zabbix-style probe (sync age, upstream data age); `state/status.json` is also served at `/safetravel/_mirror/status.json`.
 - `scripts/mirror/nginx-safetravel.conf`: HTTPS (80 → 443), `/safetravel/` sub-path like GitHub Pages, `Cache-Control: no-cache` for text (cheap 304s, as file names are not fingerprinted) and 1 h for images, gzip, basic security headers, no CSP header (the pages carry their own CSP meta with a script hash), hidden files denied, no `open_file_cache`.
 - `scripts/mirror/install.sh`: user, directories, units, SELinux labels, nginx template (not enabled automatically), first sync.
-- Sizing for 30–50 kiosks: steady state ≈ 80 requests/min and well under 1 Mbps; the twice-daily data reload peaks at a few hundred MB over 1–3 minutes in the worst case. 1 vCPU / 1 GB / 10 GB is enough; 2 vCPU / 2–4 GB / 40 GB recommended; for high availability run two VMs behind a load balancer or keepalived VIP, each syncing on its own. Outbound HTTPS to `github.com` and `ancientsky.github.io` only; set `HTTPS_PROXY` in `/etc/safetravel/mirror.env` if needed. Serve kiosks over HTTPS (Screen Wake Lock needs a secure context) and keep kiosk clocks on NTP.
+- Sizing for 30–50 kiosks: steady state ≈ 80 requests/min and well under 1 Mbps; the twice-daily data reload peaks at a few hundred MB over 1–3 minutes in the worst case. 1 vCPU / 1 GB / 10 GB is enough; 2 vCPU / 2–4 GB / 40 GB recommended; for high availability run two VMs behind a load balancer or keepalived VIP, each syncing on its own. Outbound HTTPS to `github.com` and `ancientsky.github.io` only; set `HTTPS_PROXY` in `/etc/safetravel/mirror.env` if needed. Serve kiosks over HTTPS (Screen Wake Lock needs a secure context) and keep kiosk clocks on NTP. The sync also writes `version.json` (hash of the site's code files, identical to the GitHub deploys' `.github/scripts/stamp-version.sh`); the map, trip and poster pages poll it and reload themselves at a quiet moment, so kiosks never need a manual refresh.
