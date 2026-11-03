@@ -202,8 +202,8 @@ body.paused .dots::before { content: ""; width: 14px; height: 18px; border: soli
 .ico-pin { width: 46px; height: 46px; fill: #d40018; }
 .al-country { margin-top: 6px; font-size: 122px; font-weight: 900; line-height: 1.1; color: #d40018; letter-spacing: .02em; }
 .al-country.is-long { font: 900 80px/1.08 var(--latin); letter-spacing: -.01em; }
-.al-country-en { margin-top: 8px; font: 700 40px/1.2 var(--latin); color: #6a2bd0; }
-.al-country-en mark.hl { color: #d40018; animation: none; } /* abbreviation, red like the country name */
+.al-country-en { margin-top: 8px; font: 700 40px/1.2 var(--latin); color: #d40018; } /* red like the country name */
+.al-country-en mark.hl { animation: none; }
 .al-status {
   display: inline-flex; align-items: center; gap: 16px; margin-top: 26px; max-width: 100%;
   font-size: 40px; font-weight: 800; line-height: 1.25; color: #2b2833; text-align: left;
