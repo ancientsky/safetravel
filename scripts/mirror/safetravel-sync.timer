@@ -1,0 +1,13 @@
+# /etc/systemd/system/safetravel-sync.timer — sync the SafeTravel intranet mirror every 5 minutes (docs/MIRROR.md).
+[Unit]
+Description=SafeTravel TW intranet mirror: sync every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=15s
+RandomizedDelaySec=20s
+Unit=safetravel-sync.service
+
+[Install]
+WantedBy=timers.target

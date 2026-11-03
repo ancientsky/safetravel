@@ -132,6 +132,10 @@ flowchart LR
 - **web/**：無建置步驟的 ES modules，D3 v7（只打包用到的函式，清單見 `scripts/d3-entry.mjs`）與 topojson-client 已 vendor 於 `web/vendor/`，以相對路徑部署在 `/safetravel/` 子路徑，CSP 限制只連自身網域。
 - 詳細設計：[ARCHITECTURE](docs/ARCHITECTURE.md) · 資料合約：[DATA_CONTRACT](docs/DATA_CONTRACT.md) · 入境航班設計：[ARRIVALS](docs/ARRIVALS.md) · 設定步驟：[ARRIVALS_SETUP](docs/ARRIVALS_SETUP.md) · 旅遊警示：[WARNINGS](docs/WARNINGS.md) · 翻譯排程：[TRANSLATION_GUIDE](docs/TRANSLATION_GUIDE.md) · 維運：[OPERATIONS](docs/OPERATIONS.md)
 
+### 署內鏡像站
+
+要在署內 Linux 主機（nginx）提供同一個網站給 kiosk 使用、又不重覆抓取資料：署內主機每 5 分鐘從 GitHub 複製已處理好的網站（`scripts/mirror/`：同步程式、systemd timer、nginx 設定、安裝程式），不連任何資料來源、不需要 API 金鑰。安裝、nginx 設定、30–50 台 kiosk 的建議規格與維運方式見 [docs/MIRROR.md](docs/MIRROR.md)。
+
 ### 資料來源
 
 | 資料 | 來源 |
@@ -253,6 +257,10 @@ GitHub's own cron started runs 4.5–8.5 h late on this repository, so it was re
 ### Architecture
 
 See the diagram above: `pipeline/` (Python) fetches the sources, keeps history and the translation cache in SQLite (`data/safetravel.db`), exports `web/data/*.json` and validates them against [DATA_CONTRACT](docs/DATA_CONTRACT.md); `mofa` builds the travel warnings (`warnings.json`), `arrivals` and `watch` produce the inbound board and route-watch data, and `pending` / `import_translations.py` hand text to and from the daily translation routine. `web/` is build-free ES modules with D3 v7 (only the functions listed in `scripts/d3-entry.mjs`) and topojson-client vendored, served from the `/safetravel/` sub-path under a strict CSP. Details: [ARCHITECTURE](docs/ARCHITECTURE.md) · [WARNINGS](docs/WARNINGS.md) · [ARRIVALS](docs/ARRIVALS.md) · [TRANSLATION_GUIDE](docs/TRANSLATION_GUIDE.md) · [OPERATIONS](docs/OPERATIONS.md).
+
+### Intranet mirror
+
+To serve the site from an internal Linux/nginx host without fetching any source twice, `scripts/mirror/` copies the published site from GitHub every 5 minutes (atomic release switch, health check, rollback). See [docs/MIRROR.md](docs/MIRROR.md).
 
 ### Data sources
 

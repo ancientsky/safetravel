@@ -31,6 +31,7 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
 | `web/vendor/` | npm (vendored, `npm run vendor`) | `d3.min.js` (only the d3 functions listed in `scripts/d3-entry.mjs`, bundled by esbuild; the Pages deploy runs `scripts/check-d3.mjs` and fails if `web/` calls a d3 function outside that list), `topojson-client.min.js` — no CDN at runtime |
 | `web/slides/` | humans + Actions | Health-poster carousel (`slide.html`): `slides.json` playlist, `assets/` artwork, `auto/` auto-publish folder (images dropped there + generated `index.json`), `export/` PNG written by `slides.yml`. Spec: `SLIDES.md` |
 | `scripts/slide-sources/` | humans | Original Taiwan CDC posters + seal; `scripts/crop-slide-assets.py` cuts the artwork into `web/slides/assets/` |
+| `scripts/mirror/` | humans | Intranet mirror kit (sync script, systemd units, nginx site, installer): copies `web/` of `main` + the live `arrivals.json` to an internal nginx host; never contacts the data sources. Spec: `MIRROR.md` |
 | `.github/workflows/` | ops | `update-data.yml` (cron) · `deploy-pages.yml` (on push to main, web/**) · `arrivals.yml` (arrivals board, external trigger) · `slides.yml` (poster PNG/PDF export → commit → dispatch deploy) |
 | `docs/` | — | This file + `DATA_CONTRACT.md` + `SLIDES.md` (poster carousel) + `ARRIVALS.md` (arrivals board spec) + `ARRIVALS_SETUP.md` (owner setup, zh-Hant) |
 
