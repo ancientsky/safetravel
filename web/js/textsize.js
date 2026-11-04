@@ -4,7 +4,7 @@ import { storageSet } from './util.js';
 
 export const TEXT_SIZES = ['s', 'm', 'l', 'xl'];
 const KEY = 'safetravel.textSize';
-const current = () => (TEXT_SIZES.includes(document.documentElement.dataset.ts) ? document.documentElement.dataset.ts : 'm');
+const current = () => (TEXT_SIZES.includes(document.documentElement.dataset.ts) ? document.documentElement.dataset.ts : 'xl');
 
 /** btn: the header button; t: the page's translate function (keys ts_s … ts_xl, ts_label); onChange: re-layout hook. */
 export function bindTextSize(btn, { t, onChange } = {}) {

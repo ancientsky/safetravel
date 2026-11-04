@@ -992,7 +992,8 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 
 /* Spotlight keeps one fixed size from first paint (no layout shift when digests arrive or the
    country changes): the card fills the box, long texts are clamped, the link sits at the bottom. */
-.spotlight { height: calc(384px * var(--ts)); display: flex; flex-direction: column; }
+/* large text on short screens: the card stops below the zoom buttons (top: --under-hud, ~120 px tall) */
+.spotlight { height: min(calc(384px * var(--ts)), calc(100vh - var(--foot-h) - 12px - var(--under-hud, 150px) - 132px)); display: flex; flex-direction: column; }
 .spot-card { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .spot-title { flex: none; }
 .spot-ai, .spot-recent, .spot-skeleton { flex: none; }

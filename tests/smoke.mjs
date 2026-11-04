@@ -451,7 +451,7 @@ async function run(browser) {
     return `nrt → ${nrt[0]}; 曼谷 → BKK, DMK; Enter opens #/country/JP`;
   });
 
-  await check('text size: 標準 by default on desktop, the button cycles and is remembered, ?text= overrides, layout holds', async () => {
+  await check('text size: 特大 by default on desktop, the button cycles and is remembered, ?text= overrides, layout holds', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 1600, height: 900 } });
     const pr = await ctx.newPage();
     const errs = [];
@@ -471,21 +471,22 @@ async function run(browser) {
     await pr.waitForTimeout(800);
     const d = await state();
     const seen = [d.ts];
-    for (let i = 0; i < 2; i++) { await pr.click('[data-testid="textsize-toggle"]'); await pr.waitForTimeout(400); seen.push((await state()).ts); }
-    const xl = await state();
+    const xl = d; // the default is the largest size: check the layout there, then cycle round
+    for (let i = 0; i < 4; i++) { await pr.click('[data-testid="textsize-toggle"]'); await pr.waitForTimeout(400); seen.push((await state()).ts); }
+    const after = await state();
     await pr.reload({ waitUntil: 'load' });
     await pr.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
     const kept = await state();
     await pr.goto(`${BASE_URL}?text=s`, { waitUntil: 'load' });
     const q = await state();
     await ctx.close();
-    assert(d.ts === 'm' && Math.abs(d.fs - 14 * 1.12) < 0.1 && d.stored === null, `default ${JSON.stringify(d)}`);
-    assert(seen.join('') === 'mlxl' && xl.stored === 'xl' && Math.abs(xl.fs - 14 * 1.4) < 0.1, `cycle ${seen} ${JSON.stringify(xl)}`);
+    assert(d.ts === 'xl' && Math.abs(d.fs - 14 * 1.4) < 0.1 && d.stored === null, `default ${JSON.stringify(d)}`);
+    assert(seen.join('') === 'xlsmlxl' && after.stored === 'xl', `cycle ${seen} ${JSON.stringify(after)}`);
     assert(xl.toolbarBelowTiles && xl.panelBelowHeader && xl.scrollX === 0, `layout at xl ${JSON.stringify(xl)}`);
     assert(kept.ts === 'xl' && q.ts === 's' && q.stored === 'xl', `reload ${kept.ts}, ?text=s ${q.ts} (stored ${q.stored})`);
     assert(/特大|XL/.test(xl.label), `label ${xl.label}`);
     assert(!errs.length, errs[0]);
-    return `m → l → xl (body ${d.fs}px → ${xl.fs}px), kept after reload, ?text=s overrides`;
+    return `default xl (body ${d.fs}px), cycles s → m → l → xl, kept after reload, ?text=s overrides`;
   });
 
   await check('arrivals board: flight search (JK202, jk-202, JK0202, codeshare BR2101) across checkpoints and a wider window', async () => {

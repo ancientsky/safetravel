@@ -102,7 +102,7 @@ not poll; `?refreshEvery=<s>` shortens the poll for tests.
 - Theme: `dark` default (black `#050a07` → deep green, neon green `#19ff8a` accent, cyan secondary), `light` alternative. Level colours per `DATA_CONTRACT.md`.
 - Everything the map needs is loaded from `web/data/*.json` with `fetch()` relative to `index.html` (works under `/safetravel/` sub-path).
 - Text size: `js/textsize-boot.js` (classic script in `<head>` of `index.html` and `trip.html`, so no CSP hash) sets
-  `data-ts` (s / m / l / xl = 100 / 112 / 125 / 140 %; `?text=` > localStorage `safetravel.textSize` > `m`, or `s` on
+  `data-ts` (s / m / l / xl = 100 / 112 / 125 / 140 %; `?text=` > localStorage `safetravel.textSize` > `xl`, or `s` on
   ≤ 760 px) before first paint; every font size in `styles.css` / `trip.css` is `calc(Npx * var(--ts))`, and the
   panel, legend, spotlight, search and arrivals board widen with it. The header stops at 112 % (100 % below 1500 px);
   the toolbar / panel / zoom / weather bar follow its measured bottom edge (`--hud-top-b`, `--hud-b` from a
