@@ -6,15 +6,21 @@
 
 | 國家面板 / Country panel | 入境航班看板 / Inbound flights board |
 |---|---|
-| ![國家面板：剛果民主共和國](docs/screenshots/panel-cd-zh.jpg) | ![入境航班看板](docs/screenshots/arrivals-zh.jpg) |
+| ![國家面板：剛果民主共和國](docs/screenshots/panel-cd-zh.jpg) | ![入境航班看板（停靠在地圖左側）](docs/screenshots/arrivals-zh.jpg) |
+| **圖例即等級篩選（只看第二、三級）/ Legend as level filter** | **全螢幕入境航班看板 / Full-screen arrivals board (`arrivals.html`)** |
+| ![圖例篩選：只顯示第二級與第三級國家，航線只看入境](docs/screenshots/filter-l2-zh.jpg) | ![arrivals.html：兩欄入境航班，第二級以上地區的班機加底色](docs/screenshots/board-page-zh.jpg) |
 | **疫區航線監測 / Outbreak route watch** | **淺色主題（英文）/ Light theme (English)** |
-| ![伊爾庫次克直飛航線](docs/screenshots/watch-irkutsk-zh.jpg) | ![Light theme, English](docs/screenshots/light-en.jpg) |
+| ![伊爾庫次克直飛航線，圖例說明虛線](docs/screenshots/watch-irkutsk-zh.jpg) | ![Light theme, English](docs/screenshots/light-en.jpg) |
 | **旅遊警示圖層 / Travel-warning layer** | **出國前旅遊安全查詢 / Pre-trip safety check** |
 | ![外交部旅遊警示圖層：柬埔寨](docs/screenshots/warnings-kh-zh.jpg) | ![trip.html 目的地資訊卡：柬埔寨](docs/screenshots/trip-card-zh.jpg) |
 
-| 直式牆面螢幕 / Portrait wall screen | 手機 / Phone | 衛教海報輪播 / Health posters |
+| 直式牆面螢幕 / Portrait wall screen | 手機選單 / Phone menu | 衛教海報輪播 / Health posters |
 |---|---|---|
-| <img src="docs/screenshots/wall-portrait-zh.jpg" alt="直式螢幕：入境航班看板＋國家面板" width="300"> | <img src="docs/screenshots/phone-en.jpg" alt="Phone layout" width="245"> | <img src="docs/screenshots/slide-ebola-zh.jpg" alt="衛教海報輪播：伊波拉疫情警示（直式）" width="300"> |
+| <img src="docs/screenshots/wall-portrait-zh.jpg" alt="直式螢幕：入境航班看板＋國家面板" width="300"> | <img src="docs/screenshots/phone-menu-zh.jpg" alt="手機版地圖頁的「功能與頁面」選單" width="245"> | <img src="docs/screenshots/slide-ebola-zh.jpg" alt="衛教海報輪播：伊波拉疫情警示（直式）" width="300"> |
+
+| 快查：檢疫同仁 / Quick check: staff | 快查：一般民眾 / Quick check: traveller | 手機地圖（英文）/ Phone map (English) |
+|---|---|---|
+| <img src="docs/screenshots/m-officer-zh.jpg" alt="m.html 檢疫同仁首頁：未來 60 分鐘來自第二級以上地區的入境班機" width="245"> | <img src="docs/screenshots/m-public-zh.jpg" alt="m.html 一般民眾：日本的疫情建議、旅遊警示與近期疫情" width="245"> | <img src="docs/screenshots/phone-en.jpg" alt="Phone layout of the map page" width="245"> |
 
 ---
 
@@ -28,7 +34,7 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 - **國家面板**：點選國家可看到所有有效建議（同疾病的多個省分會合併顯示）、AI 兩年疫情總覽，以及疫情時間軸（預設近 6 個月，可切換 3 個月／6 個月／1 年／2 年，每台螢幕記住自己的選擇；中英對照，可展開全文、連回疾管署原文）。
 - **焦點輪播**：每 15 秒自動介紹一個國家；可切換「查看完整資訊」自動開啟國家面板，並以與入境航班看板相同的閱讀速度自動捲動。面板開著時，上方的輪播列也有「自動捲動」開關與「精簡資訊」按鈕（回到只有右下角卡片的精簡輪播）。
 - **桃園機場航線雷達**：以當日桃園機場（TPE）航點畫出動態航線，預設只看入境，可切換出入境。
-- **入境航班看板**（給機場檢疫站）：目前時間前後 60 分鐘內抵達的國際客機，可依機場與檢疫站（桃園 A、B＝第一航廈，C、D＝第二航廈）篩選，並顯示出發地國家的建議等級與主要疫病。
+- **入境航班看板**（給機場檢疫站）：目前時間前後 60 分鐘（可改 30 分、2 小時或全部）內抵達的國際客機，來自第二級以上地區的班機特別標示，也有不含地圖的全螢幕版 `arrivals.html`；可依機場與檢疫站（桃園 A、B＝第一航廈，C、D＝第二航廈）篩選，並顯示出發地國家的建議等級與主要疫病。
 - **旅遊警示圖層**：地圖可切換為外交部領事事務局「國外旅遊警示分級」（灰、黃、橙、紅；中國大陸、香港、澳門為陸委會燈號），評估治安、衝突、災害等整體安全，與疾管署的疫情建議分開呈現、不合併成單一分數；部分地區較高的國家以虛線標示。英文版顯示外交部摘要的非官方英譯，全文為中文原文。
 - **出國前旅遊安全查詢**（[`trip.html`](https://ancientsky.github.io/safetravel/trip.html)，給民眾與旅行社）：查詢目的地即可並列兩種官方分級、各地區警示與近期疫情；另有三圖層世界地圖（旅遊警示／疫情建議／天氣：80 個城市的天氣與最高溫標在地圖上，可逐日切換或播放）、**全球都市天氣預報**（中央氣象署 80 個城市未來 7 天，可依地區篩選、°C／°F 切換，點城市即開啟該國資訊卡，資訊卡內也列出當地城市預報）、近期變動、全部目的地表格（篩選、排序、匯出 CSV、列印）。預設淺色主題。
 - **旅遊疫情快查**（[`m.html`](https://ancientsky.github.io/safetravel/m.html)，給自己的手機或電腦）：不載入地圖、字大、搜尋優先的個人版。第一次開啟選擇身分（之後右上角隨時切換，或網址 `?role=officer／public`）——**檢疫同仁**：首頁列出未來 60 分鐘來自第二級以上地區的入境班機，搜尋框也能查航班號（`BR384`），國家卡片附今日自該國入境的班機，另有「入境航班」分頁（時段、只看 L2+）；**一般民眾**：熱門目的地、疫情建議與外交部旅遊警示摘要、近 60 天疫情。兩者都有「疫情快訊」分頁（近 60 天，可只看第二級以上國家）。手機開啟地圖版時會提示一次改用快查（可關閉）；之後也可從地圖版右上角「**選單**」進入。
@@ -46,7 +52,7 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 | 入境航班 | 開關入境航班看板（預設關閉） |
 | 出國查詢 | 前往出國前旅遊安全查詢頁（`trip.html`） |
 | 快查 | 前往「旅遊疫情快查」（`m.html`）：搜尋優先、字大、不載入地圖，適合自己的電腦與手機（手機版在「選單」裡） |
-| 衛教輪播 | 前往機場檢疫站衛教海報輪播（`slide.html`；手機版隱藏，入境航班看板與頁尾也有連結） |
+| 衛教輪播 | 前往機場檢疫站衛教海報輪播（`slide.html`；手機版在「選單」裡，寬度 1366 px 以下的橫式螢幕不在標題列，入境航班看板與頁尾也有連結） |
 | 疫區航線 | 開啟監測選單，用開關顯示／隱藏疫區直飛航線圖 |
 | 音效 | 開關音效（預設關閉；瀏覽器擋自動播放時，按鈕會出現提示點，點一下即可開啟） |
 | Aa 字級 | 切換字體大小：小（100%）→ 標準（112%）→ 大（125%）→ 特大（140%，桌機與牆面螢幕預設），每台螢幕記住；手機預設「標準」。也可用網址 `?text=s／m／l／xl` 固定 |
@@ -241,7 +247,7 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 - **Country panel** with every active advisory (provinces with the same disease grouped), an AI two-year overview and an epidemic timeline (past 6 months by default; 3 / 6 / 12 / 24 months, remembered per screen; zh/en, full text, link to the TCDC original).
 - **Spotlight tour** that presents a country every 15 s, optionally opening the full panel and auto-scrolling it at the arrivals board's reading pace; while the panel is open its tour bar carries the auto-scroll switch and a *Compact* button back to the corner-card tour.
 - **TPE route radar**: animated routes for today's Taoyuan Airport arrivals (inbound only by default; switch to both ways).
-- **Inbound flights board** for airport quarantine stations: international passenger flights arriving within ±60 minutes, filtered by airport and checkpoint (Taoyuan A/B = Terminal 1, C/D = Terminal 2), with the origin country's advisory level and main diseases.
+- **Inbound flights board** for airport quarantine stations: international passenger flights arriving within ±60 minutes (or ±30, ±2 h, all), flights from level 2+ areas highlighted, also as a map-free full-screen page (`arrivals.html`), filtered by airport and checkpoint (Taoyuan A/B = Terminal 1, C/D = Terminal 2), with the origin country's advisory level and main diseases.
 - **Travel-warning layer**: switch the map to the MOFA (BOCA) travel warning levels (grey, yellow, orange, red; mainland China, Hong Kong and Macau use the MAC rating). They rate overall safety — crime, conflict, disasters — and are shown beside, never merged with, the CDC health advisories; countries rated higher in some areas get a dashed outline. The English UI shows unofficial English translations of the MOFA summaries; the full text is the Chinese original.
 - **Pre-trip safety check** ([`trip.html`](https://ancientsky.github.io/safetravel/trip.html), for travellers and travel agencies): search a destination to see both official ratings side by side, regional warnings and recent epidemic news; plus a three-layer world map (travel warnings / health notices / weather: each city's weather and high on the map, day by day or played), a **world-city weather forecast** (CWA, 80 cities × 7 days, region filter, °C/°F; a city opens its country card, which also lists the local forecast), recent changes and an all-destinations table (filter, sort, CSV export, print). Light theme by default.
 - **Travel health quick check** ([`m.html`](https://ancientsky.github.io/safetravel/m.html), for your own phone or computer): no map, large text, search first. Pick a role on first visit (switch any time, or `?role=officer|public`) — **quarantine staff** see flights arriving from level 2+ areas in the next 60 minutes, can search flight numbers (`BR384`), get today's flights from the country on its card and an *Arrivals* tab (time window, L2+ only); **travellers** get popular destinations, the health notice plus the MOFA warning summary and recent outbreaks. Both have an *Outbreaks* tab (last 60 days, optionally level 2+ countries only). Phones opening the map page are offered the quick check once (dismissible); it is also in the map page's **Menu**.
@@ -251,7 +257,7 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 
 ### How to use
 
-- **Header buttons**: language · **Arrivals** (inbound board, off by default) · **Trip check** (`trip.html`) · **Quick check** (`m.html`) · **Health posters** (`slide.html`; hidden on phones, also linked from the arrivals board and the footer) · **Outbreak routes** (menu with one switch per watched city) · Sound · **Aa text size** (S 100 % → M 112 % → L 125 % → XL 140 %, the default on desktops and wall screens; remembered per screen, phones default to S; `?text=s|m|l|xl` pins it) · Theme.
+- **Header buttons**: language · **Arrivals** (inbound board, off by default) · **Trip check** (`trip.html`) · **Quick check** (`m.html`) · **Health posters** (`slide.html`; in the menu on phones, left out of the header on landscape screens under 1366 px, also linked from the arrivals board and the footer) · **Outbreak routes** (menu with one switch per watched city) · Sound · **Aa text size** (S 100 % → M 112 % → L 125 % → XL 140 %, the default on desktops and wall screens; remembered per screen, phones default to S; `?text=s|m|l|xl` pins it) · Theme.
 - **Phone menu**: on phones the map page's header keeps only *Arrivals* and *Menu*; the menu lists the other pages (quick check, trip check, full-screen arrivals board, health posters — each with a one-line description) and this page's switches (arrivals board, outbreak routes, text size, dark/light, language, sound) with their current state.
 - **Map**: wheel to zoom, drag to pan, double-click to reset; `/` focuses search (countries, **cities and airports** by Chinese / English name, common nickname or IATA code, e.g. 成田, Bangkok, 名古屋, NRT — also on `trip.html`), `Esc` closes the panel; layer switch (CDC health / MOFA safety) and a **Weather** overlay switch (off by default: CWA forecasts for 80 cities with a 7-day selector, plus a local-weather section in the country panel) top-left; tooltips and the panel always show both ratings; the **legend is the level filter** (tap a level to show only it; collapsible, remembered); the route radar bottom-left shows inbound routes only by default (*Both ways* adds departures), and the legend explains the dotted outbreak routes while they are on. On phones one finger taps, two fingers pan and zoom.
 - **Inbound board**: pick the airport and checkpoint, or **search a flight** (`JK202`, `JK-202`, `jk 202`, codeshares too) or an origin (`NRT`, `東京`, or a city / nickname such as `名古屋`, `Nagoya`, `Centrair` for NGO 中部) — a search covers every checkpoint and 2 h back to 4 h ahead; each row shows gate, terminal, checkpoint and the **baggage carousel** (assigned before landing at Taoyuan); click a row to open the origin country; hover to highlight its route. *Auto-scroll* (on by default) glides through the list and pauses for 8 s after the mouse moves or 15 s after a touch/wheel/click — a parked cursor does not stop it. *Large* is for wall screens. Drag the title bar to float the board (position remembered per orientation); *Dock* restores it. Data refreshes every 10 minutes (every 30 minutes from 00:00 to 04:59 Taipei).

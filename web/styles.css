@@ -1260,7 +1260,7 @@ body.arr-open .flights-canvas { opacity: .35; }
 .arr-hub-dot { fill: var(--cyan); }
 @keyframes arr-hub { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
 
-@media (max-width: 1599px) { /* a left-docked board + legend leave no room for the route box beside the spotlight */
+@media (max-width: 1799px) { /* a left-docked board + legend leave no room for the route box beside the spotlight */
   body.arr-dock-left .flight-hud { display: none; }
 }
 /* portrait wall screens (1080x1920): the spotlight card spans most of the width, so the route box sits on top of the
@@ -1842,3 +1842,10 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
 }
 /* narrow desktops: the poster link (also in the footer and the arrivals board) leaves the header so the title fits */
 @media (max-width: 1365px) and (min-width: 761px) and (orientation: landscape) { .hud .toggles > .slides-link { display: none; } }
+/* below 1800 px (2000 px in English) the quick-check and poster links show icons only, so the title row fits */
+@media (max-width: 1799px) { .m-link span[data-i18n], .slides-link span[data-i18n] { display: none; } }
+:root[lang="en"] .m-link span[data-i18n] { display: none; } /* English labels are longer: icon only (title says what it is) */
+.arr-heading { min-width: 0; }
+.arr-kicker { white-space: nowrap; max-width: 100%; overflow: hidden; }
+.brand-text { min-width: 0; }
+.brand-kicker { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* decorative line: never wraps the header */
