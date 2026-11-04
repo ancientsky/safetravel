@@ -211,6 +211,10 @@ async function main() {
   // HUD first so the map can fit around the overlays.
   renderTiles($('#stat-tiles'), { animate: true });
   renderFreshness($('#freshness'));
+  // Legend + flight HUD are laid out now (the map fits around them) but stay invisible until the arrivals
+  // board has applied its docking: an open board pushes them sideways, which would count as layout shift.
+  $('#legend').classList.add('is-held');
+  $('#flight-hud').classList.add('is-held');
   renderLegend($('#legend'));
   renderFlightHud($('#flight-hud'));
   const chipsNode = $('#level-chips');
@@ -316,6 +320,8 @@ async function main() {
     root: $('#arrivals'), button: $('[data-testid="arrivals-toggle"]'), map, openCountry, onLayout: relayout,
   });
   arrivals.init();
+  $('#legend').classList.remove('is-held');
+  $('#flight-hud').classList.remove('is-held');
   window.__safetravel.arrivals = arrivals.debug;
 
   // Outbreak route watch (e.g. Irkutsk direct flights): header menu, off by default; ?watch=irkutsk deep link.
