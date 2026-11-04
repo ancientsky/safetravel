@@ -422,8 +422,15 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   }
 
   // ---- zoom ----
+  // Phones: at the world view one finger only taps (a stray drag no longer moves the map or opens a neighbour);
+  // two fingers pan and pinch, and once zoomed in one finger pans as usual.
+  const phone = typeof matchMedia === 'function' ? matchMedia('(max-width: 760px)') : null;
   const zoom = d3.zoom()
     .scaleExtent([1, 14])
+    .filter((ev) => {
+      if (ev.type.startsWith('touch') && phone?.matches) return (ev.touches?.length || 0) > 1 || transform.k > 1.01;
+      return (!ev.ctrlKey || ev.type === 'wheel') && !ev.button;
+    })
     .on('start', (ev) => { if (!ev.sourceEvent) unhover(); }) // map moves under a still pointer
     .on('zoom', (ev) => {
       transform = ev.transform;

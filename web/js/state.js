@@ -16,6 +16,8 @@ export const state = {
   layer: 'cdc', // map colouring: 'cdc' (CDC health advisories) | 'mofa' (MOFA/MAC travel warnings)
   wfilter: new Set(), // travel-warning levels to highlight (MOFA layer); empty = all
   flightsOn: true,
+  flightDir: 'in', // TPE routes: 'in' arrivals only (default) | 'both' directions
+  legendMin: false, // legend collapsed to its title bar
   spotlight: { iso: null, playing: true },
   mapPinned: false, // true while an overlay owns the map view (outbreak route watch): the tour does not move the map
   fps: 0,

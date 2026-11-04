@@ -116,11 +116,45 @@ let legendExtra = null;
 export function setLegendExtra(fn) { legendExtra = fn; }
 const extra = () => legendExtra?.() || { block: '', mini: '' };
 
+// Outbreak route watch entries (js/watch.js): [{ name, reason }] of the sets on the map, set once that module exists.
+let legendWatch = null;
+export function setLegendWatch(fn) { legendWatch = fn; }
+
 function flightLegend() {
-  return state.data.flights?.routes?.length ? `<ul class="legend-list legend-flights">
-      <li><span class="swatch-line out" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_out'))}</span></li>
-      <li><span class="swatch-line in" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_in'))}</span></li>
-    </ul>` : '';
+  const watch = legendWatch?.() || [];
+  const both = state.flightDir === 'both';
+  const flights = state.flightsOn && state.data.flights?.routes?.length;
+  const rows = [];
+  if (flights) {
+    rows.push(`<li><span class="swatch-line in" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_in'))}</span></li>`);
+    if (both) rows.push(`<li><span class="swatch-line out" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_out'))}</span></li>`);
+  }
+  for (const w of watch) {
+    rows.push(`<li class="lg-watch"><span class="swatch-line watch" aria-hidden="true"></span><span class="lg-name">${
+      esc(t('legend_watch', { name: w.name }))}${w.reason ? `<small>${esc(w.reason)}</small>` : ''}</span></li>`);
+  }
+  if (watch.length) {
+    rows.push(`<li class="lg-watch"><span class="swatch-dot tpe" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_watch_tpe'))}</span></li>`);
+  }
+  return rows.length ? `<ul class="legend-list legend-flights">${rows.join('')}</ul>` : '';
+}
+
+// Level rows are the map filter: a pressed row is shown, none pressed = every level.
+function levelRow(l, sw, name, count, filter) {
+  const on = filter.has(l);
+  const dim = filter.size > 0 && !on;
+  return `<li class="lg-row"><button type="button" class="lg-filter${dim ? ' is-dim' : ''}" data-level="${l}" aria-pressed="${on}">
+      <span class="swatch ${sw}" aria-hidden="true"></span><span class="lg-name">${esc(name)}</span><b class="mono">${fmtNum(count)}</b></button></li>`;
+}
+
+function legendHead(title, filter) {
+  return `<div class="legend-head">
+      <h2 class="legend-title">${esc(title)}</h2>
+      ${filter.size ? `<button type="button" class="lg-all" data-level="all">${esc(t('filter_all'))}</button>` : ''}
+      <button type="button" class="lg-min" data-legend-min aria-expanded="${!state.legendMin}" title="${esc(t(state.legendMin ? 'legend_expand' : 'legend_collapse'))}"
+        aria-label="${esc(t(state.legendMin ? 'legend_expand' : 'legend_collapse'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    </div>
+    <p class="legend-tap">${esc(t('legend_tap_filter'))}</p>`;
 }
 
 function renderWarnLegend(node) {
@@ -134,23 +168,26 @@ function renderWarnLegend(node) {
   }
   const geoIds = Array.from(state.data.worldNames.keys()).filter((id) => /^[A-Z]{2}$/.test(id) && id !== 'TW');
   counts[0] = geoIds.filter((id) => !warnLevel(id)).length;
-  const rows = [4, 3, 2, 1, 0].map((l) => `
-    <li><span class="swatch wl-${l}" aria-hidden="true"></span><span class="lg-name">${esc(l ? wLevelShort(l) : t('wl_legend_none'))}</span><b class="mono">${fmtNum(counts[l])}</b></li>`).join('');
+  const rows = [4, 3, 2, 1].map((l) => levelRow(l, `wl-${l}`, wLevelShort(l), counts[l], state.wfilter)).join('');
   node.innerHTML = `
-    <h2 class="legend-title">${esc(t('wl_legend_title'))}</h2>
+    ${legendHead(t('wl_legend_title'), state.wfilter)}
+    <div class="legend-body">
     <ul class="legend-list">${rows}
-      <li><span class="swatch swatch-part" aria-hidden="true"></span><span class="lg-name">${esc(t('wl_legend_partial'))}</span><b class="mono">${fmtNum(partial)}</b></li>
-      <li><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>${wx.mini}
+      <li class="lg-static"><span class="swatch wl-0" aria-hidden="true"></span><span class="lg-name">${esc(t('wl_legend_none'))}</span><b class="mono">${fmtNum(counts[0])}</b></li>
+      <li class="lg-static"><span class="swatch swatch-part" aria-hidden="true"></span><span class="lg-name">${esc(t('wl_legend_partial'))}</span><b class="mono">${fmtNum(partial)}</b></li>
+      <li class="lg-static"><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>${wx.mini}
     </ul>
     ${flightLegend()}${wx.block}
     <p class="legend-note">${esc(t('wl_legend_mac'))}</p>
     <p class="legend-note">${esc(t('wl_legend_note'))}</p>
-    <p class="legend-hint">${esc(t('map_hint'))}</p>`;
+    <p class="legend-hint">${esc(t('map_hint'))}</p>
+    </div>`;
 }
 
 export function renderLegend(node) {
   node.classList.remove('is-pending');
   node.classList.toggle('is-mofa', mofaMode());
+  node.classList.toggle('is-min', !!state.legendMin);
   if (mofaMode()) { renderWarnLegend(node); return; }
   const wx = extra();
   const c = state.data.alerts?.countries || {};
@@ -159,16 +196,18 @@ export function renderLegend(node) {
   const geoIds = Array.from(state.data.worldNames.keys()).filter((id) => /^[A-Z]{2}$/.test(id) && id !== 'TW');
   counts[0] = geoIds.filter((id) => !levelOf(id)).length;
   const unmapped = state.data.alerts?.unmapped?.length || 0;
-  const rows = [3, 2, 1, 0].map((l) => `
-    <li><span class="swatch lvl-${l}" aria-hidden="true"></span><span class="lg-name">${esc(l ? levelShort(l) : t('level_0'))}</span><b class="mono">${fmtNum(counts[l])}</b></li>`).join('');
+  const rows = [3, 2, 1].map((l) => levelRow(l, `lvl-${l}`, levelShort(l), counts[l], state.filter)).join('');
   node.innerHTML = `
-    <h2 class="legend-title">${esc(t('legend_title'))}</h2>
+    ${legendHead(t('legend_title'), state.filter)}
+    <div class="legend-body">
     <ul class="legend-list">${rows}
-      <li><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>${wx.mini}
+      <li class="lg-static"><span class="swatch lvl-0" aria-hidden="true"></span><span class="lg-name">${esc(t('level_0'))}</span><b class="mono">${fmtNum(counts[0])}</b></li>
+      <li class="lg-static"><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>${wx.mini}
     </ul>
     ${flightLegend()}${wx.block}
     ${unmapped ? `<p class="legend-note">${esc(t('legend_unmapped', { n: unmapped }))}</p>` : ''}
-    <p class="legend-hint">${esc(t('map_hint'))}</p>`;
+    <p class="legend-hint">${esc(t('map_hint'))}</p>
+    </div>`;
 }
 
 export function renderFlightHud(node) {
@@ -180,6 +219,15 @@ export function renderFlightHud(node) {
   btn.querySelector('.fh-toggle-text').textContent = state.flightsOn ? t('flights_toggle_on') : t('flights_toggle_off');
   btn.querySelector('.fh-toggle-sr').textContent = t('flights_toggle_sr'); // name = visible text + description
   btn.title = t('flights_toggle_label');
+  const dirNode = $('.fh-dir', node);
+  if (dirNode) {
+    const both = state.flightDir === 'both';
+    dirNode.setAttribute('aria-label', t('flights_dir_label'));
+    dirNode.hidden = !state.flightsOn || !f?.routes;
+    dirNode.innerHTML = `
+      <button type="button" data-dir="in" aria-pressed="${!both}"><i class="dot in" aria-hidden="true"></i>${esc(t('flights_dir_in'))}</button>
+      <button type="button" data-dir="both" aria-pressed="${both}">${esc(t('flights_dir_both'))}</button>`;
+  }
   if (!f || !f.routes) {
     stats.innerHTML = `<span class="fh-warn">${esc(t('flights_unavailable'))}</span>`;
     btn.disabled = true;
@@ -194,7 +242,7 @@ export function renderFlightHud(node) {
   const stale = state.data.meta?.sources?.flights?.ok === false || (fd && today && +fd !== +today);
   stats.innerHTML = `
     <div><span>${esc(t('flights_dest'))}</span><b class="mono">${fmtNum(dest)}</b></div>
-    <div><span>${esc(t('flights_dep'))}</span><b class="mono out">${fmtNum(dep)}</b></div>
+    <div${state.flightDir === 'both' ? '' : ' class="is-off"'}><span>${esc(t('flights_dep'))}</span><b class="mono out">${fmtNum(dep)}</b></div>
     <div><span>${esc(t('flights_arr'))}</span><b class="mono in">${fmtNum(arr)}</b></div>
     <div><span>${esc(t('flights_date'))}</span><b class="mono small${stale ? ' warn' : ''}" ${stale ? `title="${esc(t('flights_stale'))}"` : ''}>${esc(fmtDay(f.date, 'short'))}</b></div>`;
 }

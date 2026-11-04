@@ -56,6 +56,11 @@ export default {
   legend_countries: ({ n }) => `${n} 國`,
   legend_out: '出境航班',
   legend_in: '入境航班',
+  legend_watch: ({ name }) => `疫區航線：${name}直飛`,
+  legend_watch_tpe: '青色航點：與桃園有直航',
+  legend_tap_filter: '點選等級可只顯示該等級',
+  legend_collapse: '收合圖例',
+  legend_expand: '展開圖例',
   legend_unmapped: ({ n }) => `另有 ${n} 個地區無地圖形狀`,
 
   tooltip_advisories: ({ n, rows }) => (n ? (rows > n ? `${n} 項建議 · ${rows} 筆` : `${n} 則旅遊疫情建議`) : '無針對性建議'),
@@ -80,6 +85,9 @@ export default {
   flights_arr: '入境',
   flights_date: '日期',
   flights_stale: '航班資料非今日',
+  flights_dir_label: '航線方向',
+  flights_dir_in: '只看入境',
+  flights_dir_both: '出入境',
   flights_unavailable: '航班資料暫不可用',
 
   panel_close: '關閉',

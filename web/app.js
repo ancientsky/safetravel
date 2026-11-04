@@ -1,6 +1,7 @@
 // SafeTravel TW — entry point. Loads data, wires the map, flights, panel, spotlight and HUD.
 import {
   state, on, emit, levelOf,
+  mofaMode,
 } from './js/state.js';
 import { setLang, t, applyStatic, bindData, getLang } from './js/i18n.js';
 import { $, debounce, storageGet, storageSet, parseDay, todayTaipei } from './js/util.js';
@@ -15,14 +16,16 @@ import { createPanel } from './js/panel.js';
 import { createSpotlight } from './js/spotlight.js';
 import { createArrivals } from './js/arrivals.js';
 import { createWatch } from './js/watch.js';
-import { createSearch, renderFilterChips, renderLayerSwitch } from './js/search.js';
+import { createSearch, renderLayerSwitch } from './js/search.js';
 import {
-  startClock, renderTiles, renderFreshness, renderLegend, renderFlightHud, setLegendExtra,
+  startClock, renderTiles, renderFreshness, renderLegend, renderFlightHud, setLegendExtra, setLegendWatch,
 } from './js/hud.js';
 
 const LANG_KEY = 'safetravel.lang';
 const THEME_KEY = 'safetravel.theme';
 const FLIGHTS_KEY = 'safetravel.flights';
+const FLIGHT_DIR_KEY = 'safetravel.flightdir'; // 'in' (default) | 'both'
+const LEGEND_KEY = 'safetravel.legend'; // 'min' when collapsed
 const LAYER_KEY = 'safetravel.layer';
 const WX_KEY = 'safetravel.weather';
 
@@ -130,10 +133,16 @@ function indexEpidemics(ep) {
   state.byCountry = by;
 }
 
+let syncHudNow = () => {};
+
 async function main() {
   state.lang = setLang(storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant');
   applyTheme(initialTheme());
   state.flightsOn = storageGet(FLIGHTS_KEY) !== 'off';
+  const qRoutes = new URLSearchParams(location.search).get('routes'); // ?routes=in|both pins it (kiosks)
+  state.flightDir = (qRoutes === 'both' || qRoutes === 'in' ? qRoutes : storageGet(FLIGHT_DIR_KEY)) === 'both' ? 'both' : 'in';
+  state.legendMin = storageGet(LEGEND_KEY) === 'min';
+  document.documentElement.dataset.flightdir = state.flightDir;
   state.layer = initialLayer();
   state.weather = { on: initialWeather(), status: 'idle', data: null, day: 0 };
   bindData(state.data);
@@ -161,11 +170,14 @@ async function main() {
       if (!tilesNode.children.length) return;
       const root = document.documentElement.style;
       root.setProperty('--hud-top-b', `${Math.round(hudTop.getBoundingClientRect().bottom)}px`);
-      root.setProperty('--hud-b', `${Math.round(tilesNode.getBoundingClientRect().bottom)}px`);
+      // phones hide the tiles (the legend strip carries the counts): the toolbar then follows the title row
+      const tilesShown = tilesNode.getClientRects().length > 0;
+      root.setProperty('--hud-b', `${Math.round((tilesShown ? tilesNode : hudTop).getBoundingClientRect().bottom)}px`);
     };
     const ro = new ResizeObserver(syncHud);
     ro.observe(hudTop);
     ro.observe(tilesNode);
+    syncHudNow = syncHud;
   }
   const clockTick = startClock($('#clock'));
 
@@ -179,7 +191,7 @@ async function main() {
   on('refresh:pending', () => sound.play('arpeggio'));
   // tiny click for the UI toggles (language, theme, filters, routes, spotlight switches)
   document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-testid="lang-toggle"], [data-testid="theme-toggle"], .chip-filter, .fh-toggle, .switch, .arr-toggle, .arr-cp, .arr-big, .watch-toggle, .wx-toggle, .wxb-day, .wxb-play')) sound.play('click');
+    if (e.target.closest('[data-testid="lang-toggle"], [data-testid="theme-toggle"], .lg-filter, .lg-all, .lg-min, .fh-dir button, .fh-toggle, .switch, .arr-toggle, .arr-cp, .arr-big, .watch-toggle, .wx-toggle, .wxb-day, .wxb-play')) sound.play('click');
   });
 
   // MOFA/MAC travel warnings: not critical (the map works without them); fetched alongside.
@@ -229,6 +241,7 @@ async function main() {
 
   // HUD first so the map can fit around the overlays.
   renderTiles($('#stat-tiles'), { animate: true });
+  syncHudNow(); // phones hide the tiles, so no resize is reported once they are filled
   renderFreshness($('#freshness'));
   // Legend + flight HUD are laid out now (the map fits around them) but stay invisible until the arrivals
   // board has applied its docking: an open board pushes them sideways, which would count as layout shift.
@@ -236,19 +249,40 @@ async function main() {
   $('#flight-hud').classList.add('is-held');
   renderLegend($('#legend'));
   renderFlightHud($('#flight-hud'));
-  const chipsNode = $('#level-chips');
   const layerNode = $('#layer-switch');
+  const legendNode = $('#legend');
   const onFilter = () => {
     map.applyFilter();
-    renderFilterChips(chipsNode, onFilter);
+    renderLegend(legendNode);
   };
-  renderFilterChips(chipsNode, onFilter);
+  // The legend is also the level filter (one place instead of tiles + chips + legend): tap a level to show only it.
+  legendNode.addEventListener('click', (e) => {
+    if (e.target.closest('[data-legend-min]')) {
+      state.legendMin = !state.legendMin;
+      storageSet(LEGEND_KEY, state.legendMin ? 'min' : 'open');
+      renderLegend(legendNode);
+      legendNode.querySelector('[data-legend-min]')?.focus();
+      return;
+    }
+    const b = e.target.closest('[data-level]');
+    if (!b) return;
+    const set = mofaMode() ? state.wfilter : state.filter;
+    const all = mofaMode() ? 4 : 3;
+    const v = b.dataset.level;
+    if (v === 'all') set.clear();
+    else {
+      const l = +v;
+      if (set.has(l)) set.delete(l); else set.add(l);
+      if (set.size === all) set.clear();
+    }
+    onFilter();
+    legendNode.querySelector(`[data-level="${v}"]`)?.focus() || legendNode.querySelector('[data-level]')?.focus();
+  });
   // Layer switch (CDC health advisories ↔ MOFA/MAC travel warnings): re-colours map, chips, legend, panel.
   let search = null;
   const applyLayer = () => {
     document.documentElement.dataset.layer = state.layer;
     renderLayerSwitch(layerNode, setLayer);
-    renderFilterChips(chipsNode, onFilter);
     renderLegend($('#legend'));
     if (state.data.world) map.applyLayer();
     search?.refresh();
@@ -345,6 +379,8 @@ async function main() {
 
   // Outbreak route watch (e.g. Irkutsk direct flights): header menu, off by default; ?watch=irkutsk deep link.
   const watch = createWatch({ button: $('[data-testid="watch-toggle"]'), menu: $('#watch-menu'), map });
+  setLegendWatch(watch.legendItems); // the dashed outbreak routes get a legend entry while they are on the map
+  on('watch:change', () => renderLegend(legendNode));
   if (state.data.world) watch.init();
   window.__safetravel.watch = watch.debug;
 
@@ -391,7 +427,6 @@ async function main() {
     renderFreshness($('#freshness'));
     renderLegend($('#legend'));
     renderFlightHud($('#flight-hud'));
-    renderFilterChips(chipsNode, onFilter);
     renderLayerSwitch(layerNode, setLayer);
     map.relabel();
     search.refresh();
@@ -412,6 +447,19 @@ async function main() {
     flights?.setEnabled(state.flightsOn);
     map.setDotsVisible(state.flightsOn);
     renderFlightHud($('#flight-hud'));
+    renderLegend(legendNode);
+  });
+  // route direction: arrivals only (default, what quarantine watches) or both directions
+  $('#flight-hud').addEventListener('click', (e) => {
+    const b = e.target.closest('.fh-dir [data-dir]');
+    if (!b || b.dataset.dir === state.flightDir) return;
+    state.flightDir = b.dataset.dir === 'both' ? 'both' : 'in';
+    storageSet(FLIGHT_DIR_KEY, state.flightDir);
+    document.documentElement.dataset.flightdir = state.flightDir;
+    flights?.setDirection(state.flightDir);
+    renderFlightHud($('#flight-hud'));
+    renderLegend(legendNode);
+    $(`#flight-hud [data-dir="${state.flightDir}"]`)?.focus();
   });
   $('#zoom-in').addEventListener('click', () => map.zoomBy(1.6));
   $('#zoom-out').addEventListener('click', () => map.zoomBy(1 / 1.6));

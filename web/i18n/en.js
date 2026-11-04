@@ -58,6 +58,11 @@ export default {
   legend_countries: ({ n }) => plural(n, 'country', 'countries'),
   legend_out: 'Departures',
   legend_in: 'Arrivals',
+  legend_watch: ({ name }) => `Outbreak routes: direct flights from ${name}`,
+  legend_watch_tpe: 'Cyan stops: direct link to Taoyuan',
+  legend_tap_filter: 'Tap a level to show only that level',
+  legend_collapse: 'Collapse legend',
+  legend_expand: 'Expand legend',
   legend_unmapped: ({ n }) => `${plural(n, 'more area', 'more areas')} without a map shape`,
 
   tooltip_advisories: ({ n, rows }) => (n ? (rows > n ? `${plural(n, 'advisory', 'advisories')} · ${plural(rows, 'entry', 'entries')}` : plural(n, 'advisory', 'advisories')) : 'No specific advisory'),
@@ -82,6 +87,9 @@ export default {
   flights_arr: 'Arrivals',
   flights_date: 'Date',
   flights_stale: 'Flight data is not from today',
+  flights_dir_label: 'Route direction',
+  flights_dir_in: 'Inbound only',
+  flights_dir_both: 'Both ways',
   flights_unavailable: 'Flight data unavailable',
 
   panel_close: 'Close',

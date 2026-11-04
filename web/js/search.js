@@ -1,10 +1,10 @@
 // Search combobox: countries (zh / en / ISO) plus airports and cities (zh / en / IATA code, js/places.js, loaded on
-// first use), each opening its country; map layer switch and level filter chips.
+// first use), each opening its country; map layer switch (the level filter lives in the legend, js/hud.js).
 import {
   state, levelOf, alertsOf, warnLevel, mofaMode,
 } from './state.js';
 import {
-  t, countryName, badge, levelShort, fmtNum, wLevelShort, wbadge,
+  t, countryName, badge, fmtNum, wbadge,
 } from './i18n.js';
 import { esc, $ } from './util.js';
 import { loadPlaces, findPlaces, placeName } from './places.js';
@@ -153,54 +153,5 @@ export function renderLayerSwitch(node, onChange) {
   node.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
     if (b.dataset.layer === state.layer) return;
     onChange(b.dataset.layer);
-  }));
-}
-
-function renderWarnChips(node, onChange) {
-  const counts = { 1: 0, 2: 0, 3: 0, 4: 0 };
-  for (const iso of Object.keys(state.data.warnings?.countries || {})) {
-    const l = warnLevel(iso);
-    if (l) counts[l]++;
-  }
-  node.setAttribute('aria-label', t('filter_label'));
-  node.innerHTML = `<span class="chips-label">${esc(t('filter_label'))}</span>` + [4, 3, 2, 1].map((l) => `
-    <button type="button" class="chip-filter wl-${l}" data-level="${l}" aria-pressed="${state.wfilter.has(l)}" title="${esc(wLevelShort(l))}">
-      <i class="dot wl-${l}" aria-hidden="true"></i>${esc(t(`wl_chip_${l}`))}<b class="mono">${fmtNum(counts[l])}</b>
-    </button>`).join('') + `
-    <button type="button" class="chip-filter chip-all" data-level="all" aria-pressed="${state.wfilter.size === 0}">${esc(t('filter_all'))}</button>`;
-  node.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
-    const v = b.dataset.level;
-    if (v === 'all') state.wfilter.clear();
-    else {
-      const l = +v;
-      if (state.wfilter.has(l)) state.wfilter.delete(l);
-      else state.wfilter.add(l);
-      if (state.wfilter.size === 4) state.wfilter.clear();
-    }
-    onChange();
-  }));
-}
-
-export function renderFilterChips(node, onChange) {
-  if (mofaMode()) { renderWarnChips(node, onChange); return; }
-  const c = state.data.alerts?.countries || {};
-  const counts = { 1: 0, 2: 0, 3: 0 };
-  for (const v of Object.values(c)) if (v.max_level) counts[v.max_level]++;
-  node.setAttribute('aria-label', t('filter_label'));
-  node.innerHTML = `<span class="chips-label">${esc(t('filter_label'))}</span>` + [3, 2, 1].map((l) => `
-    <button type="button" class="chip-filter lvl-${l}" data-level="${l}" aria-pressed="${state.filter.has(l)}" title="${esc(levelShort(l))}">
-      <i class="dot lvl-${l}" aria-hidden="true"></i>${esc(t(`level_chip_${l}`))}<b class="mono">${fmtNum(counts[l])}</b>
-    </button>`).join('') + `
-    <button type="button" class="chip-filter chip-all" data-level="all" aria-pressed="${state.filter.size === 0}">${esc(t('filter_all'))}</button>`;
-  node.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
-    const v = b.dataset.level;
-    if (v === 'all') state.filter.clear();
-    else {
-      const l = +v;
-      if (state.filter.has(l)) state.filter.delete(l);
-      else state.filter.add(l);
-      if (state.filter.size === 3) state.filter.clear();
-    }
-    onChange();
   }));
 }

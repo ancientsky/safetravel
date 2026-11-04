@@ -20,7 +20,7 @@ const PILL_H = 22;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 // HUD cards markers must not hide under (checked when visible)
 const OBSTACLES = [
-  '.hud', '#search', '.layer-row', '#level-chips', '#legend', '#flight-hud', '.zoom-ctrl', '#wx-bar',
+  '.hud', '#search', '.layer-row', '#legend', '#flight-hud', '.zoom-ctrl', '#wx-bar',
   '#spotlight:not(.is-hidden)', '#panel:not([hidden])', '#arrivals:not([hidden])', '#watch-menu:not([hidden])',
   '#digest-status:not([hidden])', '.foot',
 ];

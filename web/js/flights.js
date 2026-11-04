@@ -40,6 +40,11 @@ export function createFlights({ canvas, map }) {
   const arcCtx = arcCanvas.getContext('2d');
   let arcKey = '';
   let lastDraw = 0;
+  // 'in': inbound only (the default: what airport quarantine watches); 'both': departures too
+  let dir = state.flightDir === 'both' ? 'both' : 'in';
+  const deps = (r) => (dir === 'in' ? 0 : (r.departures || 0));
+  // one colour for every line when only arrivals are shown: the arcs take the inbound colour
+  const arcColor = () => (dir === 'in' ? colors.in : colors.arc);
 
   // Fixed object pools: no allocation in the animation loop.
   const glyphs = Array.from({ length: MAX_GLYPHS }, () => ({ on: false, ri: 0, out: true, t: 0, dur: 1 }));
@@ -132,7 +137,7 @@ export function createFlights({ canvas, map }) {
           else len += Math.hypot(dx, dy);
         }
       }
-      const total = (r.departures || 0) + (r.arrivals || 0);
+      const total = deps(r) + (r.arrivals || 0);
       return {
         r, pts, breaks, len,
         dur: clamp(1.8 + len / 210, 1.8, 7.5) / SPEED,
@@ -143,7 +148,7 @@ export function createFlights({ canvas, map }) {
         dest: [pts[(SAMPLES - 1) * 2], pts[(SAMPLES - 1) * 2 + 1]],
       };
     });
-    const load = routes.reduce((s, ro) => s + ((ro.r.departures || 0) + (ro.r.arrivals || 0)) * ro.dur, 0);
+    const load = routes.reduce((s, ro) => s + (deps(ro.r) + (ro.r.arrivals || 0)) * ro.dur, 0);
     spawnBase = load > 0 ? TARGET_ALIVE / load : 0;
     glyphs.forEach((g) => { g.on = false; });
     prefill();
@@ -153,10 +158,10 @@ export function createFlights({ canvas, map }) {
     if (reducedMotion()) return;
     let n = 0;
     for (const [ri, ro] of routes.entries()) {
-      const expected = ((ro.r.departures || 0) + (ro.r.arrivals || 0)) * spawnBase * ro.dur;
+      const expected = (deps(ro.r) + (ro.r.arrivals || 0)) * spawnBase * ro.dur;
       const count = Math.round(expected);
       for (let c = 0; c < count && n < TARGET_ALIVE; c++, n++) {
-        const out = Math.random() < (ro.r.departures || 0) / ((ro.r.departures || 0) + (ro.r.arrivals || 0) || 1);
+        const out = Math.random() < deps(ro.r) / (deps(ro.r) + (ro.r.arrivals || 0) || 1);
         spawn(ri, out, Math.random());
       }
     }
@@ -200,7 +205,7 @@ export function createFlights({ canvas, map }) {
     // spawn proportional to counts
     for (let ri = 0; ri < routes.length; ri++) {
       const ro = routes[ri];
-      ro.accOut += (ro.r.departures || 0) * spawnBase * dt;
+      ro.accOut += deps(ro.r) * spawnBase * dt;
       ro.accIn += (ro.r.arrivals || 0) * spawnBase * dt;
       if (ro.accOut >= 1) { ro.accOut -= 1; spawn(ri, true); }
       if (ro.accIn >= 1) { ro.accIn -= 1; spawn(ri, false); }
@@ -229,14 +234,14 @@ export function createFlights({ canvas, map }) {
     // --- arcs (zoomed coordinates) ---
     if (lowFps && animate) {
       // cheap path: one bitmap blit with a global "breathing" alpha instead of 55 strokes + dashes
-      const key = `${k}|${x}|${y}|${W}|${H}|${dpr}|${colors.arc}|${colors.light}`;
+      const key = `${k}|${x}|${y}|${W}|${H}|${dpr}|${arcColor()}|${colors.light}`;
       if (key !== arcKey) {
         arcKey = key;
         arcCanvas.width = canvas.width;
         arcCanvas.height = canvas.height;
         arcCtx.setTransform(dpr * k, 0, 0, dpr * k, dpr * x, dpr * y);
         arcCtx.lineCap = 'round';
-        arcCtx.strokeStyle = colors.arc;
+        arcCtx.strokeStyle = arcColor();
         arcCtx.globalAlpha = colors.light ? 0.4 : 0.3;
         for (const ro of routes) {
           arcCtx.beginPath();
@@ -258,17 +263,17 @@ export function createFlights({ canvas, map }) {
       const pulse = animate ? 0.5 + 0.5 * Math.sin(time * 1.6 + ro.phase) : 0.6;
       ctx.beginPath();
       tracePath(ro);
-      ctx.strokeStyle = colors.arc;
+      ctx.strokeStyle = arcColor();
       ctx.globalAlpha = (colors.light ? 0.28 : 0.16) + pulse * (colors.light ? 0.22 : 0.2);
       ctx.lineWidth = ro.width / k;
       ctx.stroke();
     }
     if (animate && !lowFps) {
-      // flowing data-stream dashes (outbound direction)
+      // flowing data-stream dashes: towards Taiwan when only arrivals are shown, outwards otherwise
       ctx.setLineDash([2.5 / k, 13 / k]);
-      ctx.lineDashOffset = (-time * 26 * SPEED) / k;
+      ctx.lineDashOffset = ((dir === 'in' ? 1 : -1) * time * 26 * SPEED) / k;
       ctx.globalAlpha = colors.light ? 0.55 : 0.5;
-      ctx.strokeStyle = colors.out;
+      ctx.strokeStyle = dir === 'in' ? colors.in : colors.out;
       ctx.lineWidth = 1.1 / k;
       ctx.beginPath();
       for (const ro of routes) tracePath(ro);
@@ -459,6 +464,13 @@ export function createFlights({ canvas, map }) {
   return {
     init,
     setEnabled,
+    /** 'in' (arrivals only) or 'both' directions; rebuilds the comet population. */
+    setDirection: (d) => {
+      dir = d === 'both' ? 'both' : 'in';
+      arcKey = '';
+      build();
+      if (enabled && !running) draw(false);
+    },
     refreshTheme: () => { arcKey = ''; readColors(); if (enabled && !running) draw(false); },
     stats: () => ({ active: glyphs.filter((g) => g.on).length, routes: routes.length }),
   };

@@ -855,3 +855,8 @@ button.chg:hover { background: var(--surface-2); border-color: var(--border); }
 .ts-a { font-weight: 800; letter-spacing: -.02em; line-height: 1; }
 .ts-a small { font-size: .7em; font-weight: 700; }
 @media (max-width: 560px) { .ts-toggle .ts-val { display: none; } } /* phones: "Aa" only (size in its title / aria-label) */
+@media (max-width: 560px) { /* phones at 112 % text: header buttons and the back link share one row */
+  .toggles { gap: 6px; }
+  .btn-tg { padding: 6px 8px; }
+  .back span { max-width: 8em; }
+}

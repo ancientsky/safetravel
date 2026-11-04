@@ -642,6 +642,33 @@ async function run(browser) {
     return `${m.markers} markers, no overflow`;
   });
 
+  await check('legend is the level filter, collapses and is remembered; routes are inbound-only by default with a both-ways switch', async () => {
+    const r0 = await page.evaluate(() => ({
+      chips: !!document.querySelector('#level-chips'), rows: document.querySelectorAll('#legend .lg-filter').length,
+      dir: window.__safetravel.state.flightDir, attr: document.documentElement.dataset.flightdir,
+      lines: [...document.querySelectorAll('#legend .swatch-line')].map((e) => e.className),
+    }));
+    assert(!r0.chips, 'the separate level chip row is still there');
+    assert(r0.rows >= 3, `${r0.rows} filter rows in the legend`);
+    assert(r0.dir === 'in' && r0.attr === 'in', `default direction ${r0.dir}/${r0.attr}`);
+    assert(!r0.lines.some((c) => /\bout\b/.test(c)), 'outbound line in the legend while inbound-only');
+    await page.locator('#legend [data-level="2"]').click();
+    const r1 = await page.evaluate(() => ({ f: [...window.__safetravel.state.filter], dim: document.querySelectorAll('#legend .lg-filter.is-dim').length }));
+    assert(r1.f.length === 1 && r1.f[0] === 2 && r1.dim >= 2, `filter ${JSON.stringify(r1)}`);
+    await page.locator('#legend [data-level="all"]').click();
+    assert((await page.evaluate(() => window.__safetravel.state.filter.size)) === 0, '"all" did not clear the filter');
+    await page.locator('#flight-hud [data-dir="both"]').click();
+    const both = await page.evaluate(() => ({ d: localStorage.getItem('safetravel.flightdir'), out: !!document.querySelector('#legend .swatch-line.out') }));
+    assert(both.d === 'both' && both.out, `both-ways ${JSON.stringify(both)}`);
+    await page.locator('#flight-hud [data-dir="in"]').click();
+    await page.locator('#legend [data-legend-min]').click();
+    const min = await page.evaluate(() => ({ cls: document.querySelector('#legend').classList.contains('is-min'), st: localStorage.getItem('safetravel.legend'),
+      body: getComputedStyle(document.querySelector('#legend .legend-body')).display }));
+    assert(min.cls && min.st === 'min' && min.body === 'none', `collapse ${JSON.stringify(min)}`);
+    await page.locator('#legend [data-legend-min]').click();
+    return `${r0.rows} level rows, inbound-only default, collapse remembered`;
+  });
+
   record('no console errors (incl. weather overlay)', consoleErrors.length === 0,
     consoleErrors.length === 0 ? '' : `${consoleErrors.length} error(s)`);
 

@@ -282,6 +282,8 @@ export function createWatch({ button, menu, map }) {
   return {
     init,
     refresh: () => { renderMenu(); layer.update(); },
+    /** Sets on the map, for the legend: [{ name, reason }]. */
+    legendItems: () => active().map((s) => ({ name: hubName(s), reason: ((isEn() ? s.reason_en : s.reason_zh) || '').split(/[；;]/)[0].trim() })),
     debug: { sets: () => sets, on: () => [...on], toggle },
   };
 }
