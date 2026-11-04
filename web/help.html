@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>使用說明 · SafeTravel TW</title>
+  <meta name="description" content="SafeTravel TW 使用說明：各頁面與功能、展示螢幕網址設定、等級說明、資料來源與常見問題。Help: pages, features, kiosk settings, levels, sources and FAQ.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <!-- theme / language before first paint: external file, so the CSP needs no hash.
+       MAINTENANCE: when a feature is added or changed, update this page (both languages) together with README / docs. -->
+  <script src="js/m-boot.js"></script>
+  <script src="js/textsize-boot.js"></script>
+  <link rel="stylesheet" href="m.css">
+  <link rel="stylesheet" href="help.css">
+  <script type="module" src="js/help.js"></script>
+</head>
+<body class="help-page">
+  <header class="m-head">
+    <a class="m-brand" href="./">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12.5"/><path d="M16 16 L25 10"/><circle class="core" cx="16" cy="16" r="2.6"/></svg>
+      <b><span class="zh-only">使用說明</span><span class="en-only">Help</span></b>
+    </a>
+    <div class="m-tools">
+      <a class="m-btn m-hide-sm" href="./"><span class="zh-only">情報板</span><span class="en-only">Map</span></a>
+      <a class="m-btn m-hide-sm" href="m.html"><span class="zh-only">快查</span><span class="en-only">Quick check</span></a>
+      <button type="button" class="m-btn" data-testid="lang-toggle"><span class="zh-only">EN</span><span class="en-only">中</span></button>
+      <button type="button" class="m-btn" data-testid="theme-toggle" aria-label="深色／淺色 Dark / light">
+        <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>
+        <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===================================================================== 繁體中文 -->
+  <main class="help" lang="zh-Hant" data-lang="zh" data-testid="help-zh">
+    <h1>SafeTravel TW 使用說明</h1>
+    <p class="lede">把疾管署「國際旅遊疫情建議等級」、國際重要疫情、外交部旅遊警示、桃園機場與全台入境航班整理在一起的網站。給機場檢疫同仁、出國旅客與旅行社使用。本頁說明每個頁面與功能怎麼用。</p>
+
+    <nav class="toc" aria-label="目錄">
+      <a href="#pages">頁面一覽</a><a href="#which">我該用哪一頁</a><a href="#map">情報板（地圖）</a><a href="#arrivals">入境航班看板</a>
+      <a href="#quick">旅遊疫情快查</a><a href="#trip">出國前查詢</a><a href="#slides">衛教海報輪播</a><a href="#kiosk">展示螢幕設定</a>
+      <a href="#levels">等級怎麼看</a><a href="#sources">資料來源與更新</a><a href="#faq">常見問題</a>
+    </nav>
+
+    <section id="pages">
+      <h2>頁面一覽</h2>
+      <div class="cards">
+        <a class="card-link" href="./"><b>全球旅遊疫情情報板</b><span>世界地圖依疫情建議等級上色，含國家面板、焦點輪播、航線雷達、入境航班看板。適合大螢幕與展示機。</span></a>
+        <a class="card-link" href="m.html"><b>旅遊疫情快查</b><span>手機、個人電腦用。搜尋優先、字大、不載入地圖；可選「檢疫同仁」或「一般民眾」。</span></a>
+        <a class="card-link" href="trip.html"><b>出國前查詢</b><span>外交部旅遊警示與疾管署疫情建議並列，含目的地天氣、近期變動、全部目的地表格。</span></a>
+        <a class="card-link" href="arrivals.html"><b>入境航班看板（全螢幕）</b><span>給檢疫站櫃台的平板或螢幕：前後 30 分～2 小時抵達的國際客機與出發地風險。</span></a>
+        <a class="card-link" href="slide.html"><b>衛教海報輪播</b><span>機場檢疫站螢幕用的疾管署衛教海報，直式、橫式都可。</span></a>
+      </div>
+      <p class="note">手機上的情報板：右上角「選單」可找到以上所有頁面與這一頁的功能。電腦版：標題列按鈕與頁尾連結。</p>
+    </section>
+
+    <section id="which">
+      <h2>我該用哪一頁？</h2>
+      <table>
+        <thead><tr><th>你是…</th><th>建議</th></tr></thead>
+        <tbody>
+          <tr><td>機場檢疫同仁（手機）</td><td><a href="m.html?role=officer">快查・檢疫同仁</a>：首頁就是未來 60 分鐘來自第二級以上地區的入境班機；可直接搜尋航班號（如 BR384）。</td></tr>
+          <tr><td>檢疫站櫃台的平板／螢幕</td><td><a href="arrivals.html">入境航班看板（全螢幕）</a>，或情報板加 <code>?arr=TPE-C</code>（見「展示螢幕設定」）。</td></tr>
+          <tr><td>要出國的民眾、旅行社</td><td><a href="m.html?role=public">快查・一般民眾</a>（手機）或 <a href="trip.html">出國前查詢</a>（電腦、可列印）。</td></tr>
+          <tr><td>大廳展示螢幕</td><td><a href="./">情報板</a>：開「查看完整資訊」與「自動捲動」即可無人值守輪播；或 <a href="slide.html">衛教海報輪播</a>。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="map">
+      <h2>全球旅遊疫情情報板（地圖）</h2>
+      <h3>看地圖</h3>
+      <ul>
+        <li><b>顏色</b>：各國依疾管署旅遊疫情建議的最高等級上色（第一級注意、第二級警示、第三級警告）。左上可切換成「旅遊警示・外交部」圖層。</li>
+        <li><b>圖例就是篩選</b>：點左下圖例的某個等級，地圖只突顯該等級（可複選，按「全部」還原）。圖例右上 ⌄ 可收合。</li>
+        <li><b>操作</b>：滾輪縮放、拖曳移動、雙擊重設；按 <kbd>/</kbd> 跳到搜尋框，<kbd>Esc</kbd> 關閉面板。手機上單指點國家、雙指移動縮放。</li>
+        <li><b>天氣</b>：「天氣」開關疊加中央氣象署 80 個城市的天氣與最高溫，可逐日切換或播放。</li>
+      </ul>
+      <h3>搜尋</h3>
+      <p>可輸入國家、城市或機場的中英文名稱、常見俗稱或機場代碼，例如「日本」「曼谷」「名古屋」「Nagoya」「NRT」，選取後開啟該國面板。</p>
+      <h3>國家面板</h3>
+      <ul>
+        <li>疾管署與外交部兩種分級並列；所有有效的疫情建議（同疾病多個省分合併）。</li>
+        <li>AI 兩年疫情總覽；疫情時間軸（預設近 6 個月，可切換 3／6／12／24 個月）。</li>
+        <li>外交部旅遊警示可展開全文並連回領事事務局原文；開天氣時另有當地天氣預報。</li>
+      </ul>
+      <h3>焦點輪播</h3>
+      <p>右下卡片每 15 秒介紹一個國家。打開「查看完整資訊」會自動開啟國家面板並以閱讀速度自動捲動；面板上方的「精簡資訊」回到卡片。</p>
+      <h3>航線雷達</h3>
+      <p>畫出今天桃園機場的航線。預設<b>只看入境</b>（所有線同一顏色），可切到「出入境」，或按「航線 ON／OFF」關閉動畫。</p>
+      <h3>疫區航線監測</h3>
+      <p>按「疫區航線」開啟選單，打開伊爾庫次克（疑似鼠疫）或金夏沙（本迪布焦病毒伊波拉）開關，地圖顯示該城市的直飛航線網；青色航點為與桃園有直航、旅客可能轉機來臺的城市。開啟時圖例會說明虛線的意思。</p>
+      <h3>其他按鈕</h3>
+      <ul>
+        <li><b>Aa 字級</b>：小（100%）→ 標準（112%）→ 大（125%）→ 特大（140%）。電腦與牆面螢幕預設特大、手機預設標準，每台裝置記住。</li>
+        <li><b>EN／中</b>切換語言；<b>月亮／太陽</b>切換深淺色；<b>音效</b>預設關閉。</li>
+      </ul>
+    </section>
+
+    <section id="arrivals">
+      <h2>入境航班看板</h2>
+      <p>情報板右上「入境航班」打開，或使用全螢幕版 <a href="arrivals.html">arrivals.html</a>（不載入地圖、寬螢幕分兩欄）。</p>
+      <ul>
+        <li><b>機場與檢疫站</b>：桃園 A·T1、B·T1、C·T2、D·T2；登機門未定或停靠遠端機坪的航班會列在該航廈每個檢疫站。</li>
+        <li><b>查詢時段</b>：前後 30 分、60 分（預設）、2 小時，或「全部」（前 2 小時～後 4 小時）。</li>
+        <li><b>需注意的班機</b>：來自第二級以上地區的班機整列加底色；按「來自 L2+ 地區 N 班 · 只看這些」只列出它們。</li>
+        <li><b>搜尋航班</b>：JK202、JK-202、jk 202、共掛班號都可以；也可輸入出發地（NRT、東京、名古屋）。搜尋時不分檢疫站、涵蓋前 2 小時～後 4 小時。</li>
+        <li>每列：抵達時間（表定不同時以刪除線標示）、出發地與國家、<b>出發國等級與主要疫病</b>、航班與機型、<b>登機門／航廈／檢疫站</b>、<b>行李轉盤</b>、狀態。點一列開啟該國資訊。</li>
+        <li><b>自動捲動</b>（預設開）：以閱讀速度往下捲，有人操作時暫停。<b>大字</b>適合牆面螢幕。地圖頁的看板可拖曳標題列移動位置，↗ 按鈕開啟全螢幕版。</li>
+        <li>資料約每 10 分鐘更新（00:00–04:59 約每 30 分鐘）；延遲時狀態列會變橘色。</li>
+      </ul>
+    </section>
+
+    <section id="quick">
+      <h2>旅遊疫情快查（手機版）</h2>
+      <p>第一次開啟時選擇身分，之後右上角隨時切換。深淺色跟隨手機設定。</p>
+      <table>
+        <thead><tr><th></th><th>檢疫同仁</th><th>一般民眾</th></tr></thead>
+        <tbody>
+          <tr><td>首頁</td><td>未來 60 分鐘來自第二級以上地區的入境班機、第三級／第二級國家、最新疫情</td><td>熱門目的地、第三級／第二級國家、最新疫情</td></tr>
+          <tr><td>搜尋</td><td>國家、城市、機場、<b>航班號</b>（選航班會開出發國卡片並標出該班機）</td><td>國家、城市、機場</td></tr>
+          <tr><td>國家卡片</td><td>疫情建議與疾病、<b>今日自該國入境的班機</b>、近 60 天疫情、外交部燈號</td><td>疫情建議與疾病、<b>外交部旅遊警示摘要</b>、近 60 天疫情、完整出國前查詢連結</td></tr>
+          <tr><td>分頁</td><td>查詢・入境航班・疫情快訊・地圖</td><td>查詢・疫情快訊・地圖</td></tr>
+        </tbody>
+      </table>
+      <p class="note">也可直接分享連結：<code>m.html?role=officer</code>（同仁）、<code>m.html?role=public</code>（民眾）、<code>m.html#/c/JP</code>（直接開日本）。</p>
+    </section>
+
+    <section id="trip">
+      <h2>出國前查詢</h2>
+      <ul>
+        <li>輸入目的地（國家、城市、機場）即顯示<b>目的地資訊卡</b>：外交部旅遊警示與疾管署疫情建議並列、各地區警示、近期疫情、當地天氣；可列印此卡。</li>
+        <li>世界地圖三圖層：旅遊警示／疫情建議／天氣。</li>
+        <li>全球都市天氣：中央氣象署 80 個城市未來 7 天，可依地區篩選、°C／°F 切換。</li>
+        <li>近期變動、全部目的地表格（篩選、排序、匯出 CSV、列印）。連結 <code>trip.html#KH</code> 直接開啟柬埔寨。</li>
+      </ul>
+    </section>
+
+    <section id="slides">
+      <h2>衛教海報輪播</h2>
+      <ul>
+        <li>疾管署衛教海報（伊波拉疫情警示、入境症狀報到、症狀提醒、別把病菌帶回國），直式 1080×1920 與橫式 1920×1080 自動縮放。</li>
+        <li>上架：在 <code>web/slides/slides.json</code> 設定，或把現成海報圖檔放進 <code>web/slides/auto/</code> 就自動上架，刪除即下架。</li>
+        <li>網址參數：<code>?interval=8</code>（每張秒數）、<code>?orient=portrait|landscape|auto</code>、<code>?only=…</code>、<code>?lang=zh</code>。</li>
+      </ul>
+    </section>
+
+    <section id="kiosk">
+      <h2>展示螢幕（kiosk）設定</h2>
+      <p>在網址後面加參數即可固定畫面；參數可合併，例如 <code>?arr=TPE-C&amp;big=1&amp;watch=irkutsk</code>。</p>
+      <table class="params">
+        <thead><tr><th>網址</th><th>效果</th></tr></thead>
+        <tbody>
+          <tr><td><code>#/country/CD</code></td><td>直接開啟某國面板（ISO 兩碼）</td></tr>
+          <tr><td><code>?arr=TPE-C</code></td><td>開啟入境航班看板：桃園 C 檢疫站（<code>TPE-A</code>～<code>TPE-D</code>；其他機場 <code>TSA</code>、<code>KHH</code>、<code>RMQ</code>…）</td></tr>
+          <tr><td><code>&amp;big=1</code></td><td>看板大字</td></tr>
+          <tr><td><code>&amp;win=30</code></td><td>看板時段 <code>30／60／120／all</code></td></tr>
+          <tr><td><code>arrivals.html?arr=TPE-C</code></td><td>全螢幕入境航班看板</td></tr>
+          <tr><td><code>?routes=both</code></td><td>航線雷達顯示出入境（預設 <code>in</code>）</td></tr>
+          <tr><td><code>?watch=irkutsk,kinshasa</code></td><td>開啟疫區航線</td></tr>
+          <tr><td><code>?layer=mofa</code></td><td>以外交部旅遊警示圖層開啟</td></tr>
+          <tr><td><code>?wx=1</code></td><td>開啟天氣圖層</td></tr>
+          <tr><td><code>?text=xl</code></td><td>固定字體大小（<code>s／m／l／xl</code>）</td></tr>
+          <tr><td><code>?months=6</code></td><td>國家面板疫情時間軸範圍（3／6／12／24 個月）</td></tr>
+          <tr><td><code>?osk=1</code></td><td>觸控 kiosk 的螢幕小鍵盤（注音、英數、常用目的地）；<code>?osk=0</code> 關閉</td></tr>
+        </tbody>
+      </table>
+      <p class="note">展示螢幕會在資料或網站更新後、沒有人操作的時候自動重新載入，不需要手動刷新。署內鏡像站的架設方式見 repo 的 <code>docs/MIRROR.md</code>。</p>
+    </section>
+
+    <section id="levels">
+      <h2>等級怎麼看</h2>
+      <h3>疾管署 國際旅遊疫情建議（傳染病風險）</h3>
+      <ul class="lv">
+        <li><span class="badge lvl-3"><i></i>第三級 警告</span> 避免至當地所有非必要旅遊</li>
+        <li><span class="badge lvl-2"><i></i>第二級 警示</span> 對當地採取加強防護</li>
+        <li><span class="badge lvl-1"><i></i>第一級 注意</span> 提醒遵守當地的一般預防措施</li>
+      </ul>
+      <p>一國有多項建議時，地圖與卡片以<b>最高等級</b>表示；同一疾病多個省分合併顯示；已解除的建議不顯示。</p>
+      <h3>外交部 國外旅遊警示（整體安全：治安、衝突、天災等）</h3>
+      <ul class="lv">
+        <li><span class="badge wl-4"><i></i>第四級 紅色</span> 儘速離境</li>
+        <li><span class="badge wl-3"><i></i>第三級 橙色</span> 避免前往</li>
+        <li><span class="badge wl-2"><i></i>第二級 黃色</span> 注意</li>
+        <li><span class="badge wl-1"><i></i>第一級 灰色</span> 提醒</li>
+      </ul>
+      <p>中國大陸、香港、澳門採陸委會燈號。只有部分地區較高時，地圖以虛線標示「部分地區較高」。<b>兩種分級分開評估，本站不合併成單一分數。</b></p>
+    </section>
+
+    <section id="sources">
+      <h2>資料來源與更新時間</h2>
+      <table>
+        <thead><tr><th>單位</th><th>提供的資料</th><th>更新</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://www.cdc.gov.tw/" target="_blank" rel="noopener">衛福部疾管署</a></td><td>國際旅遊疫情建議等級、國際重要疫情資訊</td><td>每天 11:17、21:17</td></tr>
+          <tr><td><a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener">交通部 TDX</a>・<a href="https://www.taoyuan-airport.com/" target="_blank" rel="noopener">桃園機場</a></td><td>桃園機場當日航線、全台機場入境航班、登機門與行李轉盤</td><td>航線：每天兩次；入境航班：約每 10 分鐘（深夜 30 分鐘）</td></tr>
+          <tr><td><a href="https://www.boca.gov.tw/sp-trwa-list-1.html" target="_blank" rel="noopener">外交部領事事務局</a></td><td>國外旅遊警示分級與說明</td><td>每天兩次</td></tr>
+          <tr><td><a href="https://www.mac.gov.tw/" target="_blank" rel="noopener">陸委會</a></td><td>中國大陸、香港、澳門旅遊警示燈號</td><td>陸委會調整時人工更新</td></tr>
+          <tr><td><a href="https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007" target="_blank" rel="noopener">中央氣象署</a></td><td>全球 80 個城市未來 7 天天氣預報</td><td>每天兩次</td></tr>
+          <tr><td><a href="https://www.flightconnections.com/" target="_blank" rel="noopener">FlightConnections</a></td><td>疫區城市的直飛航點與每月航班數</td><td>疫情發生時整理</td></tr>
+        </tbody>
+      </table>
+      <p class="note">英文翻譯與疫情摘要由 AI 產生（每天 11:52 處理新資料），可能有誤；出國前請以疾管署與外交部官方公告為準。</p>
+    </section>
+
+    <section id="faq">
+      <h2>常見問題</h2>
+      <details><summary>為什麼某個國家沒有顏色？</summary><p>疾管署目前沒有針對該地的旅遊疫情建議（灰色「目前無針對性建議」），不代表沒有任何風險，仍請注意個人衛生與防蚊。</p></details>
+      <details><summary>資料多久更新一次？畫面要重新整理嗎？</summary><p>疫情建議、旅遊警示與天氣每天更新兩次，入境航班約每 10 分鐘。頁面會自動更新，展示螢幕也會在沒人操作時自動重新載入。</p></details>
+      <details><summary>疾管署第二級和外交部橙色哪個比較嚴重？</summary><p>兩者評估的面向不同：疾管署看傳染病風險，外交部看治安、衝突、天災等整體安全，不能互相比較，請兩者都參考。</p></details>
+      <details><summary>入境航班看板找不到某班飛機？</summary><p>先確認時段（可改「全部」）與檢疫站（選「全部」），或直接在搜尋框輸入航班號；搜尋涵蓋前 2 小時到後 4 小時、所有檢疫站與共掛班號。</p></details>
+      <details><summary>手機上地圖太小、不好操作？</summary><p>建議改用<a href="m.html">旅遊疫情快查</a>，搜尋更快、字更大。在地圖上單指點國家、雙指才會移動縮放。</p></details>
+      <details><summary>網站會記錄我的資料嗎？</summary><p>不需要登入，也沒有廣告或追蹤程式。語言、字級、主題、身分等偏好只存在你自己的瀏覽器裡。</p></details>
+    </section>
+
+    <p class="foot-note">非官方資訊整理，AI 翻譯與摘要可能有誤，出國前請以疾管署最新公告為準。</p>
+  </main>
+
+  <!-- ===================================================================== English -->
+  <main class="help" lang="en" data-lang="en" data-testid="help-en" hidden>
+    <h1>SafeTravel TW help</h1>
+    <p class="lede">Taiwan CDC travel health notices, international outbreak digests, MOFA travel warnings and Taiwan's inbound flights in one place — for airport quarantine staff, travellers and travel agencies. This page explains every page and feature.</p>
+
+    <nav class="toc" aria-label="Contents">
+      <a href="#en-pages">Pages</a><a href="#en-which">Which page for me?</a><a href="#en-map">Map</a><a href="#en-arrivals">Arrivals board</a>
+      <a href="#en-quick">Quick check</a><a href="#en-trip">Trip check</a><a href="#en-slides">Health posters</a><a href="#en-kiosk">Kiosk settings</a>
+      <a href="#en-levels">Levels</a><a href="#en-sources">Sources &amp; updates</a><a href="#en-faq">FAQ</a>
+    </nav>
+
+    <section id="en-pages">
+      <h2>Pages</h2>
+      <div class="cards">
+        <a class="card-link" href="./"><b>Global Travel Health Radar</b><span>World map coloured by health notice level, with country panel, spotlight tour, route radar and arrivals board. For large screens and kiosks.</span></a>
+        <a class="card-link" href="m.html"><b>Travel Health Quick Check</b><span>For phones and your own computer: search first, large text, no map; staff or traveller view.</span></a>
+        <a class="card-link" href="trip.html"><b>Trip check</b><span>MOFA travel warnings and Taiwan CDC health notices side by side, with weather, recent changes and a table of all destinations.</span></a>
+        <a class="card-link" href="arrivals.html"><b>Inbound board (full screen)</b><span>For quarantine counter tablets and screens: international arrivals within ±30 min to ±2 h, with origin risk.</span></a>
+        <a class="card-link" href="slide.html"><b>Health posters</b><span>Taiwan CDC posters for airport quarantine screens, portrait or landscape.</span></a>
+      </div>
+      <p class="note">On a phone, the map page's <b>Menu</b> lists all of these plus the page's switches. On a computer: header buttons and footer links.</p>
+    </section>
+
+    <section id="en-which">
+      <h2>Which page for me?</h2>
+      <table>
+        <thead><tr><th>You are…</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Quarantine staff (phone)</td><td><a href="m.html?role=officer">Quick check · staff</a>: the start view lists flights from level 2+ areas arriving in the next 60 minutes; search a flight number (e.g. BR384).</td></tr>
+          <tr><td>Counter tablet / screen</td><td><a href="arrivals.html">Full-screen inbound board</a>, or the map with <code>?arr=TPE-C</code> (see kiosk settings).</td></tr>
+          <tr><td>Traveller, travel agency</td><td><a href="m.html?role=public">Quick check · traveller</a> on a phone, or the <a href="trip.html">trip check</a> on a computer (printable).</td></tr>
+          <tr><td>Lobby display</td><td>The <a href="./">map</a> with “Show full details” and auto-scroll on, or the <a href="slide.html">health posters</a>.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="en-map">
+      <h2>Global Travel Health Radar (map)</h2>
+      <ul>
+        <li><b>Colours</b>: each country's highest Taiwan CDC level (1 Watch, 2 Alert, 3 Warning); switch to the MOFA travel-warning layer top-left.</li>
+        <li><b>The legend is the filter</b>: tap a level to show only it (several allowed, “All” resets); ⌄ collapses the legend.</li>
+        <li><b>Navigate</b>: wheel to zoom, drag to pan, double-click to reset; <kbd>/</kbd> focuses search, <kbd>Esc</kbd> closes the panel. On phones one finger taps, two fingers pan and zoom.</li>
+        <li><b>Search</b> countries, cities and airports by Chinese / English name, nickname or IATA code (Bangkok, 名古屋, Nagoya, NRT).</li>
+        <li><b>Country panel</b>: both official ratings, every active notice, an AI two-year overview, an outbreak timeline (3 / 6 / 12 / 24 months), the MOFA warning text and local weather.</li>
+        <li><b>Spotlight tour</b>: a country every 15 s; “Show full details” opens and auto-scrolls the panel.</li>
+        <li><b>Route radar</b>: today's Taoyuan routes, inbound only by default (“Both ways” adds departures).</li>
+        <li><b>Outbreak routes</b>: the direct-flight networks of Irkutsk (suspected plague) and Kinshasa (Bundibugyo Ebola); cyan stops have direct flights to Taoyuan. The legend explains the dotted lines.</li>
+        <li><b>Weather</b>: CWA forecasts for 80 cities with a 7-day selector. <b>Aa</b>: text size 100 / 112 / 125 / 140 % (computers default to 140 %, phones to 112 %).</li>
+      </ul>
+    </section>
+
+    <section id="en-arrivals">
+      <h2>Inbound flights board</h2>
+      <ul>
+        <li>Open it from the map's <b>Arrivals</b> button or use the full-screen <a href="arrivals.html">arrivals.html</a> (no map, two columns on wide screens).</li>
+        <li><b>Airport &amp; checkpoint</b>: Taoyuan A·T1, B·T1, C·T2, D·T2. <b>Time window</b>: ±30, ±60 (default), ±2 h or all (−2 h … +4 h).</li>
+        <li><b>Flights that matter</b>: rows from level 2+ areas are tinted; “from L2+ areas · show only these” filters to them.</li>
+        <li><b>Search</b> a flight (JK202, JK-202, codeshares) or an origin (NRT, Tokyo, Nagoya) across all checkpoints and the whole window.</li>
+        <li>Each row: time, origin and country, <b>origin level and main diseases</b>, flight and aircraft, <b>gate / terminal / checkpoint</b>, <b>baggage carousel</b>, status. Auto-scroll and large type for wall screens. Data refresh about every 10 minutes (30 at night).</li>
+      </ul>
+    </section>
+
+    <section id="en-quick">
+      <h2>Travel Health Quick Check</h2>
+      <p>Pick a role on first visit (switch any time, top right). <b>Staff</b>: flights from level 2+ areas in the next 60 minutes, flight-number search, today's flights from a country on its card, an Arrivals tab. <b>Traveller</b>: popular destinations, health notice plus MOFA warning summary, link to the full trip check. Both: level 3 / 2 country lists and an outbreak news tab (last 60 days). Links: <code>m.html?role=officer</code>, <code>m.html?role=public</code>, <code>m.html#/c/JP</code>.</p>
+    </section>
+
+    <section id="en-trip">
+      <h2>Trip check</h2>
+      <p>Search a destination for a printable card with both official ratings, regional warnings, recent outbreaks and local weather; a three-layer world map; 7-day forecasts for 80 cities (°C / °F); recent changes and a table of all destinations (filter, sort, CSV, print). <code>trip.html#KH</code> opens Cambodia directly.</p>
+    </section>
+
+    <section id="en-slides">
+      <h2>Health posters</h2>
+      <p>Taiwan CDC posters re-laid out for 1080×1920 and 1920×1080 screens. Add posters in <code>web/slides/slides.json</code> or drop image files into <code>web/slides/auto/</code>. URL options: <code>?interval=8</code>, <code>?orient=portrait|landscape|auto</code>, <code>?only=…</code>, <code>?lang=zh</code>.</p>
+    </section>
+
+    <section id="en-kiosk">
+      <h2>Kiosk settings</h2>
+      <table class="params">
+        <thead><tr><th>URL</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>#/country/CD</code></td><td>Open a country panel (ISO code)</td></tr>
+          <tr><td><code>?arr=TPE-C</code></td><td>Arrivals board for Taoyuan checkpoint C (<code>TPE-A</code>…<code>TPE-D</code>, <code>TSA</code>, <code>KHH</code>, <code>RMQ</code>…)</td></tr>
+          <tr><td><code>&amp;big=1</code> · <code>&amp;win=30</code></td><td>Large type · time window <code>30 / 60 / 120 / all</code></td></tr>
+          <tr><td><code>arrivals.html?arr=TPE-C</code></td><td>Full-screen arrivals board</td></tr>
+          <tr><td><code>?routes=both</code></td><td>Route radar both ways (default <code>in</code>)</td></tr>
+          <tr><td><code>?watch=irkutsk,kinshasa</code></td><td>Outbreak routes on</td></tr>
+          <tr><td><code>?layer=mofa</code> · <code>?wx=1</code></td><td>Travel-warning layer · weather layer</td></tr>
+          <tr><td><code>?text=xl</code> · <code>?months=6</code></td><td>Fixed text size · panel timeline range</td></tr>
+          <tr><td><code>?osk=1</code></td><td>On-screen keyboard for touch kiosks (<code>?osk=0</code> off)</td></tr>
+        </tbody>
+      </table>
+      <p class="note">Screens reload themselves at a quiet moment after data or site updates. Intranet mirror: <code>docs/MIRROR.md</code> in the repository.</p>
+    </section>
+
+    <section id="en-levels">
+      <h2>Levels</h2>
+      <h3>Taiwan CDC travel health notices (infectious disease risk)</h3>
+      <ul class="lv">
+        <li><span class="badge lvl-3"><i></i>Level 3 Warning</span> Avoid all non-essential travel</li>
+        <li><span class="badge lvl-2"><i></i>Level 2 Alert</span> Practice enhanced precautions</li>
+        <li><span class="badge lvl-1"><i></i>Level 1 Watch</span> Practice usual precautions</li>
+      </ul>
+      <h3>MOFA travel warnings (overall safety: crime, conflict, disasters)</h3>
+      <ul class="lv">
+        <li><span class="badge wl-4"><i></i>Level 4 Red</span> Leave as soon as possible</li>
+        <li><span class="badge wl-3"><i></i>Level 3 Orange</span> Avoid non-essential travel</li>
+        <li><span class="badge wl-2"><i></i>Level 2 Yellow</span> Exercise caution</li>
+        <li><span class="badge wl-1"><i></i>Level 1 Grey</span> Be aware</li>
+      </ul>
+      <p>Mainland China, Hong Kong and Macau use the Mainland Affairs Council rating. The two scales measure different things and are never merged into one score.</p>
+    </section>
+
+    <section id="en-sources">
+      <h2>Sources &amp; updates</h2>
+      <table>
+        <thead><tr><th>Source</th><th>Provides</th><th>Updated</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://www.cdc.gov.tw/" target="_blank" rel="noopener">Taiwan CDC</a></td><td>Travel health notice levels, international outbreak digests</td><td>Daily 11:17 and 21:17</td></tr>
+          <tr><td><a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener">MOTC TDX</a> · <a href="https://www.taoyuan-airport.com/" target="_blank" rel="noopener">Taoyuan Airport</a></td><td>Today's Taoyuan routes; inbound flights, gates and carousels at all Taiwan airports</td><td>Routes twice a day; arrivals about every 10 min (30 at night)</td></tr>
+          <tr><td><a href="https://www.boca.gov.tw/sp-trwa-list-1.html" target="_blank" rel="noopener">MOFA Bureau of Consular Affairs</a></td><td>Travel warning levels and texts</td><td>Twice a day</td></tr>
+          <tr><td><a href="https://www.mac.gov.tw/" target="_blank" rel="noopener">Mainland Affairs Council</a></td><td>Warnings for mainland China, Hong Kong, Macau</td><td>Manually, when MAC changes them</td></tr>
+          <tr><td><a href="https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007" target="_blank" rel="noopener">Central Weather Administration</a></td><td>7-day forecasts for 80 world cities</td><td>Twice a day</td></tr>
+          <tr><td><a href="https://www.flightconnections.com/" target="_blank" rel="noopener">FlightConnections</a></td><td>Direct destinations and monthly flights of outbreak cities</td><td>When an outbreak is tracked</td></tr>
+        </tbody>
+      </table>
+      <p class="note">English translations and summaries are AI-generated (new items processed daily at 11:52) and may contain errors — check the official Taiwan CDC and MOFA notices before you travel.</p>
+    </section>
+
+    <section id="en-faq">
+      <h2>FAQ</h2>
+      <details><summary>Why is a country not coloured?</summary><p>Taiwan CDC has no travel health notice for it right now. That does not mean there is no risk.</p></details>
+      <details><summary>How often is the data updated?</summary><p>Notices, warnings and weather twice a day, arrivals about every 10 minutes. Pages update themselves; kiosks reload at a quiet moment.</p></details>
+      <details><summary>Which is worse, CDC level 2 or MOFA orange?</summary><p>They measure different things (disease risk vs overall safety) and cannot be compared — consider both.</p></details>
+      <details><summary>I cannot find a flight on the board.</summary><p>Set the time window to “All” and the checkpoint to “All”, or type the flight number: search covers −2 h … +4 h, every checkpoint and codeshares.</p></details>
+      <details><summary>Does the site track me?</summary><p>No login, no ads, no trackers. Preferences (language, text size, theme, role) stay in your own browser.</p></details>
+    </section>
+
+    <p class="foot-note">Unofficial aggregation; AI text may contain errors. Check official Taiwan CDC notices before you travel.</p>
+  </main>
+</body>
+</html>

@@ -135,6 +135,16 @@ docs/DATA_CONTRACT.md), arrivals.json and the place index only when a view needs
 (strings `m_*`), `places.js`, `textsize.js`, `autoreload.js` and `bestTime` / `flightKey` from `arrivals.js`. The map page
 offers it once on phones (`safetravel.mpromo`).
 
+## Help page (`help.html`)
+
+Static user guide for staff and travellers: `help.html` holds the whole text twice (`<main data-lang="zh">` and
+`<main data-lang="en">`), styled by `m.css` + `help.css`; `js/help.js` only switches language (`safetravel.lang`) and theme
+(`safetravel.m.theme`, shared with m.html) and maps `#sources`-style anchors to the English ids (`#en-sources`). Linked from
+the map page's footer and phone menu, m.html and trip.html. The map page's footer lists sources as one short line of
+names (link titles say what each provides) and points to `help.html#sources` for the details.
+**Keep it current**: every user-visible change (page, feature, URL parameter, level wording, source) also updates
+help.html in both languages (CLAUDE.md ground rule).
+
 ## Standalone arrivals board (`arrivals.html`)
 
 The inbound board without the map, for counter tablets and screens: `arrivals.html` (CSP without inline scripts) +

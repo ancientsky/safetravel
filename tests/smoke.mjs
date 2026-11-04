@@ -623,7 +623,7 @@ async function run(browser) {
     return 'traveller: 泰國 card; officer: flights tab, BR384 → Vietnam card with the flight highlighted';
   });
 
-  await check('phone menu: header keeps board + menu, the sheet lists the 4 pages and switches with their state', async () => {
+  await check('phone menu: header keeps board + menu, the sheet lists the 5 pages and switches with their state', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const ph = await ctx.newPage();
     await ph.addInitScript(() => { try { localStorage.setItem('safetravel.mpromo', 'off'); } catch (e) { /* ignore */ } });
@@ -642,10 +642,39 @@ async function run(browser) {
     await ctx.close();
     const shown = Object.fromEntries(head);
     assert(shown['menu-toggle'] && shown['arrivals-toggle'] && !shown['theme-toggle'] && !shown['watch-toggle'] && !shown['lang-toggle'], `header ${JSON.stringify(shown)}`);
-    assert(links.join() === 'm.html,trip.html,arrivals.html,slide.html', `pages ${links}`);
+    assert(links.join() === 'm.html,trip.html,arrivals.html,slide.html,help.html', `pages ${links}`);
     assert(after.theme !== before && after.open && after.state, `theme switch ${JSON.stringify(after)}`);
     assert(board, 'the board did not open from the menu');
-    return '4 pages, switches keep the sheet open, the board closes it';
+    return '5 pages, switches keep the sheet open, the board closes it';
+  });
+
+  await check('help.html: both languages, every contents link has its section, #sources works in English, footer links here', async () => {
+    const foot = await page.evaluate(() => ({ help: document.querySelector('[data-testid="footer-help-link"]')?.getAttribute('href'),
+      more: document.querySelector('.foot-more')?.getAttribute('href') }));
+    const ctx = await page.context().browser().newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const ph = await ctx.newPage();
+    const errs = [];
+    ph.on('pageerror', (e) => errs.push(e.message));
+    ph.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+    await ph.goto(new URL('help.html', BASE_URL).href, { waitUntil: 'load' });
+    await ph.waitForSelector('body[data-ready="1"]');
+    const toc = await ph.evaluate(() => [...document.querySelectorAll('.toc a')].map((a) => a.getAttribute('href')).filter((h) => !document.getElementById(h.slice(1))));
+    const zh = await ph.evaluate(() => ({ zh: !document.querySelector('[data-lang="zh"]').hidden, en: !document.querySelector('[data-lang="en"]').hidden,
+      over: document.documentElement.scrollWidth - innerWidth, secs: document.querySelectorAll('[data-lang="zh"] section').length }));
+    await ph.tap('[data-testid="lang-toggle"]');
+    await ph.goto(new URL('index.html', BASE_URL).href);
+    await ph.goto(new URL('help.html#sources', BASE_URL).href, { waitUntil: 'load' });
+    await ph.waitForSelector('body[data-ready="1"]');
+    await ph.waitForTimeout(300);
+    const en = await ph.evaluate(() => ({ lang: document.documentElement.lang, top: Math.round(document.getElementById('en-sources').getBoundingClientRect().top),
+      secs: document.querySelectorAll('[data-lang="en"] section').length }));
+    await ctx.close();
+    assert(foot.help === 'help.html' && foot.more === 'help.html#sources', `footer ${JSON.stringify(foot)}`);
+    assert(!toc.length, `contents links without a section: ${toc}`);
+    assert(zh.zh && !zh.en && zh.over <= 1 && zh.secs >= 11, `zh ${JSON.stringify(zh)}`);
+    assert(en.lang === 'en' && en.top >= 0 && en.top < 200 && en.secs === zh.secs, `en ${JSON.stringify(en)}`);
+    assert(!errs.length, errs[0]);
+    return `${zh.secs} sections in both languages, #sources → #en-sources`;
   });
 
   await check('timeline range: 6 months by default, 3/6/12/24 switch the list, choice remembered, ?months= overrides', async () => {

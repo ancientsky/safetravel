@@ -269,6 +269,8 @@ export default {
   nav_slides: 'Health posters',
   nav_slides_title: 'Taiwan CDC health-poster carousel for airport quarantine-station screens',
   foot_slides: 'Airport quarantine health-poster carousel',
+  foot_quick: 'Quick check (phones)',
+  foot_help: 'Help',
   ts_s: 'S',
   ts_m: 'M',
   ts_l: 'L',

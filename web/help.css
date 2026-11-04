@@ -1,0 +1,56 @@
+/* help.html — layout on top of m.css (tokens, header, badges). Static content in both languages. */
+.zh-only, .en-only { display: inline; }
+:root[lang="en"] .zh-only, :root:not([lang="en"]) .en-only { display: none; }
+.help-page { padding-bottom: 32px; }
+.help { max-width: 860px; margin: 0 auto; padding: 8px 16px 24px; }
+.help h1 { margin: 14px 0 6px; font-size: calc(26px * var(--ts)); line-height: 1.25; }
+.help .lede { margin: 0 0 14px; color: var(--fg-dim); }
+.help section { margin-top: 26px; scroll-margin-top: 70px; }
+.help h2 { margin: 0 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--border); font-size: calc(20px * var(--ts)); }
+.help h3 { margin: 16px 0 6px; font-size: calc(16px * var(--ts)); color: var(--fg-dim); }
+.help p, .help li { line-height: 1.7; }
+.help ul { margin: 6px 0; padding-left: 1.3em; }
+.help li + li { margin-top: 4px; }
+.help code { padding: 1px 5px; border: 1px solid var(--border); border-radius: 5px; background: var(--card-2); font-size: .88em; word-break: break-all; }
+.help kbd { padding: 0 6px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 5px; font: inherit; font-size: .88em; }
+.help .note { padding: 10px 12px; border-left: 4px solid var(--accent); border-radius: 6px; background: var(--card); color: var(--fg-dim); font-size: .94em; }
+.help .foot-note { margin-top: 30px; font-size: .85em; color: var(--fg-mute); }
+
+/* table of contents: wrapping chips */
+.toc { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.toc a { padding: 4px 10px; border: 1px solid var(--border-strong); border-radius: 999px; color: var(--fg); text-decoration: none; font-size: .9em; font-weight: 600; }
+.toc a:hover, .toc a:focus-visible { border-color: var(--accent); color: var(--accent); }
+
+/* page cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.card-link { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--card);
+  color: var(--fg); text-decoration: none; box-shadow: var(--shadow); }
+.card-link:hover, .card-link:focus-visible { border-color: var(--accent); }
+.card-link b { font-size: calc(16px * var(--ts)); color: var(--accent); }
+:root[data-theme="light"] .card-link b { color: var(--link); }
+.card-link span { font-size: .92em; color: var(--fg-dim); line-height: 1.55; }
+
+/* tables scroll sideways on phones instead of squeezing */
+.help table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; font-size: .94em; }
+.help th, .help td { padding: 8px 10px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+.help th { background: var(--card-2); white-space: nowrap; }
+.help td { background: var(--card); }
+.help table.params td:first-child { white-space: nowrap; }
+
+.lv { list-style: none; padding: 0 !important; }
+.lv li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.help details { margin-top: 8px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.help summary { cursor: pointer; font-weight: 700; }
+.help details p { margin: 8px 0 0; color: var(--fg-dim); }
+@media print { .toc, .m-head { display: none; } .help main[hidden] { display: none; } }
+/* phones: each table row becomes a small card; js/help.js copies the column headings into data-label */
+@media (max-width: 600px) {
+  .help table, .help thead, .help tbody, .help tr, .help th, .help td { display: block; width: auto; }
+  .help table { overflow: visible; }
+  .help thead { display: none; }
+  .help tr { margin-bottom: 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); overflow: hidden; }
+  .help td { border: 0; border-top: 1px dashed var(--border); }
+  .help td:first-child { border-top: 0; font-weight: 700; background: var(--card-2); }
+  .help td[data-label]:not(:first-child)::before { content: attr(data-label); display: block; font-size: .8em; color: var(--fg-mute); }
+  .help table.params td:first-child { white-space: normal; }
+}

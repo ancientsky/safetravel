@@ -866,6 +866,14 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 :root[data-theme="light"] .foot { background: linear-gradient(to top, rgba(253, 248, 225, .96), rgba(253, 248, 225, .6)); }
 .foot p { margin: 0; }
 .foot-sep { color: var(--fg-mute); margin: 0 2px 0 4px; }
+/* sources: one short line of names (each link's title says what it provides; details on help.html#sources) */
+.foot-src { font-size: calc(10px * var(--ts)); line-height: 1.5; }
+.foot-k { margin-right: 6px; font-family: var(--mono); letter-spacing: .08em; color: var(--fg-mute); }
+.foot-dot { margin: 0 5px; color: var(--fg-mute); opacity: .7; }
+.foot-src a { color: var(--fg-mute); text-decoration: none; border-bottom: 1px dotted var(--border-strong); }
+.foot-src a:hover, .foot-src a:focus-visible { color: var(--fg); }
+.foot a.foot-more { margin-left: 10px; color: var(--cyan); border: 0; white-space: nowrap; }
+.foot a.foot-help { margin-left: 6px; color: var(--accent); font-weight: 600; }
 .foot a { color: var(--fg-dim); }
 .foot-disclaimer { text-align: right; max-width: 50%; }
 .noscript { position: fixed; inset: 40% 10% auto; text-align: center; font-size: calc(16px * var(--ts)); }
@@ -1841,7 +1849,9 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
   .arrivals, .arrivals[data-mode] { background: var(--bg); } /* opaque over the map and footer */
 }
 /* narrow desktops: the poster link (also in the footer and the arrivals board) leaves the header so the title fits */
-@media (max-width: 1365px) and (min-width: 761px) and (orientation: landscape) { .hud .toggles > .slides-link { display: none; } }
+/* narrow desktops (<1366 px): the freshness pill shrinks to its status dot (text in its title) so the header keeps
+   every button, the quick-check and poster links included, and the title still fits at 1181-1280 px */
+@media (max-width: 1365px) and (min-width: 761px) { .freshness { min-width: 0; padding: 5px 7px; } .freshness span { display: none; } }
 /* below 1800 px (2000 px in English) the quick-check and poster links show icons only, so the title row fits */
 @media (max-width: 1799px) { .m-link span[data-i18n], .slides-link span[data-i18n] { display: none; } }
 :root[lang="en"] .m-link span[data-i18n] { display: none; } /* English labels are longer: icon only (title says what it is) */
@@ -1849,3 +1859,8 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
 .arr-kicker { white-space: nowrap; max-width: 100%; overflow: hidden; }
 .brand-text { min-width: 0; }
 .brand-kicker { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* decorative line: never wraps the header */
+.foot a { white-space: nowrap; } /* never break inside an organisation's or a page's name */
+@media (max-width: 760px) {
+  .foot-src { font-size: calc(9.5px * var(--ts)); }
+  .foot a.foot-more { display: none; } /* "使用說明" right below leads to the same details */
+}

@@ -230,6 +230,7 @@
         <li><a class="pm-item" href="trip.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="7.5" width="14" height="11.5" rx="2"/><path d="M9 7.5V5.5h6v2M9 12h6M9 15h4"/></svg><span class="pm-text"><b data-i18n="menu_trip"></b><small data-i18n="menu_trip_d"></small></span><span class="pm-go" aria-hidden="true">›</span></a></li>
         <li><a class="pm-item" href="arrivals.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.5h18"/><path d="M4.2 8.6l1.7-.4 2.6 2.7 3.9-1-3-5.6 2.1-.5 5 5 3.4-.9a1.5 1.5 0 0 1 .8 2.9L7.9 14.5a1.9 1.9 0 0 1-2-.8z"/></svg><span class="pm-text"><b data-i18n="menu_arr_page"></b><small data-i18n="menu_arr_page_d"></small></span><span class="pm-go" aria-hidden="true">›</span></a></li>
         <li><a class="pm-item" href="slide.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="12" rx="1.5"/><path d="M12 15.5v4M8.5 20.5h7M7.5 8h9M7.5 11h5.5"/></svg><span class="pm-text"><b data-i18n="menu_slides"></b><small data-i18n="menu_slides_d"></small></span><span class="pm-go" aria-hidden="true">›</span></a></li>
+        <li><a class="pm-item" href="help.html" data-testid="menu-help"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.6M12 16.8v.2"/></svg><span class="pm-text"><b data-i18n="menu_help"></b><small data-i18n="menu_help_d"></small></span><span class="pm-go" aria-hidden="true">›</span></a></li>
       </ul>
       <h3 class="pm-sec" data-i18n="menu_here">這個地圖頁</h3>
       <ul class="pm-list">
@@ -326,18 +327,13 @@
   </div>
 
   <footer class="foot">
-    <p>
-      <span data-i18n="footer_sources">資料來源：衛福部疾管署「國際旅遊疫情建議等級」與「國際重要疫情資訊」；桃園國際機場航班資訊。</span>
-      <a href="https://www.cdc.gov.tw/" target="_blank" rel="noopener noreferrer" data-i18n="footer_cdc">疾管署</a> ·
-      <a href="https://www.taoyuan-airport.com/" target="_blank" rel="noopener noreferrer" data-i18n="footer_airport">桃園機場</a>
-      <span class="foot-sep" aria-hidden="true">｜</span><span data-i18n="footer_arrivals">入境航班資訊：</span><a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener noreferrer" data-i18n="footer_tdx">交通部 TDX</a>
-      <span class="foot-sep" aria-hidden="true">｜</span><span data-i18n="footer_watch">疫區航線：</span><a href="https://www.flightconnections.com/" target="_blank" rel="noopener noreferrer">FlightConnections</a>
-      <span class="foot-sep" aria-hidden="true">｜</span><span data-i18n="footer_warnings">旅遊警示：</span><a href="https://www.boca.gov.tw/sp-trwa-list-1.html" target="_blank" rel="noopener noreferrer" data-i18n="footer_boca">外交部領事事務局</a> ·
-      <a href="https://www.mac.gov.tw/News.aspx?n=E0243AD02975213D&amp;sms=EF1DC35EB9749B36" target="_blank" rel="noopener noreferrer" data-i18n="footer_mac">陸委會</a>
-      <span class="foot-sep" aria-hidden="true">｜</span><a href="slide.html" data-testid="footer-slides-link" data-i18n="footer_slides">衛教海報輪播</a>
-      <span class="foot-sep" aria-hidden="true">｜</span><span class="foot-nw"><span data-i18n="footer_weather">天氣：</span><a href="https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007" target="_blank" rel="noopener noreferrer" data-i18n="footer_cwa" data-i18n-attr="title:footer_cwa_title">中央氣象署</a></span>
+    <p class="foot-src">
+      <span class="foot-k" data-i18n="footer_src_k">資料來源</span>
+      <a href="https://www.cdc.gov.tw/" target="_blank" rel="noopener noreferrer" data-i18n="footer_cdc" data-i18n-attr="title:footer_cdc_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://www.taoyuan-airport.com/" target="_blank" rel="noopener noreferrer" data-i18n="footer_airport" data-i18n-attr="title:footer_airport_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener noreferrer" data-i18n="footer_tdx" data-i18n-attr="title:footer_tdx_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://www.boca.gov.tw/sp-trwa-list-1.html" target="_blank" rel="noopener noreferrer" data-i18n="footer_boca" data-i18n-attr="title:footer_boca_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://www.mac.gov.tw/News.aspx?n=E0243AD02975213D&amp;sms=EF1DC35EB9749B36" target="_blank" rel="noopener noreferrer" data-i18n="footer_mac" data-i18n-attr="title:footer_mac_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007" target="_blank" rel="noopener noreferrer" class="foot-cwa" data-i18n="footer_cwa" data-i18n-attr="title:footer_cwa_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://www.flightconnections.com/" target="_blank" rel="noopener noreferrer" data-i18n="footer_fc" data-i18n-attr="title:footer_fc_title"></a>
+      <a class="foot-more" href="help.html#sources" data-i18n="footer_more">各單位提供哪些資料 ›</a>
     </p>
-    <p class="foot-disclaimer" data-i18n="footer_disclaimer">非官方資訊整理，AI 翻譯與摘要可能有誤，出國前請以疾管署最新公告為準。</p>
+    <p class="foot-disclaimer"><span data-i18n="footer_disclaimer">非官方資訊整理，AI 翻譯與摘要可能有誤，出國前請以疾管署最新公告為準。</span>
+      <a class="foot-help" href="help.html" data-testid="footer-help-link" data-i18n="footer_help">使用說明</a><span class="foot-dot" aria-hidden="true">·</span><a href="slide.html" data-testid="footer-slides-link" data-i18n="footer_slides">衛教海報輪播</a></p>
   </footer>
 
   <div id="toasts" class="toasts" aria-live="assertive"></div>

@@ -12,6 +12,7 @@ Read `docs/ARCHITECTURE.md` and `docs/DATA_CONTRACT.md` before changing anything
 - Never read CSVs with pandas defaults: `keep_default_na=False` (Namibia = `NA`). Normalize text with NFKC.
 - Pipeline must be idempotent and work with **no** `GEMINI_API_KEY` (degraded, `ai:false`).
 - Do not put model identifiers or AI attribution in code comments or commit messages beyond the standard trailer.
+- **User help page**: `web/help.html` (使用說明, zh + en blocks, static HTML) explains every page and feature to staff and travellers. Whenever a user-visible feature, page, URL parameter, level wording or data source is added or changed, update `help.html` (both languages) in the same commit as README / docs.
 
 ## Commands
 

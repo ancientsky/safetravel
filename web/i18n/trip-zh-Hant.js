@@ -269,6 +269,8 @@ export default {
   nav_slides: '衛教海報輪播',
   nav_slides_title: '機場檢疫站螢幕用的疾管署衛教海報輪播',
   foot_slides: '機場檢疫站衛教海報輪播',
+  foot_quick: '旅遊疫情快查（手機版）',
+  foot_help: '使用說明',
   ts_s: '小',
   ts_m: '標準',
   ts_l: '大',
