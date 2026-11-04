@@ -1263,6 +1263,12 @@ body.arr-open .flights-canvas { opacity: .35; }
 @media (max-width: 1599px) { /* a left-docked board + legend leave no room for the route box beside the spotlight */
   body.arr-dock-left .flight-hud { display: none; }
 }
+/* portrait wall screens (1080x1920): the spotlight card spans most of the width, so the route box sits on top of the
+   legend in the left column instead of beside it */
+@media (orientation: portrait) and (min-width: 761px) {
+  .flight-hud { left: var(--gutter); bottom: calc(var(--foot-h) + 22px + var(--legend-h, 360px)); width: var(--legend-w); min-width: 0; }
+  .fh-stats { grid-template-columns: repeat(4, auto); }
+}
 /* in the map page's board the poster / full-screen links are icons (their title says what they are) */
 .arrivals:not(.is-standalone):not(.is-big) .arr-slides span, .arrivals:not(.is-standalone):not(.is-big) .arr-page span { display: none; }
 @media (max-width: 760px) {
@@ -1789,3 +1795,13 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
   .board-h1 { font-size: calc(16px * var(--ts)); }
   .board-head .brand-kicker { display: none; }
 }
+
+/* phones: one-time suggestion of the quick-check page (m.html), overlaid above the footer */
+.m-promo {
+  position: fixed; z-index: 30; left: var(--gutter); right: var(--gutter); bottom: calc(var(--foot-h) + 8px);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; font-size: calc(13px * var(--ts));
+  background: var(--bg); border-color: var(--accent);
+}
+.m-promo span { flex: 1 1 100%; }
+.m-promo-go { padding: 6px 14px; border-radius: 999px; background: var(--accent); color: var(--bg); font-weight: 700; text-decoration: none; }
+.m-promo-no { padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 999px; background: none; color: var(--fg-dim); font: inherit; cursor: pointer; }

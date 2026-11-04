@@ -123,6 +123,18 @@ not poll; `?refreshEvery=<s>` shortens the poll for tests.
   overridden by `?wx=1` / `?wx=0`. Markers are HTML buttons in their own layer (above the map, flights canvas and route watch,
   below the HUD), placed in screen pixels on every zoom/pan frame and kept clear of the HUD cards.
 
+## Quick check (`m.html`, personal / phone version)
+
+Search-first page without the map, for staff's and travellers' own devices: `m.html` (CSP without inline scripts) +
+`js/m-boot.js` (theme follows the device unless chosen here: `safetravel.m.theme`; language) + `js/m.js` + `m.css`
+(self-contained tokens, light + dark). Role in `localStorage` `safetravel.role` (`?role=officer|public`): officers get the
+arrivals tab, flight-number search and flights from the country on its card (arrivals.json, polled every minute while
+visible); travellers get popular destinations and the MOFA warning summary. Hash routes: `#/c/<ISO>` (card),
+`#/flights`, `#/news`. Loads alerts.json + countries.json at start; warnings.json, `epidemics-recent.json` (last 60 days,
+docs/DATA_CONTRACT.md), arrivals.json and the place index only when a view needs them. Reuses `state.js`, `i18n.js`
+(strings `m_*`), `places.js`, `textsize.js`, `autoreload.js` and `bestTime` / `flightKey` from `arrivals.js`. The map page
+offers it once on phones (`safetravel.mpromo`).
+
 ## Standalone arrivals board (`arrivals.html`)
 
 The inbound board without the map, for counter tablets and screens: `arrivals.html` (CSP without inline scripts) +

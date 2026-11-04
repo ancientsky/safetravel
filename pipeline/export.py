@@ -259,6 +259,23 @@ def split_epidemics(full: dict) -> tuple[dict, dict[str, dict]]:
     return index, dict(sorted(details.items()))
 
 
+RECENT_DAYS = 60
+
+
+def recent_epidemics(index: dict, days: int = RECENT_DAYS) -> dict:
+    """epidemics-recent.json: the epidemics.json items of the last `days` days (same item shape), newest first.
+
+    For the phone page's news list (m.html), which should not download the two-year index (~300 KB gzip).
+    The cut-off counts back from the run date (generated_at), so a re-export on the same day writes the same list.
+    """
+    today = date.fromisoformat(str(index["generated_at"])[:10])
+    cutoff = date.fromordinal(today.toordinal() - days).isoformat()
+    items = sorted((it for it in index["items"] if str(it.get("date", "")) >= cutoff),
+                   key=lambda it: (it.get("date", ""), it.get("id", "")), reverse=True)
+    return {"generated_at": index["generated_at"], "days": days, "since": cutoff,
+            "details_dir": index["details_dir"], "items": items}
+
+
 def write_epidemic_details(out_dir: Path, details: dict[str, dict]) -> None:
     """Write <out_dir>/epidemics/<KEY>.json and delete *.json files from earlier runs that were not rewritten."""
     d = Path(out_dir) / DETAILS_DIR.rstrip("/")
@@ -354,6 +371,7 @@ def export_all(conn, out_dir=None) -> dict:
 
     C.write_json(out_dir / "alerts.json", alerts)
     C.write_json(out_dir / "epidemics.json", epid)
+    C.write_json(out_dir / "epidemics-recent.json", recent_epidemics(epid))
     write_epidemic_details(out_dir, epid_details)
     if flights is not None:
         C.write_json(out_dir / "flights.json", flights)

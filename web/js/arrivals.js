@@ -48,6 +48,10 @@ function fromUrl(standalone) {
   };
 }
 
+/** Canonical flight key: upper-case letters and digits only, leading zeros of the number dropped (CI0006 = CI 6). */
+export const flightKey = (s) => String(s || '').normalize('NFKC').toUpperCase().replace(/[^0-9A-Z]/g, '')
+  .replace(/^([A-Z][A-Z0-9]|[0-9][A-Z])0+(?=\d)/, '$1');
+
 export const bestTime = (f) => ts(f.status === 'cancelled' ? f.scheduled : (f.actual || f.estimated || f.scheduled));
 
 /**
@@ -221,9 +225,6 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
   }
 
   // ---------------------------------------------------------------- flight search ("JK202", "jk-202", "JK 0202", "NRT", "東京", "名古屋")
-  // Canonical flight key: upper-case letters and digits only, leading zeros of the number dropped (CI0006 = CI 6).
-  const flightKey = (s) => String(s || '').normalize('NFKC').toUpperCase().replace(/[^0-9A-Z]/g, '')
-    .replace(/^([A-Z][A-Z0-9]|[0-9][A-Z])0+(?=\d)/, '$1');
   const placeKey = (s) => String(s || '').normalize('NFKC').toLowerCase().replace(/[\s\-_.]+/g, '');
   let query = '';
   function matchesQuery(f) {

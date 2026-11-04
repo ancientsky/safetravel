@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>旅遊疫情快查 · SafeTravel TW</title>
+  <meta name="description" content="手機快查：國家、城市、機場或航班號，一次看疾管署旅遊疫情建議、外交部旅遊警示、近期疫情與入境航班。Travel health quick check for phones.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <!-- theme / language before first paint: external file, so the CSP needs no hash -->
+  <script src="js/m-boot.js"></script>
+  <script src="js/textsize-boot.js"></script>
+  <link rel="stylesheet" href="m.css">
+  <script type="module" src="js/m.js"></script>
+  <script type="module" src="js/osk.js"></script>
+</head>
+<body>
+  <header class="m-head">
+    <a class="m-brand" href="m.html" data-i18n-attr="title:m_home_title">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12.5"/><path d="M16 16 L25 10"/><circle class="core" cx="16" cy="16" r="2.6"/></svg>
+      <b data-i18n="m_title">旅遊疫情快查</b>
+    </a>
+    <div class="m-tools">
+      <button type="button" class="m-btn m-role" data-testid="role-toggle" aria-haspopup="dialog"><span class="role-name"></span><span class="caret" aria-hidden="true">▾</span></button>
+      <button type="button" class="m-btn" data-testid="lang-toggle"><span data-i18n="lang_toggle">EN</span><span class="sr-only" data-i18n="lang_toggle_sr"> — 切換語言為英文</span></button>
+      <button type="button" class="m-btn ts-toggle m-hide-sm" data-testid="textsize-toggle"><span aria-hidden="true">A<small>A</small></span><span class="ts-val sr-only">標準</span></button>
+      <button type="button" class="m-btn" data-testid="theme-toggle">
+        <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>
+        <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="m-search" role="search">
+    <div class="m-search-box">
+      <label class="sr-only" for="m-q" data-i18n="m_search_label">搜尋</label>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <input id="m-q" type="search" autocomplete="off" spellcheck="false" enterkeyhint="search" data-testid="search"
+             role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="m-results">
+      <ul id="m-results" class="m-results" role="listbox" hidden></ul>
+    </div>
+  </div>
+
+  <main id="m-main" class="m-main" tabindex="-1">
+    <section id="view-home" data-view="home" aria-live="polite"></section>
+    <section id="view-card" data-view="card" hidden></section>
+    <section id="view-flights" data-view="flights" hidden></section>
+    <section id="view-news" data-view="news" hidden></section>
+  </main>
+
+  <footer class="m-foot">
+    <span data-i18n="m_foot">資料來源：衛福部疾管署、外交部領事事務局、陸委會、交通部 TDX。非官方資訊整理，AI 翻譯與摘要可能有誤，出國前請以疾管署最新公告為準。</span>
+    <a href="./" data-i18n="m_full_map">完整地圖版</a> · <a href="trip.html" data-i18n="trip_link">出國查詢</a>
+  </footer>
+
+  <nav class="m-tabs" role="tablist" data-i18n-attr="aria-label:m_tabs_label">
+    <button type="button" class="m-tab" role="tab" data-tab="home" data-testid="tab-home">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><span data-i18n="m_tab_home">查詢</span>
+    </button>
+    <button type="button" class="m-tab" role="tab" data-tab="flights" data-testid="tab-flights">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.5h18"/><path d="M4.2 8.6l1.7-.4 2.6 2.7 3.9-1-3-5.6 2.1-.5 5 5 3.4-.9a1.5 1.5 0 0 1 .8 2.9L7.9 14.5a1.9 1.9 0 0 1-2-.8z"/></svg><span data-i18n="m_tab_flights">入境航班</span>
+    </button>
+    <button type="button" class="m-tab" role="tab" data-tab="news" data-testid="tab-news">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4.5" width="16" height="15" rx="2"/><path d="M8 9h8M8 12.5h8M8 16h5"/></svg><span data-i18n="m_tab_news">疫情快訊</span>
+    </button>
+    <a class="m-tab" href="./" data-testid="tab-map">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5 9 4.5l6 2 5.5-2v13l-5.5 2-6-2-5.5 2z"/><path d="M9 4.5v13M15 6.5v13"/></svg><span data-i18n="m_tab_map">地圖</span>
+    </a>
+  </nav>
+
+  <div id="role-dialog" class="m-dialog" role="dialog" aria-modal="true" aria-labelledby="role-title" hidden>
+    <div class="m-dialog-card">
+      <h2 id="role-title" data-i18n="m_role_title">您是哪一種使用者？</h2>
+      <p data-i18n="m_role_lede">畫面會依身分調整，隨時可在右上角切換。</p>
+      <button type="button" class="role-opt" data-role="officer" data-testid="role-officer"><b data-i18n="m_role_officer">檢疫同仁</b><span data-i18n="m_role_officer_d">入境航班、出發地疫情等級與重點疾病</span></button>
+      <button type="button" class="role-opt" data-role="public" data-testid="role-public"><b data-i18n="m_role_public">一般民眾</b><span data-i18n="m_role_public_d">出國前查目的地的疫情建議、旅遊警示與近期疫情</span></button>
+    </div>
+  </div>
+</body>
+</html>

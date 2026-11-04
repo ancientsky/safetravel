@@ -578,6 +578,27 @@ def check_warnings(v: V, w):
                     v.err(f"warnings.json.changes.{k}[{j}]", "bad change entry")
 
 
+def check_epidemics_recent(v: V, doc, epid) -> None:
+    """epidemics-recent.json: a recent slice of epidemics.json (same items, dates on or after `since`)."""
+    w = "epidemics-recent.json"
+    if not v.keys(w, doc, ["generated_at", "days", "since", "details_dir", "items"]):
+        return
+    v.pat(w, doc["since"], DATE, "since")
+    if not isinstance(doc["items"], list):
+        v.err(w, "items must be a list")
+        return
+    full = {it.get("id"): it for it in (epid or {}).get("items", []) if isinstance(it, dict)} if isinstance(epid, dict) else {}
+    for i, it in enumerate(doc["items"]):
+        iw = f"{w}.items[{i}]"
+        if not isinstance(it, dict):
+            v.err(iw, "expected object")
+            continue
+        if full and full.get(it.get("id")) != it:
+            v.err(iw, f"id {str(it.get('id'))[:24]!r} differs from (or is missing in) epidemics.json")
+        if str(it.get("date", "")) < str(doc["since"]):
+            v.err(iw, f"date {it.get('date')!r} is before since {doc['since']!r}")
+
+
 def check_places(v: V, doc) -> None:
     """web/data/places.json: [{code: IATA or "", iso, zh, en, alias?: [names]}] for the search boxes."""
     w = "places.json"
@@ -633,6 +654,12 @@ def validate_dir(d: Path) -> list[str]:
             check_weather(v, json.loads(ww.read_text(encoding="utf-8")))
         except json.JSONDecodeError as e:
             v.err("weather.json", f"cannot parse: {e}")
+    er = d / "epidemics-recent.json"
+    if er.exists():
+        try:
+            check_epidemics_recent(v, json.loads(er.read_text(encoding="utf-8")), data.get("epidemics"))
+        except ValueError as e:
+            v.err("epidemics-recent.json", f"cannot parse: {e}")
     pl = d / "places.json"
     if pl.exists():
         try:

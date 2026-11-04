@@ -116,6 +116,18 @@ Rules:
 - `zh`/`en` are strings; `en` falls back to the zh text when Gemini is unavailable.
 - The exporter rewrites the directory every run and deletes any other `*.json` file in it, so countries that drop out of the 2-year window disappear.
 
+
+## `epidemics-recent.json` (phone page news list)
+
+Written by `pipeline/export.py` (`recent_epidemics`) next to `epidemics.json`: the items of the last 60 days, newest first, **the same objects as in `epidemics.json`** (full text still lazy-loaded from `epidemics/<KEY>.json`). Used by `m.html` so a phone does not download the two-year index.
+
+```json
+{ "generated_at": "2026-11-04T12:00:00+08:00", "days": 60, "since": "2026-09-05", "details_dir": "epidemics/",
+  "items": [ { "id": "…", "date": "2026-11-03", "…": "same keys as epidemics.json items" } ] }
+```
+
+- `since` = run date − `days`; every item's `date` ≥ `since`. Checked by `python -m pipeline validate` (`check_epidemics_recent`): each item must equal the `epidemics.json` item with that id.
+
 ## `flights.json`
 
 ```json

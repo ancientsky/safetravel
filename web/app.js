@@ -26,6 +26,7 @@ const THEME_KEY = 'safetravel.theme';
 const FLIGHTS_KEY = 'safetravel.flights';
 const FLIGHT_DIR_KEY = 'safetravel.flightdir'; // 'in' (default) | 'both'
 const LEGEND_KEY = 'safetravel.legend'; // 'min' when collapsed
+const PROMO_KEY = 'safetravel.mpromo'; // 'off' once the phone suggestion of m.html was used or dismissed
 const LAYER_KEY = 'safetravel.layer';
 const WX_KEY = 'safetravel.weather';
 
@@ -251,6 +252,13 @@ async function main() {
   renderFlightHud($('#flight-hud'));
   const layerNode = $('#layer-switch');
   const legendNode = $('#legend');
+  // portrait screens stack the route box on top of the legend: keep --legend-h (its height) current
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(([e]) => {
+      const h = e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height;
+      document.documentElement.style.setProperty('--legend-h', `${Math.ceil(h)}px`);
+    }).observe(legendNode);
+  }
   const onFilter = () => {
     map.applyFilter();
     renderLegend(legendNode);
@@ -411,6 +419,30 @@ async function main() {
         window.__safetravel.spotlight = { next: (iso) => spotlight.next(iso), current: () => spotlight.current() };
       }, 1000);
     }, 1500));
+  }
+
+  // Phones: suggest the quick-check page (m.html) once; "no thanks" is remembered. Overlay, so nothing shifts.
+  if (LITE_MAP && storageGet(PROMO_KEY) !== 'off' && !new URLSearchParams(location.search).has('arr')) {
+    setTimeout(() => {
+      const bar = document.createElement('div');
+      bar.className = 'm-promo glass';
+      bar.setAttribute('role', 'note');
+      bar.dataset.testid = 'm-promo';
+      const txt = document.createElement('span');
+      txt.textContent = t('m_promo');
+      const goLink = document.createElement('a');
+      goLink.className = 'm-promo-go';
+      goLink.href = 'm.html';
+      goLink.textContent = t('m_promo_go');
+      const no = document.createElement('button');
+      no.type = 'button';
+      no.className = 'm-promo-no';
+      no.textContent = t('m_promo_close');
+      no.addEventListener('click', () => { storageSet(PROMO_KEY, 'off'); bar.remove(); });
+      goLink.addEventListener('click', () => storageSet(PROMO_KEY, 'off'));
+      bar.append(txt, goLink, no);
+      document.body.append(bar);
+    }, 2500);
   }
 
   // ---- controls ----

@@ -578,6 +578,51 @@ async function run(browser) {
     return `windows 2/1/3 rows, L2+ filter keeps ${l2}, row → trip.html`;
   });
 
+  await check('m.html quick check: role chooser, traveller search → card, officer flights tab and flight search', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const pm = await ctx.newPage();
+    const errs = [];
+    pm.on('pageerror', (e) => errs.push(e.message));
+    pm.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+    const now = Date.now();
+    const iso = (min) => new Date(now + min * 60000 + 8 * 3600000).toISOString().slice(0, 16) + '+08:00';
+    const doc = {
+      generated_at: iso(0), source: 'tdx', endpoint: 'test', tdx_updated: iso(0), window: { from: iso(-120), to: iso(240) },
+      refresh_minutes: { day: 10, night: 30 }, quota: null,
+      airports: { TPE: { name_zh: '桃園', name_en: 'Taoyuan', lat: 25.08, lon: 121.23, flights: 1, checkpoints: [] } },
+      flights: [{ id: 'x', airport: 'TPE', flight: 'BR 384', airline: 'BR', codeshares: [], from: 'DAD', from_zh: '峴港', from_en: 'Da Nang', country: 'VN',
+        lat: 16, lon: 108, terminal: '2', gate: 'B9', checkpoint: 'B', apron: '', scheduled: iso(20), estimated: iso(20), actual: null,
+        status: 'on_time', status_zh: '準時', status_en: 'ON TIME', aircraft: 'A321' }],
+    };
+    await pm.route('**/data/arrivals.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(doc) }));
+    await pm.goto(new URL('m.html', BASE_URL).href, { waitUntil: 'load' });
+    await pm.waitForSelector('#role-dialog:not([hidden])', { timeout: 10000 });
+    await pm.tap('[data-testid="role-public"]');
+    const pubFlightsHidden = await pm.locator('[data-testid="tab-flights"]').isHidden();
+    await pm.fill('#m-q', '泰國');
+    await pm.waitForSelector('#m-results li[data-iso="TH"]', { timeout: 5000 });
+    await pm.press('#m-q', 'Enter');
+    await pm.waitForSelector('[data-testid="country-card"][data-iso="TH"]', { timeout: 5000 });
+    const card = await pm.locator('[data-testid="country-card"]').textContent();
+    await pm.goto(new URL('m.html?role=officer', BASE_URL).href, { waitUntil: 'load' });
+    await pm.waitForSelector('body[data-ready="1"]', { timeout: 10000 });
+    await pm.tap('[data-testid="tab-flights"]');
+    await pm.waitForSelector('#view-flights .f-row', { timeout: 10000 });
+    await pm.fill('#m-q', 'br384');
+    await pm.waitForSelector('#m-results li[data-fid="x"]', { timeout: 5000 });
+    await pm.tap('#m-results li[data-fid="x"]');
+    await pm.waitForSelector('[data-testid="country-card"][data-iso="VN"] .f-row.is-hit', { timeout: 5000 });
+    const over = await pm.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    const role = await pm.evaluate(() => localStorage.getItem('safetravel.role'));
+    await ctx.close();
+    assert(pubFlightsHidden, 'travellers see the flights tab');
+    assert(/疾管署/.test(card) && /外交部/.test(card), `card text: ${card.slice(0, 80)}`);
+    assert(role === 'officer', `role stored ${role}`);
+    assert(over <= 1, `horizontal overflow ${over}px`);
+    assert(!errs.length, errs[0]);
+    return 'traveller: 泰國 card; officer: flights tab, BR384 → Vietnam card with the flight highlighted';
+  });
+
   await check('timeline range: 6 months by default, 3/6/12/24 switch the list, choice remembered, ?months= overrides', async () => {
     const pr = await context.newPage();
     const errs = [];
