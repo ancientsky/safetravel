@@ -417,8 +417,10 @@ def check_arrivals(v: V, a):
     ids, last = set(), None
     for i, f in enumerate(fl):
         fw = f"{w}.flights[{i}]"
-        if not v.keys(fw, f, req) or any(k not in f for k in req):
+        if not v.keys(fw, f, req, ["carousel"]) or any(k not in f for k in req):
             continue
+        if "carousel" in f and not (isinstance(f["carousel"], str) and re.fullmatch(r"[0-9A-Z-]{0,4}", f["carousel"])):
+            v.err(fw, f"carousel {str(f['carousel'])[:12]!r}: short code like '04' or ''")
         for k in ("id", "airport", "flight", "airline", "from", "from_zh", "from_en", "country", "terminal", "gate",
                   "apron", "status_zh", "status_en", "aircraft"):
             v.typ(fw, f[k], str, k)

@@ -134,6 +134,16 @@ def _best_time(f: dict) -> datetime:
     return datetime.fromisoformat(f["actual"] or f["estimated"] or f["scheduled"])
 
 
+def _carousel(main: dict, rows: list[dict]) -> str:
+    """Baggage-claim carousel ("04", "6"…) from TDX's BaggageClaim; the operating row first, then any codeshare row.
+    TPE assigns it before landing (T1 01-07, T2 01-08). Anything that is not a short code is dropped."""
+    for r in [main, *rows]:
+        c = re.sub(r"\s+", "", _str(r.get("BaggageClaim"))).upper()
+        if c and re.fullmatch(r"[0-9A-Z-]{1,4}", c):
+            return c
+    return ""
+
+
 def _coord(geo: dict, iata: str, key: str) -> float | None:
     v = (geo.get(iata) or {}).get(key)
     return round(float(v), 4) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
@@ -202,6 +212,7 @@ def parse(obj, airports_country: dict | None, tdx_names: dict | None, now: datet
             "country": country_of(org),
             "lat": _coord(geo, org, "lat"), "lon": _coord(geo, org, "lon"),
             "terminal": _str(main.get("Terminal")), "gate": gate, "checkpoint": cp, "apron": _str(main.get("Apron")),
+            "carousel": _carousel(main, rows),
             "scheduled": _fmt(sched), "estimated": _fmt(est), "actual": _fmt(act),
             "status": status, "status_zh": st_zh, "status_en": st_en,
             "aircraft": _str(main.get("AcType")),

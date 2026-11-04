@@ -187,6 +187,8 @@ export default {
   arr_gate: 'Gate',
   arr_gate_tbd: 'TBD',
   arr_gate_tbd_title: 'Gate not assigned or remote stand: any checkpoint of this terminal may handle it',
+  arr_carousel: 'Belt',
+  arr_carousel_title: ({ n }) => `Baggage carousel ${n}`,
   arr_terminal: ({ term }) => `T${term}`,
   arr_count: ({ up, past }) => `${up} arriving · ${past} arrived`,
   arr_risk: ({ n }) => `${n} from L2+ areas`,

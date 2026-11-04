@@ -1145,6 +1145,8 @@ body.arr-open .flights-canvas { opacity: .35; }
 }
 .arr-gate.is-tbd b { color: var(--fg-mute); border-style: dashed; border-color: var(--border-strong); background: transparent; font-size: 1em; }
 .arr-gate > span.mono { font-size: .75em; color: var(--fg-mute); }
+.arr-belt { display: inline-flex; align-items: baseline; gap: 4px; font-size: .75em; color: var(--fg-dim); white-space: nowrap; }
+.arr-belt-n { font-size: 1.25em; font-weight: 700; color: var(--fg); }
 .arr-st { font-size: .74em; font-weight: 600; padding: 0 6px; border-radius: 999px; border: 1px solid var(--border); color: var(--fg-dim); white-space: nowrap; }
 .arr-st.st-arrived { color: var(--accent); border-color: rgba(var(--accent-rgb), .5); }
 .arr-st.st-on_time, .arr-st.st-early { color: var(--cyan); border-color: rgba(var(--cyan-rgb), .5); }

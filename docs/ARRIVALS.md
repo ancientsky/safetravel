@@ -103,7 +103,7 @@ Measured on this repo (Oct 2026): scheduled runs start **4.5–8.5 h late** (`17
       "airport": "TPE",
       "flight": "CI 101", "airline": "CI", "codeshares": ["BR 2101"],
       "from": "NRT", "from_zh": "東京成田", "from_en": "Tokyo Narita", "country": "JP", "lat": 35.7647, "lon": 140.386,
-      "terminal": "1", "gate": "A5", "checkpoint": "A", "apron": "",
+      "terminal": "1", "gate": "A5", "checkpoint": "A", "apron": "", "carousel": "04",
       "scheduled": "2026-10-14T18:05+08:00", "estimated": "2026-10-14T18:21+08:00", "actual": null,
       "status": "delayed", "status_zh": "延遲", "status_en": "DELAY",
       "aircraft": "A350-900"
@@ -124,6 +124,11 @@ Rules:
   with `AcType`, else the lowest flight number; the others go to `codeshares` (sorted). `flight` = `"<AirlineID> <FlightNumber>"`.
 - `gate`: trimmed. `checkpoint`: for TPE, the gate's first letter when it is A–D, else `null` (remote stand / not yet
   assigned — the UI shows it under every checkpoint of its terminal). Other airports: `null` and `checkpoints: []`.
+- `carousel` (optional; files published before it existed lack it): baggage-claim carousel from TDX `BaggageClaim`
+  (operating row first, else a codeshare row), whitespace removed, `[0-9A-Z-]{1,4}` (e.g. `"04"`), else `""`.
+  TPE assigns it before landing for (nearly) every passenger arrival (T1 01–07, T2 01–08); no extra API call.
+  The board shows it under the gate (not for cancelled flights). `www.taoyuan-airport.com`'s own flight API is not
+  used: it sits behind a Cloudflare challenge that blocks GitHub Actions (see ARCHITECTURE.md).
 - Times: TDX local times + `+08:00`; missing → `null`. `scheduled` is always present.
 - `status` ∈ `arrived | on_time | early | delayed | changed | cancelled | other`, from `ArrivalRemarkEn` /
   `ArrivalRemark` (`ARRIV` → arrived, `CANCEL` → cancelled, `DELAY` → delayed, `CHANGE` → changed, `EARLY` → early,

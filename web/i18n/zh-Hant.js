@@ -185,6 +185,8 @@ export default {
   arr_gate: '登機門',
   arr_gate_tbd: '未定',
   arr_gate_tbd_title: '登機門未定或停靠遠端機坪，可能由此航廈任一檢疫站處理',
+  arr_carousel: '轉盤',
+  arr_carousel_title: ({ n }) => `行李轉盤 ${n}`,
   arr_terminal: ({ term }) => `T${term}`,
   arr_count: ({ up, past }) => `即將 ${up} · 已抵達 ${past}`,
   arr_risk: ({ n }) => `來自 L2+ 地區 ${n} 班`,

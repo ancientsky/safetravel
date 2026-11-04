@@ -281,6 +281,8 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     const cs = Array.isArray(f.codeshares) ? f.codeshares : [];
     const dis = diseasesFor(iso);
     const gate = (f.gate || '').trim();
+    // baggage-claim carousel (TDX BaggageClaim, assigned before landing); meaningless for a cancelled flight
+    const belt = st !== 'cancelled' && typeof f.carousel === 'string' && /^[0-9A-Z-]{1,4}$/.test(f.carousel) ? f.carousel : '';
     const statusText = st === 'other' ? ((isEn() ? f.status_en : f.status_zh) || t('arr_status_other')) : t(`arr_status_${st}`);
     const lvlBadge = lvl >= 2 ? badge(lvl, levelShort(lvl), 'badge-sm') : lvl === 1 ? `<span class="arr-l1 mono" title="${esc(levelShort(1))}"><i class="dot lvl-1"></i>L1</span>` : '';
     return `<li class="arr-row lvl-${lvl} st-${st}${f.id === hotId ? ' is-hot' : ''}" data-id="${esc(f.id)}">
@@ -296,6 +298,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
         <span class="arr-gate${gate ? '' : ' is-tbd'}"${gate ? '' : ` title="${esc(t('arr_gate_tbd_title'))}"`}>
           <b class="mono">${esc(gate || t('arr_gate_tbd'))}</b>
           <span class="mono">${f.terminal ? esc(t('arr_terminal', { term: f.terminal })) : ''}${f.checkpoint && cfg.cp === 'ALL' ? ` · ${esc(f.checkpoint)}` : ''}</span>
+          ${belt ? `<span class="arr-belt" title="${esc(t('arr_carousel_title', { n: belt }))}">${esc(t('arr_carousel'))}<span class="arr-belt-n mono">${esc(belt)}</span></span>` : ''}
           <span class="arr-st st-${st}">${esc(statusText)}</span>
         </span>
       </button>

@@ -115,6 +115,40 @@ def one_of(rows):
     return doc["flights"][0]
 
 
+def test_carousel_from_baggage_claim():
+    assert one(row(BaggageClaim="04"))["carousel"] == "04"
+    assert one(row(BaggageClaim=" 7 "))["carousel"] == "7"
+    assert one(row())["carousel"] == ""                       # not assigned yet
+    assert one(row(BaggageClaim="<b>"))["carousel"] == ""     # not a short code: dropped
+    # the operating row has none: a codeshare row of the same flight supplies it
+    f = one_of([row("101", "CI"), row("2101", "BR", ac=None, BaggageClaim="05")])
+    assert f["flight"] == "CI 101" and f["carousel"] == "05"
+
+
+def test_latest_fixture_has_carousels():
+    raw = json.loads(LATEST.read_text(encoding="utf-8"))
+    now = datetime.fromisoformat(raw[0]["UpdateTime"]).astimezone(C.TAIPEI)
+    doc = A.parse(raw, None, {}, now, geo=json.loads((REPO / "web/data/airports.json").read_text(encoding="utf-8")))
+    with_c = [f for f in doc["flights"] if f["carousel"]]
+    assert len(with_c) >= 0.9 * len(doc["flights"])          # TPE assigns a carousel to (nearly) every arrival
+
+
+def test_validator_carousel_optional_and_checked():
+    doc = parse([row(BaggageClaim="03")])
+    v = validate.V()
+    validate.check_arrivals(v, doc)
+    assert v.errors == []
+    old = json.loads(json.dumps(doc))
+    del old["flights"][0]["carousel"]                       # a file published before the field existed
+    v = validate.V()
+    validate.check_arrivals(v, old)
+    assert v.errors == []
+    old["flights"][0]["carousel"] = "<script>"
+    v = validate.V()
+    validate.check_arrivals(v, old)
+    assert any("carousel" in str(e) for e in v.errors)
+
+
 def test_different_time_or_origin_is_not_collapsed():
     doc = parse([row("101", sched="2026-10-14T18:05"), row("103", sched="2026-10-14T19:05"), row("201", org="HKG")])
     assert len(doc["flights"]) == 3
