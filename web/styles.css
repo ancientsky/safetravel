@@ -1169,7 +1169,15 @@ body.arr-open .flights-canvas { opacity: .35; }
 .arr-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 10px 12px; scrollbar-width: thin; }
 .arr-body:focus { outline: none; }
 .arr-summary { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 6px 4px 2px; font-size: .85em; color: var(--fg-dim); }
-.arr-risk { color: var(--lvl2); font-weight: 600; }
+.arr-risk { padding: 1px 10px; border: 1px solid color-mix(in srgb, var(--lvl2) 60%, transparent); border-radius: 999px; background: none;
+  color: var(--lvl2); font: inherit; font-weight: 600; cursor: pointer; }
+.arr-risk:hover, .arr-risk:focus-visible { background: color-mix(in srgb, var(--lvl2) 14%, transparent); outline: none; }
+.arr-risk[aria-pressed="true"] { background: var(--lvl2); color: var(--bg); }
+/* time window: ±30 / ±60 / ±2 h / all */
+.arr-win { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 999px; }
+.arr-wbtn { padding: 2px 9px; border: 0; border-radius: 999px; background: none; color: var(--fg-dim); font: 600 .85em var(--sans); cursor: pointer; white-space: nowrap; }
+.arr-wbtn[aria-pressed="true"] { background: rgba(var(--cyan-rgb), .18); color: var(--fg); }
+.arr-wbtn:focus-visible { outline: 2px solid var(--accent); }
 .arr-empty { margin: 14px 6px; color: var(--fg-mute); font-size: .92em; }
 .arr-sec h3 {
   position: sticky; top: -4px; z-index: 1; display: flex; align-items: baseline; gap: 8px;
@@ -1184,6 +1192,9 @@ body.arr-open .flights-canvas { opacity: .35; }
 .arr-row.lvl-1 { --lc: var(--lvl1); }
 .arr-row.lvl-2 { --lc: var(--lvl2); }
 .arr-row.lvl-3 { --lc: var(--lvl3); }
+/* flights from level 2+ areas stand out: tinted row, thicker level bar */
+.arr-row.lvl-2 .arr-hit, .arr-row.lvl-3 .arr-hit { border-left-width: 6px; background: color-mix(in srgb, var(--lc) 9%, transparent); }
+.arr-row.lvl-3 .arr-hit { background: color-mix(in srgb, var(--lc) 14%, transparent); border-color: color-mix(in srgb, var(--lc) 45%, transparent); }
 .arr-hit {
   width: 100%; display: grid; grid-template-columns: calc(66px * var(--arr-fs)) minmax(0, 1fr) auto; gap: 10px; align-items: start;
   padding: 7px 8px 7px 10px; text-align: left; cursor: pointer;
@@ -1249,9 +1260,11 @@ body.arr-open .flights-canvas { opacity: .35; }
 .arr-hub-dot { fill: var(--cyan); }
 @keyframes arr-hub { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
 
-@media (max-width: 1180px) {
+@media (max-width: 1599px) { /* a left-docked board + legend leave no room for the route box beside the spotlight */
   body.arr-dock-left .flight-hud { display: none; }
 }
+/* in the map page's board the poster / full-screen links are icons (their title says what they are) */
+.arrivals:not(.is-standalone):not(.is-big) .arr-slides span, .arrivals:not(.is-standalone):not(.is-big) .arr-page span { display: none; }
 @media (max-width: 760px) {
   .arr-toggle span[data-i18n], .arr-scroll span { display: none; }
   .arrivals, .arrivals[data-mode] {
@@ -1259,7 +1272,7 @@ body.arr-open .flights-canvas { opacity: .35; }
     border-radius: 16px 16px 0 0; resize: none;
   }
   body.arr-open .spotlight { visibility: hidden; }
-  .arr-hit { grid-template-columns: 58px minmax(0, 1fr) auto; gap: 8px; }
+  .arr-hit { grid-template-columns: calc(58px * var(--arr-fs)) minmax(0, 1fr) auto; gap: 8px; }
 }
 
 /* ---------- outbreak route watch (docs/DATA_CONTRACT.md · watch.json) ---------- */
@@ -1736,7 +1749,7 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
 .foot-nw { white-space: nowrap; }
 
 /* link to the health-poster carousel (slide.html): label only on wide screens, hidden on phones (header is full) */
-.slides-link, .arr-slides { color: var(--fg); text-decoration: none; }
+.slides-link, .arr-slides, .arr-page { color: var(--fg); text-decoration: none; }
 @media (max-width: 1799px) { :root[lang="en"] .slides-link span[data-i18n] { display: none; } } /* longer English header labels */
 @media (max-width: 1599px) {
   .slides-link span[data-i18n] { display: none; }
@@ -1748,3 +1761,31 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
 /* text-size button (js/textsize.js) */
 .ts-a { font-weight: 800; letter-spacing: -.02em; line-height: 1; }
 .ts-a small { font-size: .7em; font-weight: 700; }
+
+/* ---------- arrivals.html: the board on its own page (counter tablets, screens) ---------- */
+.board-page { overflow: hidden; }
+.board-head {
+  position: fixed; z-index: 11; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px var(--gutter); border-bottom: 1px solid var(--border); background: var(--bg);
+}
+.board-brand { display: flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none; }
+.board-brand .brand-text { display: flex; flex-direction: column; min-width: 0; }
+.board-brand .brand-kicker { margin: 0; }
+.board-h1 { font-weight: 700; font-size: calc(20px * var(--ts-hud)); letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.board-page .arrivals.is-standalone {
+  inset: var(--board-top, 64px) 0 0 0; top: var(--board-top, 64px); left: 0; right: 0; bottom: 0; width: auto; height: auto;
+  border-radius: 0; border-left: 0; border-right: 0; border-bottom: 0; background: var(--bg); animation: none; resize: none;
+}
+.arrivals.is-standalone .arr-head { cursor: default; touch-action: auto; }
+.arrivals.is-standalone .arr-page { display: none; }
+/* the page header already says what this is: the board keeps only its window kicker */
+.arrivals.is-standalone #arr-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 1000px) { .board-head .brand-kicker { display: none; } }
+@media (min-width: 1000px) { /* wide screens: two columns of rows */
+  .board-page .arrivals.is-standalone .arr-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
+}
+@media (max-width: 760px) {
+  .board-head .clock, .board-head .map-link span[data-i18n], .board-head .trip-link span[data-i18n] { display: none; }
+  .board-h1 { font-size: calc(16px * var(--ts)); }
+  .board-head .brand-kicker { display: none; }
+}

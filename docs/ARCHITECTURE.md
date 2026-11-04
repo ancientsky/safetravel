@@ -42,7 +42,8 @@ Every deploy (deploy-pages, update-data, arrivals publish) runs `.github/scripts
 artifact; the intranet mirror computes the same hash. The committed file says `"dev"` (local preview never reloads).
 `web/js/autoreload.js` polls it (and, for `trip.html`, `data/meta.json`) every 5 minutes and marks a reload pending;
 the page reloads at a harmless moment: `index.html` via `refresh.js` (spotlight boundary or 60 s; activity defers it by at most 2 min),
-`slide.html` at the next poster change (paused: 60 s idle), `trip.html` after 5 minutes without input. Hidden tabs do
+`slide.html` at the next poster change (paused: 60 s idle), `trip.html` after 5 minutes without input, `arrivals.html`
+after 60 s without input. Hidden tabs do
 not poll; `?refreshEvery=<s>` shortens the poll for tests.
 
 ## Data sources
@@ -121,6 +122,14 @@ not poll; `?refreshEvery=<s>` shortens the poll for tests.
   nothing weather-related is fetched or built. State in `localStorage` `safetravel.weather` (`on`/`off`, default off),
   overridden by `?wx=1` / `?wx=0`. Markers are HTML buttons in their own layer (above the map, flights canvas and route watch,
   below the HUD), placed in screen pixels on every zoom/pan frame and kept clear of the HUD cards.
+
+## Standalone arrivals board (`arrivals.html`)
+
+The inbound board without the map, for counter tablets and screens: `arrivals.html` (CSP without inline scripts) +
+`js/board-boot.js` (theme / language before first paint, same keys as the map page) + `js/board.js` (loads
+alerts.json + countries.json, then `createArrivals({ standalone: true })` from `js/arrivals.js`; rows open
+`trip.html#<ISO>`; `autoreload.js` for new site code). Styles live in `styles.css` (`.board-page`). Details in
+`docs/ARRIVALS.md` (UI).
 
 ## Health-poster carousel (slide.html)
 

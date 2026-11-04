@@ -532,6 +532,52 @@ async function run(browser) {
     return 'all formats find JK 202 (other checkpoint), codeshare and −90 min flights found, Esc restores';
   });
 
+  await check('arrivals.html: full-screen board, time window ±30/±60/all, "only L2+" filter, row opens trip.html', async () => {
+    const now = Date.now();
+    const iso = (min) => new Date(now + min * 60000 + 8 * 3600000).toISOString().slice(0, 16) + '+08:00';
+    const fl = (id, flight, min, country, from) => ({
+      id, airport: 'TPE', flight, airline: flight.slice(0, 2), codeshares: [], from, from_zh: from, from_en: from, country, lat: 20, lon: 110,
+      terminal: '1', gate: 'A5', checkpoint: 'A', apron: '', scheduled: iso(min), estimated: iso(min), actual: null,
+      status: 'on_time', status_zh: '準時', status_en: 'ON TIME', aircraft: 'A321',
+    });
+    const l2 = await page.evaluate(() => Object.entries(window.__safetravel.state.data.alerts.countries).find(([, v]) => v.max_level === 2)?.[0]);
+    const doc = {
+      generated_at: iso(0), source: 'tdx', endpoint: 'test', tdx_updated: iso(0), window: { from: iso(-120), to: iso(240) },
+      refresh_minutes: { day: 10, night: 30 }, quota: null,
+      airports: { TPE: { name_zh: '桃園', name_en: 'Taoyuan', lat: 25.08, lon: 121.23, flights: 3, checkpoints: [{ id: 'A', terminal: '1' }] } },
+      flights: [fl('a', 'CI 101', 10, 'JP', 'NRT'), fl('b', 'BR 384', 45, l2, 'XXA'), fl('c', 'CI 777', -100, 'JP', 'KIX')],
+    };
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 } });
+    const pr = await ctx.newPage();
+    const errs = [];
+    pr.on('pageerror', (e) => errs.push(e.message));
+    pr.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+    await pr.route('**/data/arrivals.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(doc) }));
+    await pr.goto(new URL('arrivals.html', BASE_URL).href, { waitUntil: 'load' });
+    await pr.waitForFunction(() => document.querySelectorAll('#arrivals .arr-row').length > 0, null, { timeout: 15000 });
+    const rows = () => pr.$$eval('#arrivals .arr-row .arr-flight', (ls) => ls.map((l) => l.textContent.trim()).sort());
+    const r60 = await rows();
+    await pr.click('[data-testid="arrivals-window"] [data-win="30"]');
+    const r30 = await rows();
+    await pr.click('[data-testid="arrivals-window"] [data-win="0"]');
+    const rAll = await rows();
+    await pr.click('#arrivals [data-risk]');
+    const rRisk = await rows();
+    const fills = await pr.evaluate(() => { const r = document.querySelector('#arrivals').getBoundingClientRect(); return r.width >= innerWidth - 2 && r.bottom >= innerHeight - 2; });
+    await pr.click('#arrivals .arr-hit[data-iso]');
+    await pr.waitForURL(/trip\.html#/, { timeout: 10000 });
+    const url = pr.url();
+    await ctx.close();
+    assert(r60.join() === 'BR 384,CI 101', `±60: ${r60}`);
+    assert(r30.join() === 'CI 101', `±30: ${r30}`);
+    assert(rAll.join() === 'BR 384,CI 101,CI 777', `all: ${rAll}`);
+    assert(rRisk.join() === 'BR 384', `only L2+: ${rRisk}`);
+    assert(fills, 'the board does not fill the page');
+    assert(url.endsWith(`trip.html#${l2}`), `row opened ${url}`);
+    assert(!errs.length, errs[0]);
+    return `windows 2/1/3 rows, L2+ filter keeps ${l2}, row → trip.html`;
+  });
+
   await check('timeline range: 6 months by default, 3/6/12/24 switch the list, choice remembered, ?months= overrides', async () => {
     const pr = await context.newPage();
     const errs = [];

@@ -146,7 +146,7 @@ fingerprint() {
 # ------------------------------------------------------------------ release: build, check, switch, prune
 check_release() { # check_release <dir>
   local d=$1 f
-  for f in index.html trip.html slide.html app.js styles.css data/meta.json data/epidemics.json data/alerts.json \
+  for f in index.html trip.html slide.html arrivals.html app.js styles.css data/meta.json data/epidemics.json data/alerts.json \
            data/world.json slides/slides.json; do
     [ -s "$d/$f" ] || { warn "release is missing $f"; return 1; }
   done

@@ -1,4 +1,5 @@
-// Inbound flights board for airport quarantine stations: passenger flights arriving within ±60 min at the
+// Inbound flights board for airport quarantine stations: passenger flights arriving within ±60 min (±30 / ±120 /
+// the whole published window on request) at the
 // chosen Taiwan airport / checkpoint, with the origin country's advisory level, plus a map layer of their routes.
 // Data: data/arrivals.json (docs/ARRIVALS.md), published every 10 min (30 min at night) outside git.
 import { state, emit, levelOf, groupAlerts } from './state.js';
@@ -14,7 +15,7 @@ const d3 = window.d3;
 const ON_KEY = 'safetravel.arrivals';
 const CFG_KEY = 'safetravel.arrivals.cfg';
 const POS_KEY = 'safetravel.arrivals.pos';
-const WINDOW_MS = 60 * 60 * 1000;
+const WINDOWS = [30, 60, 120, 0]; // ± minutes around now; 0 = the whole published window (2 h back … 4 h ahead)
 const POLL_MS = 60 * 1000;
 const TICK_MS = 20 * 1000;
 // unattended wall screens: the list glides down at a reading pace, rests at both ends, then starts over
@@ -35,17 +36,24 @@ function readJSON(key) {
   try { return JSON.parse(storageGet(key) || 'null'); } catch { return null; }
 }
 
-/** ?arr=TPE-C (airport + checkpoint), ?arr=KHH, &big=1 */
-function fromUrl() {
+/** ?arr=TPE-C (airport + checkpoint), ?arr=KHH, &big=1, &win=30|60|120|all */
+function fromUrl(standalone) {
   const q = new URLSearchParams(location.search);
   const m = /^([A-Za-z]{3})(?:-([A-Da-d]))?$/.exec(q.get('arr') || '');
-  if (!m) return null;
-  return { airport: m[1].toUpperCase(), cp: m[2] ? m[2].toUpperCase() : 'ALL', big: q.get('big') === '1' ? true : undefined };
+  const w = q.get('win');
+  const win = w === 'all' ? 0 : WINDOWS.includes(Number(w)) && w ? Number(w) : undefined;
+  if (!m) return standalone && (win !== undefined || q.get('big')) ? { win, big: q.get('big') === '1' ? true : undefined } : null;
+  return {
+    airport: m[1].toUpperCase(), cp: m[2] ? m[2].toUpperCase() : 'ALL', big: q.get('big') === '1' ? true : undefined, win,
+  };
 }
 
 export const bestTime = (f) => ts(f.status === 'cancelled' ? f.scheduled : (f.actual || f.estimated || f.scheduled));
 
-export function createArrivals({ root, button, map, openCountry, onLayout }) {
+/**
+ * The board. `standalone` (arrivals.html): always open, fills its page, no map layer / dock / drag / close.
+ */
+export function createArrivals({ root, button, map, openCountry, onLayout, standalone = false }) {
   const head = root.querySelector('.arr-head');
   const selAirport = root.querySelector('.arr-airport');
   const cpsNode = root.querySelector('.arr-cps');
@@ -58,11 +66,13 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
   const btnClose = root.querySelector('.arr-close');
   const swScroll = root.querySelector('.arr-scroll');
 
-  const url = fromUrl();
-  const cfg = { airport: 'TPE', cp: 'ALL', big: false, scroll: true, ...(readJSON(CFG_KEY) || {}) };
+  const winNode = root.querySelector('.arr-win');
+  const url = fromUrl(standalone);
+  const cfg = { airport: 'TPE', cp: 'ALL', big: false, scroll: true, win: 60, risk: false, ...(readJSON(CFG_KEY) || {}) };
+  if (!WINDOWS.includes(cfg.win)) cfg.win = 60;
   if (url) Object.assign(cfg, Object.fromEntries(Object.entries(url).filter(([, v]) => v !== undefined)));
   let positions = readJSON(POS_KEY) || {};
-  let on = url ? true : storageGet(ON_KEY) === 'on';
+  let on = standalone || (url ? true : storageGet(ON_KEY) === 'on');
   let minimized = false;
   let data = null;
   let status = 'idle'; // idle | loading | ready | none | error
@@ -73,7 +83,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
   // ---------------------------------------------------------------- layout
   const mq = (q) => typeof matchMedia === 'function' && matchMedia(q).matches;
   const mode = () => (mq('(max-width: 760px)') ? 'phone' : window.innerHeight > window.innerWidth ? 'portrait' : 'landscape');
-  const floating = () => mode() !== 'phone' && !!positions[mode()];
+  const floating = () => !standalone && mode() !== 'phone' && !!positions[mode()];
 
   function measureTop() {
     const tb = document.querySelector('.toolbar')?.getBoundingClientRect();
@@ -103,7 +113,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
 
   /** Map insets so the world refits around a docked board (null = no board / floating / phone). */
   function insets() {
-    if (!on || minimized || floating()) return null;
+    if (standalone || !on || minimized || floating()) return null;
     const m = mode();
     if (m === 'phone') return null;
     const r = root.getBoundingClientRect();
@@ -233,7 +243,8 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
       // a search looks at every checkpoint and the whole published window (2 h back … 4 h ahead), not just ±60 min
       if (f.airport !== cfg.airport || (searching ? !matchesQuery(f) : !matchesCp(f))) continue;
       const tm = bestTime(f);
-      if (!Number.isFinite(tm) || (!searching && Math.abs(tm - now) > WINDOW_MS)) continue;
+      if (!Number.isFinite(tm) || (!searching && cfg.win && Math.abs(tm - now) > cfg.win * 60000)) continue;
+      if (!searching && cfg.risk && levelOf(f.country) < 2) continue;
       const row = { f, tm };
       if (f.status === 'arrived' || tm < now) past.push(row);
       else up.push(row);
@@ -261,6 +272,16 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
       ? btn('ALL', t('arr_cp_all')) + cps.map((c) => btn(c.id, t('arr_cp_label', { id: c.id, term: c.terminal }), t('arr_cp_aria', { id: c.id, term: c.terminal }))).join('')
       : '';
     cpsNode.hidden = !cps.length;
+    if (winNode) {
+      winNode.innerHTML = WINDOWS.map((w) => `<button type="button" class="arr-wbtn" data-win="${w}" aria-pressed="${cfg.win === w}">${
+        esc(w ? t('arr_win_btn', { n: w }) : t('arr_win_all'))}</button>`).join('');
+    }
+    const kicker = root.querySelector('.arr-kicker [data-i18n="arr_kicker"]');
+    if (kicker) kicker.textContent = cfg.win ? t('arr_kicker_n', { n: cfg.win }) : t('arr_kicker_all');
+    const pageLink = root.querySelector('.arr-page'); // the full-screen page opens on the same airport / checkpoint / window
+    if (pageLink) {
+      pageLink.href = `arrivals.html?arr=${encodeURIComponent(cfg.airport)}${cfg.cp !== 'ALL' ? `-${encodeURIComponent(cfg.cp)}` : ''}&win=${cfg.win || 'all'}`;
+    }
     btnBig.setAttribute('aria-pressed', String(!!cfg.big));
     renderScrollSwitch();
     root.classList.toggle('is-big', !!cfg.big);
@@ -337,21 +358,23 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     }
     const { up, past } = visible(now);
     const risky = [...up, ...past].filter(({ f }) => levelOf(f.country) >= 2).length;
+    const winText = (dir) => (query.trim() ? t(`arr_window_${dir}_search`) : cfg.win ? t(`arr_window_${dir}`, { n: cfg.win }) : t(`arr_window_${dir}_all`));
     const section = (key, win, rows) => `<section class="arr-sec arr-sec-${key}">
-        <h3><span>${esc(t(`arr_${key}`))}</span><small class="mono">${esc(t(`arr_window_${win}`))}</small><b class="mono">${rows.length}</b></h3>
+        <h3><span>${esc(t(`arr_${key}`))}</span><small class="mono">${esc(winText(win))}</small><b class="mono">${rows.length}</b></h3>
         ${rows.length ? `<ol class="arr-list">${rows.map((r) => rowHtml(r, now)).join('')}</ol>` : ''}
       </section>`;
     const empty = !up.length && !past.length;
     const q = query.trim();
     body.innerHTML = `${q ? `<p class="arr-found mono">${esc(t('arr_find_count', { q, n: up.length + past.length }))}</p>` : ''}<p class="arr-summary"><span>${esc(t('arr_count', { up: up.length, past: past.length }))}</span>${
-      risky ? `<span class="arr-risk">${esc(t('arr_risk', { n: risky }))}</span>` : ''}</p>${
-      empty ? `<p class="arr-empty">${esc(q ? t('arr_find_none') : cfg.cp !== 'ALL' ? t('arr_empty_cp') : t('arr_empty'))}</p>` : ''}${
+      risky || cfg.risk ? `<button type="button" class="arr-risk" data-risk aria-pressed="${!!cfg.risk}" title="${esc(t('arr_risk_title'))}">${
+        esc(cfg.risk ? t('arr_risk_on', { n: risky }) : t('arr_risk', { n: risky }))}</button>` : ''}</p>${
+      empty ? `<p class="arr-empty">${esc(q ? t('arr_find_none') : cfg.risk ? t('arr_empty_risk') : cfg.cp !== 'ALL' ? t('arr_empty_cp') : t('arr_empty'))}</p>` : ''}${
       section('upcoming', 'next', up)}${section('arrived', 'past', past)}`;
     layer.update([...up, ...past]);
   }
 
   // ---------------------------------------------------------------- map layer
-  const layer = (() => {
+  const layer = !map ? { update() {}, hot() {}, hide() {} } : (() => {
     const wrap = document.createElement('div');
     wrap.className = 'arr-layer';
     wrap.setAttribute('aria-hidden', 'true');
@@ -465,7 +488,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
   const saveCfg = () => storageSet(CFG_KEY, JSON.stringify(cfg));
 
   button?.addEventListener('click', () => setOn(!on));
-  btnClose.addEventListener('click', () => { setOn(false); button?.focus(); });
+  btnClose?.addEventListener('click', () => { setOn(false); button?.focus(); });
   btnBig.addEventListener('click', () => { cfg.big = !cfg.big; saveCfg(); render(); });
   // other names of the origin airports (js/places.js): loaded the first time the search is used, never at page load
   let placesAsked = false;
@@ -484,7 +507,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
   });
   qInput?.addEventListener('keydown', (e) => { if (e.key === 'Escape' && qInput.value) { e.stopPropagation(); qInput.value = ''; query = ''; render(); } });
   swScroll?.addEventListener('click', () => { cfg.scroll = !cfg.scroll; saveCfg(); renderScrollSwitch(); glide.holdUntil = 0; });
-  btnMin.addEventListener('click', () => {
+  btnMin?.addEventListener('click', () => {
     minimized = !minimized;
     root.classList.toggle('is-min', minimized);
     btnMin.setAttribute('aria-expanded', String(!minimized));
@@ -494,7 +517,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     applyLayout();
     onLayout?.();
   });
-  btnDock.addEventListener('click', () => {
+  btnDock?.addEventListener('click', () => {
     delete positions[mode()];
     storageSet(POS_KEY, JSON.stringify(positions));
     applyLayout();
@@ -511,8 +534,25 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     toTop();
   });
   body.addEventListener('click', (e) => {
+    if (e.target.closest('[data-risk]')) {
+      cfg.risk = !cfg.risk;
+      saveCfg();
+      render();
+      toTop();
+      body.querySelector('[data-risk]')?.focus();
+      return;
+    }
     const b = e.target.closest('.arr-hit[data-iso]');
     if (b) openCountry(b.dataset.iso);
+  });
+  winNode?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-win]');
+    if (!b) return;
+    cfg.win = Number(b.dataset.win);
+    saveCfg();
+    render();
+    toTop();
+    winNode.querySelector(`[data-win="${cfg.win}"]`)?.focus();
   });
   const setHot = (id) => {
     if (id === hotId) return;
@@ -527,7 +567,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
 
   // drag the title bar to float the board (position remembered per orientation)
   head.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 || mode() === 'phone' || e.target.closest('button, select, a')) return;
+    if (standalone || e.button !== 0 || mode() === 'phone' || e.target.closest('button, select, a')) return;
     const r = root.getBoundingClientRect();
     const dx = e.clientX - r.left;
     const dy = e.clientY - r.top;
@@ -574,7 +614,8 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
 
   function init() {
     root.classList.toggle('no-motion', reducedMotion());
-    if (on) setOn(true, { persist: !url });
+    if (standalone) root.classList.add('is-standalone');
+    if (on) setOn(true, { persist: !url && !standalone });
     else button?.setAttribute('aria-pressed', 'false');
   }
 

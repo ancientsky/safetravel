@@ -145,6 +145,12 @@ Rules:
 
 ## UI
 
+Time window (`cfg.win`, remembered; `&win=30|60|120|all`): ±30, ±60 (default) or ±120 minutes around now, or the
+whole file window (−2 h … +4 h). Flights from level 2+ areas get a tinted row and a thicker level bar; the summary's
+"from L2+ areas · show only these" button filters to them (`cfg.risk`). `arrivals.html` runs the same board standalone
+(`createArrivals({ standalone: true })`, js/board.js): full page, no map layer / dock / drag / close, two columns of
+rows from 1000 px, rows open `trip.html#<ISO>`; it loads only alerts.json and countries.json besides arrivals.json.
+
 - **Toggle:** header button `arrivals-toggle` (plane-landing icon, 「入境航班 / Arrivals」), `aria-pressed`,
   persisted in `localStorage['safetravel.arrivals']`; **default off**.
 - **Station deep link** (bookmark per checkpoint / wall screen): `?arr=TPE-C` opens the board for TPE checkpoint C,
