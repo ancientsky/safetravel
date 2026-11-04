@@ -164,15 +164,17 @@ Written by `pipeline/places.py` during `export_all` (and re-exported idempotentl
 
 ```json
 { "version": 1, "generated_at": "2026-11-04T12:00:00+08:00",
-  "places": [ { "code": "NRT", "iso": "JP", "zh": "東京成田", "en": "Tokyo-Narita" },
+  "places": [ { "code": "NGO", "iso": "JP", "zh": "中部", "en": "Chubu Centrair Intl",
+                "alias": ["名古屋", "中部國際", "セントレア", "Centrair", "Nagoya"] },
               { "code": "", "iso": "TH", "zh": "曼谷", "en": "Bangkok" } ] }
 ```
 
 - `code`: IATA airport code, or `""` for a city without one. `iso`: country (alpha-2) the search opens. `zh`: never empty. `en`: may be `""`.
 - Airports with a Chinese name, from (first that applies) the TDX airport list (`airports_tdx`), `pipeline/airport_zh.json`, the TPE routes (`flights.json` `city_zh`) and the outbreak route watch (`watch.json`). A name that is just a country's name (TDX calls OVB Novosibirsk "俄羅斯") gives way to another source when there is one; single-airport places keep it (HKG 香港).
+- `alias` (optional, airports only): other names the airport answers to in search — the Chinese names of the sources above that lost to `zh` (not a country's name), then the hand-kept list `pipeline/airport_alias.json` (city, nickname, local spelling: NGO → 名古屋, Nagoya, セントレア). No repeats of `code`, `zh` or `en`. An airport with no Chinese name in any source takes the first Chinese name of that list (FKS 福島).
 - Cities: the CWA forecast cities (`weather.json`).
-- Every other airport is searchable by English name, city and IATA code through `airports.json`; the page also lets an airport answer to the Chinese name of its city when that city is in this file (曼谷 → BKK, DMK).
-- `python -m pipeline validate` checks it (`check_places`): IATA or empty code, ISO-2 country, non-empty `zh`, no HTML.
+- Every other airport is searchable by English name, city and IATA code through `airports.json`; the page also lets an airport answer to the Chinese name of its city when that city is in this file (曼谷 → BKK, DMK). The arrivals board's flight search uses the same names for the origin airport (名古屋 → flights from NGO).
+- `python -m pipeline validate` checks it (`check_places`): IATA or empty code, ISO-2 country, non-empty `zh`, `alias` a list of up to 24 short names, no HTML.
 
 ## `arrivals.json`
 

@@ -579,15 +579,20 @@ def check_warnings(v: V, w):
 
 
 def check_places(v: V, doc) -> None:
-    """web/data/places.json: [{code: IATA or "", iso, zh, en}] for the search boxes."""
+    """web/data/places.json: [{code: IATA or "", iso, zh, en, alias?: [names]}] for the search boxes."""
     w = "places.json"
     if not v.keys(w, doc, ["version", "generated_at", "places"]) or not isinstance(doc.get("places"), list):
         v.err(w, "places must be a list")
         return
     for i, p in enumerate(doc["places"]):
         pw = f"{w}.places[{i}]"
-        if not v.keys(pw, p, ["code", "iso", "zh", "en"]) or any(k not in p for k in ("code", "iso", "zh", "en")):
+        if not v.keys(pw, p, ["code", "iso", "zh", "en"], ["alias"]) or any(k not in p for k in ("code", "iso", "zh", "en")):
             continue
+        al = p.get("alias", [])
+        if not (isinstance(al, list) and len(al) <= 24 and all(isinstance(a, str) and 0 < len(a.strip()) <= 40 for a in al)):
+            v.err(pw, "alias must be a list of up to 24 non-empty names")
+        elif any(re.search(r"<\s*/?\s*[a-zA-Z]", a) for a in al):
+            v.err(pw, "alias looks like HTML")
         if not (p["code"] == "" or re.fullmatch(r"[A-Z]{3}", str(p["code"]))):
             v.err(pw, f"code {str(p['code'])[:8]!r} must be an IATA code or ''")
         if not ISO2.match(str(p["iso"])):

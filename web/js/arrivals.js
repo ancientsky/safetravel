@@ -8,6 +8,7 @@ import {
 import {
   esc, storageGet, storageSet, debounce, clamp, levelNum, reducedMotion, AUTO_SCROLL_PX_S,
 } from './util.js';
+import { loadPlaces, airportMatches } from './places.js';
 
 const d3 = window.d3;
 const ON_KEY = 'safetravel.arrivals';
@@ -209,7 +210,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     return !term || !f.terminal || String(f.terminal) === String(term); // gate TBD: every checkpoint of its terminal
   }
 
-  // ---------------------------------------------------------------- flight search ("JK202", "jk-202", "JK 0202", "NRT", "東京")
+  // ---------------------------------------------------------------- flight search ("JK202", "jk-202", "JK 0202", "NRT", "東京", "名古屋")
   // Canonical flight key: upper-case letters and digits only, leading zeros of the number dropped (CI0006 = CI 6).
   const flightKey = (s) => String(s || '').normalize('NFKC').toUpperCase().replace(/[^0-9A-Z]/g, '')
     .replace(/^([A-Z][A-Z0-9]|[0-9][A-Z])0+(?=\d)/, '$1');
@@ -220,7 +221,8 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     if (q && [f.flight, ...(Array.isArray(f.codeshares) ? f.codeshares : [])].some((x) => flightKey(x).startsWith(q))) return true;
     const p = placeKey(query);
     if (p.length < 2) return false;
-    return [f.from, f.from_zh, f.from_en].some((x) => placeKey(x).includes(p));
+    // the board's own names, then every name the place index knows for the airport ("名古屋", "Nagoya" for NGO 中部)
+    return [f.from, f.from_zh, f.from_en].some((x) => placeKey(x).includes(p)) || airportMatches(f.from, query);
   }
 
   function visible(now = Date.now()) {
@@ -465,7 +467,16 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
   button?.addEventListener('click', () => setOn(!on));
   btnClose.addEventListener('click', () => { setOn(false); button?.focus(); });
   btnBig.addEventListener('click', () => { cfg.big = !cfg.big; saveCfg(); render(); });
+  // other names of the origin airports (js/places.js): loaded the first time the search is used, never at page load
+  let placesAsked = false;
+  const warmPlaces = () => {
+    if (placesAsked) return;
+    placesAsked = true;
+    loadPlaces().then(() => { if (query.trim()) render(); }).catch(() => {});
+  };
+  qInput?.addEventListener('focus', warmPlaces);
   qInput?.addEventListener('input', () => {
+    warmPlaces();
     query = qInput.value;
     holdGlide(); // someone is typing: keep the list still and at the top
     body.scrollTop = 0;

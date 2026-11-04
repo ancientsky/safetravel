@@ -7,7 +7,8 @@ const norm = (s) => String(s || '').normalize('NFKC').toLowerCase().replace(/[\s
 const CJK = /[㐀-鿿]/;
 
 let loading = null;
-let places = null; // [{ code, iso, zh, en, name, kind: 'airport' | 'city', keys: [normalised strings] }]
+let places = null; // [{ code, iso, zh, en, name, alias, kind: 'airport' | 'city', keys: [normalised strings] }]
+let airportsByCode = new Map();
 
 async function getJSON(url) {
   const r = await fetch(url);
@@ -24,7 +25,8 @@ export function loadPlaces() {
         const list = [];
         for (const p of pl?.places || []) {
           if (!/^[A-Z]{2}$/.test(p.iso || '')) continue;
-          const e = { code: p.code || '', iso: p.iso, zh: p.zh || '', en: p.en || '', name: '', kind: p.code ? 'airport' : 'city' };
+          const alias = Array.isArray(p.alias) ? p.alias.filter((a) => typeof a === 'string') : [];
+          const e = { code: p.code || '', iso: p.iso, zh: p.zh || '', en: p.en || '', name: '', alias, kind: p.code ? 'airport' : 'city' };
           list.push(e);
           if (e.code) byCode.set(e.code, e);
         }
@@ -39,8 +41,10 @@ export function loadPlaces() {
         const cityZh = new Map(list.filter((e) => e.kind === 'city' && e.en).map((e) => [`${e.iso}|${norm(e.en)}`, e.zh]));
         for (const e of list) {
           const alias = e.kind === 'airport' && e.city ? cityZh.get(`${e.iso}|${norm(e.city)}`) : '';
-          e.keys = [...new Set([e.code, e.zh, e.en, e.name, e.city, alias].filter(Boolean).map(norm))];
+          e.keys = [...new Set([e.code, e.zh, e.en, e.name, e.city, alias, ...(e.alias || [])].filter(Boolean).map(norm))];
+          if (e.code) byCode.set(e.code, e);
         }
+        airportsByCode = byCode;
         places = list;
         return places;
       });
@@ -49,6 +53,19 @@ export function loadPlaces() {
 }
 
 export const placesReady = () => !!places;
+
+/**
+ * Does the airport with this IATA code answer to q (code, Chinese / English name, city, alias: "名古屋" or "Nagoya"
+ * for NGO 中部)? Same rules as findPlaces (Latin: prefix under 3 letters); false until loadPlaces() has resolved.
+ */
+export function airportMatches(code, q) {
+  const s = norm(q);
+  const e = airportsByCode.get(String(code || '').toUpperCase());
+  if (!e || !s) return false;
+  const cjk = CJK.test(s);
+  if (!cjk && s.length < 2) return false;
+  return e.keys.some((k) => (cjk || s.length >= 3 ? k.includes(s) : k.startsWith(s)));
+}
 
 /**
  * Places matching q, best first: [{ place, score }] with score 0 exact (or exact IATA code), 1 prefix, 2 substring.
