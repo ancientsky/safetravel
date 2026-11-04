@@ -623,6 +623,31 @@ async function run(browser) {
     return 'traveller: 泰國 card; officer: flights tab, BR384 → Vietnam card with the flight highlighted';
   });
 
+  await check('phone menu: header keeps board + menu, the sheet lists the 4 pages and switches with their state', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const ph = await ctx.newPage();
+    await ph.addInitScript(() => { try { localStorage.setItem('safetravel.mpromo', 'off'); } catch (e) { /* ignore */ } });
+    await ph.goto(BASE_URL, { waitUntil: 'load' });
+    await ph.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    const head = await ph.evaluate(() => ['menu-toggle', 'arrivals-toggle', 'theme-toggle', 'watch-toggle', 'lang-toggle']
+      .map((id) => [id, document.querySelector(`[data-testid="${id}"]`).getClientRects().length > 0]));
+    await ph.tap('[data-testid="menu-toggle"]');
+    const links = await ph.$$eval('#phone-menu a.pm-item', (as) => as.map((a) => a.getAttribute('href')));
+    const before = await ph.evaluate(() => document.documentElement.dataset.theme);
+    await ph.tap('#phone-menu [data-proxy="theme-toggle"]');
+    const after = await ph.evaluate(() => ({ theme: document.documentElement.dataset.theme, open: !document.querySelector('#phone-menu').hidden,
+      state: document.querySelector('#phone-menu [data-proxy="theme-toggle"] .pm-state').textContent }));
+    await ph.tap('#phone-menu [data-proxy="arrivals-toggle"]');
+    const board = await ph.evaluate(() => !document.querySelector('#arrivals').hidden && document.querySelector('#phone-menu').hidden);
+    await ctx.close();
+    const shown = Object.fromEntries(head);
+    assert(shown['menu-toggle'] && shown['arrivals-toggle'] && !shown['theme-toggle'] && !shown['watch-toggle'] && !shown['lang-toggle'], `header ${JSON.stringify(shown)}`);
+    assert(links.join() === 'm.html,trip.html,arrivals.html,slide.html', `pages ${links}`);
+    assert(after.theme !== before && after.open && after.state, `theme switch ${JSON.stringify(after)}`);
+    assert(board, 'the board did not open from the menu');
+    return '4 pages, switches keep the sheet open, the board closes it';
+  });
+
   await check('timeline range: 6 months by default, 3/6/12/24 switch the list, choice remembered, ?months= overrides', async () => {
     const pr = await context.newPage();
     const errs = [];

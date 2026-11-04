@@ -493,6 +493,47 @@ async function main() {
     renderLegend(legendNode);
     $(`#flight-hud [data-dir="${state.flightDir}"]`)?.focus();
   });
+  // ---- phone menu (≤760 px): the site's other pages + this page's switches, labelled and with their state ----
+  const pm = $('#phone-menu');
+  const pmBtn = $('[data-testid="menu-toggle"]');
+  const proxyOf = (b) => $(`[data-testid="${b.dataset.proxy}"]`);
+  const KEEP_OPEN = new Set(['textsize-toggle', 'theme-toggle', 'lang-toggle', 'sound-toggle']);
+  function pmRefresh() {
+    pm.querySelectorAll('[data-proxy]').forEach((b) => {
+      const src = proxyOf(b);
+      const st = b.querySelector('.pm-state');
+      if (!src || !st) return;
+      let txt = '';
+      let isOn = false;
+      if (b.dataset.proxy === 'textsize-toggle') txt = t(`ts_${document.documentElement.dataset.ts || 'm'}`);
+      else if (b.dataset.proxy === 'theme-toggle') txt = t(state.theme === 'dark' ? 'menu_dark' : 'menu_light');
+      else if (b.dataset.proxy !== 'lang-toggle') {
+        isOn = b.dataset.proxy === 'watch-toggle' ? src.classList.contains('is-active') : src.getAttribute('aria-pressed') === 'true';
+        txt = t(isOn ? 'menu_on' : 'menu_off');
+      }
+      st.textContent = txt;
+      st.hidden = !txt;
+      st.classList.toggle('is-on', isOn);
+    });
+  }
+  function pmOpen(v) {
+    pm.hidden = !v;
+    pmBtn.setAttribute('aria-expanded', String(v));
+    if (v) { pmRefresh(); pm.querySelector('.pm-item')?.focus(); } else pmBtn.focus();
+  }
+  pmBtn.addEventListener('click', () => pmOpen(true));
+  pm.querySelector('.pm-close').addEventListener('click', () => pmOpen(false));
+  pm.addEventListener('click', (e) => {
+    if (e.target === pm) { pmOpen(false); return; } // tap outside the sheet
+    const b = e.target.closest('[data-proxy]');
+    if (!b) return;
+    const keep = KEEP_OPEN.has(b.dataset.proxy);
+    if (!keep) pmOpen(false); // the board and the outbreak-route menu need the screen
+    proxyOf(b)?.click();
+    if (keep) setTimeout(pmRefresh, 0);
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pm.hidden) { e.stopPropagation(); pmOpen(false); } }, true);
+
   $('#zoom-in').addEventListener('click', () => map.zoomBy(1.6));
   $('#zoom-out').addEventListener('click', () => map.zoomBy(1 / 1.6));
   $('#zoom-reset').addEventListener('click', () => map.reset());

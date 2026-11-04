@@ -1181,7 +1181,7 @@ body.arr-open .flights-canvas { opacity: .35; }
 .arr-empty { margin: 14px 6px; color: var(--fg-mute); font-size: .92em; }
 .arr-sec h3 {
   position: sticky; top: -4px; z-index: 1; display: flex; align-items: baseline; gap: 8px;
-  margin: 8px 0 4px; padding: 6px 4px; background: var(--glass-strong);
+  margin: 8px 0 4px; padding: 6px 4px; background: var(--bg); /* opaque: rows scroll underneath */
   font-size: .9em; letter-spacing: .08em; color: var(--cyan);
 }
 .arr-sec-arrived h3 { color: var(--fg-dim); }
@@ -1805,3 +1805,38 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
 .m-promo span { flex: 1 1 100%; }
 .m-promo-go { padding: 6px 14px; border-radius: 999px; background: var(--accent); color: var(--bg); font-weight: 700; text-decoration: none; }
 .m-promo-no { padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 999px; background: none; color: var(--fg-dim); font: inherit; cursor: pointer; }
+
+/* ---------- phone menu: pages + this page's features in one sheet (the header keeps only the board and the menu) ---------- */
+.menu-toggle { display: none; }
+.phone-menu { position: fixed; inset: 0; z-index: 45; display: flex; align-items: flex-end; background: rgba(0, 0, 0, .55); }
+.phone-menu[hidden] { display: none; }
+.pm-sheet {
+  width: 100%; max-height: 88vh; overflow-y: auto; padding: 8px 14px calc(16px + env(safe-area-inset-bottom));
+  background: var(--bg); border-top: 1px solid var(--border-strong); border-radius: 18px 18px 0 0; animation: card-in .25s var(--ease);
+}
+.pm-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; }
+.pm-head h2 { margin: 0; font-size: calc(18px * var(--ts)); }
+.pm-sec { margin: 12px 0 6px; font: 600 calc(12px * var(--ts)) var(--mono); letter-spacing: .1em; color: var(--fg-mute); }
+.pm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pm-item {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 8px 12px; border: 1px solid var(--border);
+  border-radius: 12px; background: rgba(var(--accent-rgb), .03); color: var(--fg); font: inherit; text-align: left; text-decoration: none; cursor: pointer;
+}
+.pm-item:hover, .pm-item:focus-visible { border-color: var(--accent); outline: none; }
+.pm-item > svg { width: 24px; height: 24px; flex: none; fill: none; stroke: var(--cyan); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.pm-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pm-text b { font-size: calc(15px * var(--ts)); }
+.pm-text small { font-size: calc(12px * var(--ts)); color: var(--fg-dim); line-height: 1.35; }
+.pm-go { font-size: 1.4em; color: var(--fg-mute); }
+.pm-state { padding: 2px 10px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: calc(12.5px * var(--ts)); color: var(--fg-dim); white-space: nowrap; }
+.pm-state.is-on { border-color: var(--accent); color: var(--accent); }
+.pm-hot { border-color: var(--accent); background: rgba(var(--accent-rgb), .08); }
+.pm-tip { margin: 12px 2px 0; font-size: calc(12px * var(--ts)); color: var(--fg-mute); }
+@media (max-width: 760px) {
+  .menu-toggle { display: inline-flex; gap: 4px; }
+  .menu-toggle span { font-size: calc(12px * var(--ts)); }
+  /* everything else of the header lives in the menu (labelled, with its state) */
+  .hud .toggles > .lang-toggle, .hud .toggles > .trip-link, .hud .toggles > .watch-toggle, .hud .toggles > .sound-toggle,
+  .hud .toggles > .ts-toggle, .hud .toggles > .theme-toggle { display: none; }
+  .arrivals, .arrivals[data-mode] { background: var(--bg); } /* opaque over the map and footer */
+}

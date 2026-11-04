@@ -111,7 +111,9 @@ export function createWatch({ button, menu, map }) {
   }
 
   function placeMenu() {
-    const b = button.getBoundingClientRect();
+    // phones hide the header button (it lives in the menu): open under the menu button instead
+    const anchor = button.getClientRects().length ? button : document.querySelector('[data-testid="menu-toggle"]') || button;
+    const b = anchor.getBoundingClientRect();
     const w = Math.min(380, window.innerWidth - 16);
     menu.style.width = `${w}px`;
     menu.style.top = `${Math.round(b.bottom + 8)}px`;
