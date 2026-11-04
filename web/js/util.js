@@ -59,6 +59,11 @@ export function elapsed(dateStr, now = new Date()) {
   return { days, months: Math.max(0, months) };
 }
 
+/** Current text-size factor (data-ts on <html>, js/textsize-boot.js), for layout math done in JS. */
+export function textScale() {
+  return { s: 1, m: 1.12, l: 1.25, xl: 1.4 }[document.documentElement.dataset.ts] || 1;
+}
+
 /** Auto-scroll pace shared by the wall-screen lists (arrivals board, country panel), px per second. */
 export const AUTO_SCROLL_PX_S = 28;
 

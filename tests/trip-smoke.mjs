@@ -544,6 +544,25 @@ async function run(page, context) {
     return 'code change: waits for 5 idle minutes, reloads with #JP kept; data change detected';
   });
 
+  await check('search by airport / city: NRT and 曼谷 open Japan / Thailand', async () => {
+    const pr = await context.newPage();
+    await pr.goto(PAGE_URL.split('#')[0], { waitUntil: 'load' });
+    await pr.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+    const input = pr.locator('input[role="combobox"]').first();
+    const pick = async (q, want) => {
+      await input.fill(q);
+      await pr.waitForFunction(() => document.querySelector('[role="listbox"] .opt-place'), null, { timeout: 8000 });
+      const first = await pr.$eval('[role="listbox"] [role="option"]', (l) => l.textContent.replace(/\s+/g, ' ').trim());
+      await input.press('Enter');
+      await pr.waitForFunction((h) => location.hash === h, want, { timeout: 5000 });
+      return first;
+    };
+    const a = await pick('NRT', '#JP');
+    const b = await pick('曼谷', '#TH');
+    await pr.close();
+    return `NRT → ${a}; 曼谷 → ${b}`;
+  });
+
   await check('no console errors during the run', async () => {
     assert(consoleErrors.length === 0, `${consoleErrors.length}: ${consoleErrors[0]}`);
     return '';

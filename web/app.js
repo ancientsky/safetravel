@@ -5,6 +5,7 @@ import {
 import { setLang, t, applyStatic, bindData, getLang } from './js/i18n.js';
 import { $, debounce, storageGet, storageSet, parseDay, todayTaipei } from './js/util.js';
 import { toast } from './js/toast.js';
+import { bindTextSize } from './js/textsize.js';
 import { startRefresh } from './js/refresh.js';
 import { createSound } from './js/sound.js';
 import { initTooltip } from './js/tooltip.js';
@@ -147,6 +148,24 @@ async function main() {
       const h = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
       document.documentElement.style.setProperty('--foot-h', `${Math.ceil(h)}px`);
     }).observe(foot);
+  }
+  // The toolbar, country panel, zoom buttons and weather bar sit just below the header, whose height depends on the
+  // text size and on how its rows wrap: keep --hud-top-b (bottom of the title row) and --hud-b (bottom of the stat
+  // tiles) in sync. Read inside the ResizeObserver callback, where layout is already up to date.
+  const hudTop = $('.hud-top');
+  const tilesNode = $('#stat-tiles');
+  if ('ResizeObserver' in window && hudTop && tilesNode) {
+    const syncHud = () => {
+      // the tiles are filled in once the data has arrived: until then the CSS fallbacks (the 100 % layout) hold, so
+      // the toolbar does not hop up to an empty tile row and back down again (layout shift)
+      if (!tilesNode.children.length) return;
+      const root = document.documentElement.style;
+      root.setProperty('--hud-top-b', `${Math.round(hudTop.getBoundingClientRect().bottom)}px`);
+      root.setProperty('--hud-b', `${Math.round(tilesNode.getBoundingClientRect().bottom)}px`);
+    };
+    const ro = new ResizeObserver(syncHud);
+    ro.observe(hudTop);
+    ro.observe(tilesNode);
   }
   const clockTick = startClock($('#clock'));
 
@@ -359,8 +378,10 @@ async function main() {
   }
 
   // ---- controls ----
+  const textSize = bindTextSize($('[data-testid="textsize-toggle"]'), { t });
   $('[data-testid="lang-toggle"]').addEventListener('click', () => {
     state.lang = setLang(getLang() === 'en' ? 'zh-Hant' : 'en');
+    textSize.refresh();
     storageSet(LANG_KEY, state.lang);
     applyStatic();
     sound.refresh();

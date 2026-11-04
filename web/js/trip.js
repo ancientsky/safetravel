@@ -14,6 +14,7 @@ import { createSearch } from './trip-search.js';
 import { createWeather, loadWeather } from './trip-weather.js';
 import { createWxMap } from './trip-wxmap.js';
 import { autoReload } from './autoreload.js';
+import { bindTextSize } from './textsize.js';
 
 const THEME_KEY = 'safetravel.trip.theme';
 const TABS = ['mofa', 'cdc', 'wx'];
@@ -56,9 +57,11 @@ $('.theme-toggle').addEventListener('click', () => {
   storageSet(THEME_KEY, next);
   applyThemeButton();
 });
+const textSize = bindTextSize($('[data-testid="textsize-toggle"]'), { t });
 $('.lang-toggle').addEventListener('click', () => {
   setLang(isEn() ? 'zh-Hant' : 'en');
   renderAll();
+  textSize.refresh();
 });
 
 // ---------------- notices ----------------
@@ -237,6 +240,7 @@ function renderAll() {
 async function main() {
   initLang();
   applyStatic();
+  textSize.refresh();
   applyThemeButton();
   const wxData = loadWeather(); // non-critical, in parallel: weather.attach() renders it after the first paint
   wxData.catch(() => {});      // handled in attach(); avoid an "unhandled rejection" while the main data loads

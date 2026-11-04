@@ -368,6 +368,11 @@ def export_all(conn, out_dir=None) -> dict:
         weather.export(conn, out_dir)
     except Exception as e:  # pragma: no cover
         C.log.exception("weather.json not rebuilt: %s", e)
+    try:  # place names for the search boxes (airports / cities in Chinese); never blocks the main export
+        from . import places
+        places.build(conn, out_dir)
+    except Exception as e:  # pragma: no cover
+        C.log.warning("places.json not rebuilt: %s", e)
     try:  # outbreak route watch (static, hand-maintained input); never blocks the main export
         from . import watch
         watch.build(out_dir)

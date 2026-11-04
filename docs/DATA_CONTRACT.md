@@ -158,6 +158,22 @@ From OpenFlights `airports.dat`, IATA-keyed, only airports with a 3-letter IATA 
 ```
 Name lookup for every ISO alpha-2 (zh from `world-countries` `translations.zho`, with `data/manual/country_names.json` override), centroid for label/arc placement.
 
+## `places.json` (search: airports and cities)
+
+Written by `pipeline/places.py` during `export_all` (and re-exported idempotently: an unchanged list keeps its `generated_at`). Used by the search boxes of `index.html` and `trip.html` (`web/js/places.js`), which load it together with `airports.json` the first time a search box is used — never at page load.
+
+```json
+{ "version": 1, "generated_at": "2026-11-04T12:00:00+08:00",
+  "places": [ { "code": "NRT", "iso": "JP", "zh": "東京成田", "en": "Tokyo-Narita" },
+              { "code": "", "iso": "TH", "zh": "曼谷", "en": "Bangkok" } ] }
+```
+
+- `code`: IATA airport code, or `""` for a city without one. `iso`: country (alpha-2) the search opens. `zh`: never empty. `en`: may be `""`.
+- Airports with a Chinese name, from (first that applies) the TDX airport list (`airports_tdx`), `pipeline/airport_zh.json`, the TPE routes (`flights.json` `city_zh`) and the outbreak route watch (`watch.json`). A name that is just a country's name (TDX calls OVB Novosibirsk "俄羅斯") gives way to another source when there is one; single-airport places keep it (HKG 香港).
+- Cities: the CWA forecast cities (`weather.json`).
+- Every other airport is searchable by English name, city and IATA code through `airports.json`; the page also lets an airport answer to the Chinese name of its city when that city is in this file (曼谷 → BKK, DMK).
+- `python -m pipeline validate` checks it (`check_places`): IATA or empty code, ISO-2 country, non-empty `zh`, no HTML.
+
 ## `arrivals.json`
 
 Inbound international passenger flights per Taiwan airport / quarantine checkpoint for the arrivals board. Unlike the files above it is **not** written by `pipeline/export.py`, **not** committed (`.gitignore`), and is published straight to GitHub Pages by `.github/workflows/arrivals.yml` every ~10 minutes (`python -m pipeline arrivals`, built by `pipeline/arrivals.py`). The page must treat it as optional: it can be absent (fresh deployment, no TDX credentials) or older than the other data files.

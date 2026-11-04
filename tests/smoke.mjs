@@ -425,6 +425,112 @@ async function run(browser) {
     return `on: ${on} markers; off: no fetch; URL synced`;
   });
 
+  await check('search finds airports and cities (NRT, 成田, 曼谷 → BKK) and opens their country', async () => {
+    const pr = await context.newPage();
+    const errs = [];
+    pr.on('pageerror', (e) => errs.push(e.message));
+    await pr.goto(BASE_URL, { waitUntil: 'load' });
+    await pr.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    const opts = async (q) => {
+      await pr.fill('[data-testid="search"]', q);
+      await pr.waitForFunction(() => document.querySelectorAll('#search-list .opt-place').length > 0, null, { timeout: 8000 }).catch(() => {});
+      return pr.$$eval('#search-list li[role="option"]', (ls) => ls.map((l) => l.textContent.replace(/\s+/g, ' ').trim()));
+    };
+    const nrt = await opts('nrt');
+    const narita = await opts('成田');
+    const bangkok = await opts('曼谷');
+    await pr.fill('[data-testid="search"]', 'NRT');
+    await pr.waitForTimeout(200);
+    await pr.keyboard.press('Enter');
+    await pr.waitForFunction(() => location.hash === '#/country/JP', null, { timeout: 5000 });
+    await pr.close();
+    assert(nrt[0]?.includes('NRT') && /日本|Japan/.test(nrt[0] || ''), `nrt → ${nrt[0]}`);
+    assert(narita.some((o) => o.includes('NRT')), `成田 → ${narita.join(' | ')}`);
+    assert(bangkok.some((o) => o.includes('BKK')) && bangkok.some((o) => o.includes('DMK')), `曼谷 → ${bangkok.join(' | ')}`);
+    assert(!errs.length, errs[0]);
+    return `nrt → ${nrt[0]}; 曼谷 → BKK, DMK; Enter opens #/country/JP`;
+  });
+
+  await check('text size: 標準 by default on desktop, the button cycles and is remembered, ?text= overrides, layout holds', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1600, height: 900 } });
+    const pr = await ctx.newPage();
+    const errs = [];
+    pr.on('pageerror', (e) => errs.push(e.message));
+    const state = () => pr.evaluate(() => {
+      const r = (s) => document.querySelector(s)?.getBoundingClientRect();
+      const tiles = r('#stat-tiles'); const tb = r('.toolbar'); const top = r('.hud-top'); const panel = r('#panel');
+      return {
+        ts: document.documentElement.dataset.ts, fs: parseFloat(getComputedStyle(document.body).fontSize),
+        stored: localStorage.getItem('safetravel.textSize'), label: document.querySelector('[data-testid="textsize-toggle"]').getAttribute('aria-label'),
+        toolbarBelowTiles: tb.top >= tiles.bottom - 4, panelBelowHeader: !panel || panel.height === 0 || panel.top >= top.bottom,
+        scrollX: document.documentElement.scrollWidth - innerWidth,
+      };
+    });
+    await pr.goto(`${BASE_URL}#/country/JP`, { waitUntil: 'load' });
+    await pr.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    await pr.waitForTimeout(800);
+    const d = await state();
+    const seen = [d.ts];
+    for (let i = 0; i < 2; i++) { await pr.click('[data-testid="textsize-toggle"]'); await pr.waitForTimeout(400); seen.push((await state()).ts); }
+    const xl = await state();
+    await pr.reload({ waitUntil: 'load' });
+    await pr.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    const kept = await state();
+    await pr.goto(`${BASE_URL}?text=s`, { waitUntil: 'load' });
+    const q = await state();
+    await ctx.close();
+    assert(d.ts === 'm' && Math.abs(d.fs - 14 * 1.12) < 0.1 && d.stored === null, `default ${JSON.stringify(d)}`);
+    assert(seen.join('') === 'mlxl' && xl.stored === 'xl' && Math.abs(xl.fs - 14 * 1.4) < 0.1, `cycle ${seen} ${JSON.stringify(xl)}`);
+    assert(xl.toolbarBelowTiles && xl.panelBelowHeader && xl.scrollX === 0, `layout at xl ${JSON.stringify(xl)}`);
+    assert(kept.ts === 'xl' && q.ts === 's' && q.stored === 'xl', `reload ${kept.ts}, ?text=s ${q.ts} (stored ${q.stored})`);
+    assert(/特大|XL/.test(xl.label), `label ${xl.label}`);
+    assert(!errs.length, errs[0]);
+    return `m → l → xl (body ${d.fs}px → ${xl.fs}px), kept after reload, ?text=s overrides`;
+  });
+
+  await check('arrivals board: flight search (JK202, jk-202, JK0202, codeshare BR2101) across checkpoints and a wider window', async () => {
+    const now = Date.now();
+    const iso = (min) => new Date(now + min * 60000 + 8 * 3600000).toISOString().slice(0, 16) + '+08:00';
+    const fl = (id, flight, cs, cp, min, from = 'NRT', zh = '東京成田') => ({
+      id, airport: 'TPE', flight, airline: flight.slice(0, 2), codeshares: cs, from, from_zh: zh, from_en: zh, country: 'JP', lat: 35.76, lon: 140.39,
+      terminal: cp === 'A' || cp === 'B' ? '1' : '2', gate: `${cp}5`, checkpoint: cp, apron: '', carousel: '03',
+      scheduled: iso(min), estimated: iso(min), actual: null, status: 'on_time', status_zh: '準時', status_en: 'ON TIME', aircraft: 'A321',
+    });
+    const doc = {
+      generated_at: iso(0), source: 'tdx', endpoint: 'test', tdx_updated: iso(0), window: { from: iso(-120), to: iso(240) },
+      refresh_minutes: { day: 10, night: 30 }, quota: { month: '2026-11', calls_month: 1, cap_month: 4200, day: '2026-11-04', calls_day: 1 },
+      airports: { TPE: { name_zh: '桃園', name_en: 'Taoyuan', lat: 25.08, lon: 121.23, flights: 3, checkpoints: [{ id: 'A', terminal: '1' }, { id: 'B', terminal: '1' }, { id: 'C', terminal: '2' }, { id: 'D', terminal: '2' }] } },
+      flights: [fl('a', 'CI 101', ['BR 2101'], 'A', 10), fl('c', 'JK 202', [], 'C', 30, 'ICN', '首爾仁川'), fl('old', 'CI 777', [], 'A', -90)],
+    };
+    const pr = await context.newPage();
+    const errs = [];
+    pr.on('pageerror', (e) => errs.push(e.message));
+    await pr.route('**/data/arrivals.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(doc) }));
+    await pr.goto(`${BASE_URL}?arr=TPE-A`, { waitUntil: 'load' });
+    await pr.waitForFunction(() => document.querySelectorAll('#arrivals .arr-row').length > 0, null, { timeout: 30000 });
+    const rows = () => pr.$$eval('#arrivals .arr-row .arr-flight', (ls) => ls.map((l) => l.textContent.trim()));
+    const base = await rows();
+    const res = {};
+    for (const q of ['JK202', 'jk-202', 'JK0202', 'jk 2', 'BR2101', '首爾', 'CI 777', 'ZZ9']) {
+      await pr.fill('[data-testid="arrivals-search"]', q);
+      await pr.waitForTimeout(150);
+      res[q] = await rows();
+    }
+    await pr.press('[data-testid="arrivals-search"]', 'Escape');
+    await pr.waitForTimeout(150);
+    const after = await rows();
+    const belt = await pr.$eval('#arrivals .arr-belt', (e) => e.textContent.replace(/\s+/g, ''));
+    await pr.close();
+    assert(base.join() === 'CI 101', `checkpoint A without search: ${base}`);
+    for (const q of ['JK202', 'jk-202', 'JK0202', 'jk 2', '首爾']) assert(res[q].join() === 'JK 202', `${q} → ${res[q]}`);
+    assert(res.BR2101.join() === 'CI 101', `codeshare → ${res.BR2101}`);
+    assert(res['CI 777'].join() === 'CI 777', `90 min ago, outside ±60 → ${res['CI 777']}`);
+    assert(res.ZZ9.length === 0 && after.join() === 'CI 101', `none ${res.ZZ9}, after Esc ${after}`);
+    assert(/03/.test(belt), `carousel ${belt}`);
+    assert(!errs.length, errs[0]);
+    return 'all formats find JK 202 (other checkpoint), codeshare and −90 min flights found, Esc restores';
+  });
+
   await check('timeline range: 6 months by default, 3/6/12/24 switch the list, choice remembered, ?months= overrides', async () => {
     const pr = await context.newPage();
     const errs = [];

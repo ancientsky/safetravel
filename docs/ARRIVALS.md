@@ -130,6 +130,10 @@ Rules:
   The board shows it under the gate (not for cancelled flights). `www.taoyuan-airport.com`'s own flight API is not
   used: it sits behind a Cloudflare challenge that blocks GitHub Actions (see ARCHITECTURE.md).
 - Times: TDX local times + `+08:00`; missing → `null`. `scheduled` is always present.
+- Board search (`web/js/arrivals.js`, not part of the file): flight numbers are compared as upper-case letters and digits
+  with the number's leading zeros dropped (`JK-202`, `jk 202`, `JK0202` → `JK202`), as a prefix of the flight or any
+  codeshare; 2+ characters also match the origin IATA / city. While a query is set the checkpoint filter is ignored and
+  the whole file window (−2 h … +4 h) is searched instead of ±60 min.
 - `status` ∈ `arrived | on_time | early | delayed | changed | cancelled | other`, from `ArrivalRemarkEn` /
   `ArrivalRemark` (`ARRIV` → arrived, `CANCEL` → cancelled, `DELAY` → delayed, `CHANGE` → changed, `EARLY` → early,
   `ON TIME` → on_time). `status_zh` / `status_en` keep the source wording split at the first Latin letter.

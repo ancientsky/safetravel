@@ -578,6 +578,26 @@ def check_warnings(v: V, w):
                     v.err(f"warnings.json.changes.{k}[{j}]", "bad change entry")
 
 
+def check_places(v: V, doc) -> None:
+    """web/data/places.json: [{code: IATA or "", iso, zh, en}] for the search boxes."""
+    w = "places.json"
+    if not v.keys(w, doc, ["version", "generated_at", "places"]) or not isinstance(doc.get("places"), list):
+        v.err(w, "places must be a list")
+        return
+    for i, p in enumerate(doc["places"]):
+        pw = f"{w}.places[{i}]"
+        if not v.keys(pw, p, ["code", "iso", "zh", "en"]) or any(k not in p for k in ("code", "iso", "zh", "en")):
+            continue
+        if not (p["code"] == "" or re.fullmatch(r"[A-Z]{3}", str(p["code"]))):
+            v.err(pw, f"code {str(p['code'])[:8]!r} must be an IATA code or ''")
+        if not ISO2.match(str(p["iso"])):
+            v.err(pw, f"iso {str(p['iso'])[:8]!r}")
+        if not (isinstance(p["zh"], str) and p["zh"].strip()) or not isinstance(p["en"], str):
+            v.err(pw, "zh must be a non-empty string, en a string")
+        elif re.search(r"<\s*/?\s*[a-zA-Z]", p["zh"] + p["en"]):
+            v.err(pw, "looks like HTML")
+
+
 def validate_dir(d: Path) -> list[str]:
     d = Path(d)
     v = V()
@@ -608,6 +628,12 @@ def validate_dir(d: Path) -> list[str]:
             check_weather(v, json.loads(ww.read_text(encoding="utf-8")))
         except json.JSONDecodeError as e:
             v.err("weather.json", f"cannot parse: {e}")
+    pl = d / "places.json"
+    if pl.exists():
+        try:
+            check_places(v, json.loads(pl.read_text(encoding="utf-8")))
+        except ValueError as e:
+            v.err("places.json", f"cannot parse: {e}")
     wp = d / "watch.json"
     if wp.exists():
         try:

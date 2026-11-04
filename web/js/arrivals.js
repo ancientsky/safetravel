@@ -50,6 +50,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
   const cpsNode = root.querySelector('.arr-cps');
   const statusNode = root.querySelector('.arr-status');
   const body = root.querySelector('.arr-body');
+  const qInput = root.querySelector('.arr-q');
   const btnBig = root.querySelector('.arr-big');
   const btnDock = root.querySelector('.arr-dock');
   const btnMin = root.querySelector('.arr-min');
@@ -208,13 +209,29 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
     return !term || !f.terminal || String(f.terminal) === String(term); // gate TBD: every checkpoint of its terminal
   }
 
+  // ---------------------------------------------------------------- flight search ("JK202", "jk-202", "JK 0202", "NRT", "東京")
+  // Canonical flight key: upper-case letters and digits only, leading zeros of the number dropped (CI0006 = CI 6).
+  const flightKey = (s) => String(s || '').normalize('NFKC').toUpperCase().replace(/[^0-9A-Z]/g, '')
+    .replace(/^([A-Z][A-Z0-9]|[0-9][A-Z])0+(?=\d)/, '$1');
+  const placeKey = (s) => String(s || '').normalize('NFKC').toLowerCase().replace(/[\s\-_.]+/g, '');
+  let query = '';
+  function matchesQuery(f) {
+    const q = flightKey(query);
+    if (q && [f.flight, ...(Array.isArray(f.codeshares) ? f.codeshares : [])].some((x) => flightKey(x).startsWith(q))) return true;
+    const p = placeKey(query);
+    if (p.length < 2) return false;
+    return [f.from, f.from_zh, f.from_en].some((x) => placeKey(x).includes(p));
+  }
+
   function visible(now = Date.now()) {
     const up = [];
     const past = [];
+    const searching = !!query.trim();
     for (const f of data?.flights || []) {
-      if (f.airport !== cfg.airport || !matchesCp(f)) continue;
+      // a search looks at every checkpoint and the whole published window (2 h back … 4 h ahead), not just ±60 min
+      if (f.airport !== cfg.airport || (searching ? !matchesQuery(f) : !matchesCp(f))) continue;
       const tm = bestTime(f);
-      if (!Number.isFinite(tm) || Math.abs(tm - now) > WINDOW_MS) continue;
+      if (!Number.isFinite(tm) || (!searching && Math.abs(tm - now) > WINDOW_MS)) continue;
       const row = { f, tm };
       if (f.status === 'arrived' || tm < now) past.push(row);
       else up.push(row);
@@ -323,9 +340,10 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
         ${rows.length ? `<ol class="arr-list">${rows.map((r) => rowHtml(r, now)).join('')}</ol>` : ''}
       </section>`;
     const empty = !up.length && !past.length;
-    body.innerHTML = `<p class="arr-summary"><span>${esc(t('arr_count', { up: up.length, past: past.length }))}</span>${
+    const q = query.trim();
+    body.innerHTML = `${q ? `<p class="arr-found mono">${esc(t('arr_find_count', { q, n: up.length + past.length }))}</p>` : ''}<p class="arr-summary"><span>${esc(t('arr_count', { up: up.length, past: past.length }))}</span>${
       risky ? `<span class="arr-risk">${esc(t('arr_risk', { n: risky }))}</span>` : ''}</p>${
-      empty ? `<p class="arr-empty">${esc(cfg.cp !== 'ALL' ? t('arr_empty_cp') : t('arr_empty'))}</p>` : ''}${
+      empty ? `<p class="arr-empty">${esc(q ? t('arr_find_none') : cfg.cp !== 'ALL' ? t('arr_empty_cp') : t('arr_empty'))}</p>` : ''}${
       section('upcoming', 'next', up)}${section('arrived', 'past', past)}`;
     layer.update([...up, ...past]);
   }
@@ -447,6 +465,13 @@ export function createArrivals({ root, button, map, openCountry, onLayout }) {
   button?.addEventListener('click', () => setOn(!on));
   btnClose.addEventListener('click', () => { setOn(false); button?.focus(); });
   btnBig.addEventListener('click', () => { cfg.big = !cfg.big; saveCfg(); render(); });
+  qInput?.addEventListener('input', () => {
+    query = qInput.value;
+    holdGlide(); // someone is typing: keep the list still and at the top
+    body.scrollTop = 0;
+    render();
+  });
+  qInput?.addEventListener('keydown', (e) => { if (e.key === 'Escape' && qInput.value) { e.stopPropagation(); qInput.value = ''; query = ''; render(); } });
   swScroll?.addEventListener('click', () => { cfg.scroll = !cfg.scroll; saveCfg(); renderScrollSwitch(); glide.holdUntil = 0; });
   btnMin.addEventListener('click', () => {
     minimized = !minimized;

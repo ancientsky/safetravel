@@ -26,8 +26,8 @@ export default {
   nav_all: 'All destinations',
 
   search_label: 'Look up a destination',
-  search_placeholder: 'e.g. Japan, Cambodia, KH',
-  search_empty: 'No matching country or territory',
+  search_placeholder: 'e.g. Japan, Tokyo, Narita, NRT, KH',
+  search_empty: 'No matching country, territory, city or airport',
   search_hint: 'Chinese, English or two-letter country code',
   search_count: ({ n }) => `${n} suggestions, use the arrow keys to choose`,
 
@@ -269,4 +269,9 @@ export default {
   nav_slides: 'Health posters',
   nav_slides_title: 'Taiwan CDC health-poster carousel for airport quarantine-station screens',
   foot_slides: 'Airport quarantine health-poster carousel',
+  ts_s: 'S',
+  ts_m: 'M',
+  ts_l: 'L',
+  ts_xl: 'XL',
+  ts_label: ({ size }) => `Text size: ${size} (click to change)`,
 };

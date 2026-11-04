@@ -1,4 +1,5 @@
-// Country search combobox (zh / en / ISO), map layer switch and level filter chips.
+// Search combobox: countries (zh / en / ISO) plus airports and cities (zh / en / IATA code, js/places.js, loaded on
+// first use), each opening its country; map layer switch and level filter chips.
 import {
   state, levelOf, alertsOf, warnLevel, mofaMode,
 } from './state.js';
@@ -6,6 +7,7 @@ import {
   t, countryName, badge, levelShort, fmtNum, wLevelShort, wbadge,
 } from './i18n.js';
 import { esc, $ } from './util.js';
+import { loadPlaces, findPlaces, placeName } from './places.js';
 
 function index() {
   const map = new Map();
@@ -43,7 +45,12 @@ export function createSearch({ root, onPick }) {
       if (best < Infinity) scored.push({ iso, score: best, lvl: mofaMode() ? warnLevel(iso) : levelOf(iso) });
     }
     scored.sort((a, b) => a.score - b.score || b.lvl - a.lvl || countryName(a.iso).localeCompare(countryName(b.iso)));
-    return scored.slice(0, 8);
+    const countries = scored.slice(0, 8);
+    // airports / cities: after the countries of the same score (a country named like the query wins)
+    const places = findPlaces(q, 6).map(({ place, score }) => ({
+      iso: place.iso, place, score: score + 0.5, lvl: mofaMode() ? warnLevel(place.iso) : levelOf(place.iso),
+    }));
+    return [...countries, ...places].sort((a, b) => a.score - b.score).slice(0, 10);
   }
 
   function renderList() {
@@ -55,17 +62,31 @@ export function createSearch({ root, onPick }) {
       input.removeAttribute('aria-activedescendant');
       return;
     }
+    const en = state.lang === 'en';
     list.innerHTML = results.map((r, i) => {
+      const lvlBadge = mofaMode() ? wbadge(r.lvl, r.lvl ? `L${r.lvl}` : '—', 'badge-sm') : badge(r.lvl, r.lvl ? `L${r.lvl}` : '—', 'badge-sm');
+      const attrs = `role="option" id="opt-${i}" data-iso="${r.iso}" aria-selected="${i === active}" class="${i === active ? 'active' : ''}${r.place ? ' opt-place' : ''}"`;
+      if (r.place) {
+        const p = r.place;
+        const other = en ? p.zh : (p.zh && p.en);
+        return `
+      <li ${attrs}>
+        ${lvlBadge}
+        <span class="opt-name"><span class="opt-kind" aria-hidden="true">${p.kind === 'airport' ? '✈' : '●'}</span>${esc(placeName(p, en))}</span>
+        <span class="opt-alt">${esc(other ? `${other} · ` : '')}${esc(countryName(p.iso))}</span>
+        <span class="opt-meta mono">${esc(p.code || t('search_city'))}</span>
+      </li>`;
+      }
       const n = alertsOf(r.iso).length;
       return `
-      <li role="option" id="opt-${r.iso}" data-iso="${r.iso}" aria-selected="${i === active}" class="${i === active ? 'active' : ''}">
-        ${mofaMode() ? wbadge(r.lvl, r.lvl ? `L${r.lvl}` : '—', 'badge-sm') : badge(r.lvl, r.lvl ? `L${r.lvl}` : '—', 'badge-sm')}
+      <li ${attrs}>
+        ${lvlBadge}
         <span class="opt-name">${esc(countryName(r.iso))}</span>
-        <span class="opt-alt">${esc(countryName(r.iso, state.lang === 'en' ? 'zh-Hant' : 'en'))}</span>
+        <span class="opt-alt">${esc(countryName(r.iso, en ? 'zh-Hant' : 'en'))}</span>
         <span class="opt-meta mono">${r.iso}${n ? ` · ${fmtNum(n)}` : ''}</span>
       </li>`;
     }).join('');
-    if (active >= 0) input.setAttribute('aria-activedescendant', `opt-${results[active].iso}`);
+    if (active >= 0) input.setAttribute('aria-activedescendant', `opt-${active}`);
     else input.removeAttribute('aria-activedescendant');
   }
 
@@ -83,11 +104,15 @@ export function createSearch({ root, onPick }) {
     onPick(iso);
   }
 
-  input.addEventListener('input', () => {
+  function update() {
     results = search(input.value);
     active = results.length ? 0 : -1;
     renderList();
-  });
+  }
+  // the place index loads on first use; re-run the query when it arrives
+  const warm = () => loadPlaces().then(() => { if (input.value.trim()) update(); }).catch(() => {});
+  input.addEventListener('focus', warm, { once: true });
+  input.addEventListener('input', () => { warm(); update(); });
   input.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       if (!results.length) return;

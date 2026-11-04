@@ -26,8 +26,8 @@ export default {
   nav_all: '全部目的地',
 
   search_label: '查詢目的地',
-  search_placeholder: '例如：日本、柬埔寨、KH',
-  search_empty: '找不到符合的國家或地區',
+  search_placeholder: '例如：日本、東京、成田、NRT、KH',
+  search_empty: '找不到符合的國家、地區、城市或機場',
   search_hint: '可輸入中文、英文或兩碼國碼',
   search_count: ({ n }) => `${n} 個建議結果，使用上下鍵選擇`,
 
@@ -269,4 +269,9 @@ export default {
   nav_slides: '衛教海報輪播',
   nav_slides_title: '機場檢疫站螢幕用的疾管署衛教海報輪播',
   foot_slides: '機場檢疫站衛教海報輪播',
+  ts_s: '小',
+  ts_m: '標準',
+  ts_l: '大',
+  ts_xl: '特大',
+  ts_label: ({ size }) => `字體大小：${size}（按一下切換）`,
 };

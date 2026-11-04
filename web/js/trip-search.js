@@ -1,7 +1,10 @@
-// trip.html destination search: ARIA 1.2 combobox over zh / en names and ISO codes.
+// trip.html destination search: ARIA 1.2 combobox over zh / en names and ISO codes, plus airports and cities
+// (zh / en / IATA code, js/places.js, loaded on first use), each opening its country.
 import { h, mofaChip, cdcChip } from './trip-dom.js';
 import { t, nameOf, altNameOf } from './trip-i18n.js';
 import { normKey } from './trip-data.js';
+import { loadPlaces, findPlaces, placeName } from './places.js';
+import { isEn } from './trip-i18n.js';
 
 const MAX = 8;
 
@@ -25,7 +28,11 @@ export function createSearch({ input, listEl, statusEl, onOpen }) {
       if (score < Infinity) out.push([score + (d.listed ? 0 : 0.5), d]);
     }
     out.sort((a, b) => a[0] - b[0] || nameOf(a[1]).length - nameOf(b[1]).length);
-    return out.slice(0, MAX).map((x) => x[1]);
+    const countries = out.slice(0, MAX).map(([score, d]) => ({ d, score }));
+    // airports / cities: the destination is their country (a country named like the query ranks first)
+    const places = findPlaces(raw, 5).map(({ place, score }) => ({ d: model.dests.get(place.iso), place, score: score + 0.5 }))
+      .filter((r) => r.d);
+    return [...countries, ...places].sort((a, b) => a.score - b.score).slice(0, MAX + 2);
   }
 
   function close() {
@@ -53,10 +60,14 @@ export function createSearch({ input, listEl, statusEl, onOpen }) {
     if (!results.length) {
       listEl.replaceChildren(h('li', { class: 'opt-empty', role: 'presentation', text: t('search_empty') }));
     } else {
-      listEl.replaceChildren(...results.map((d, i) => h('li', {
-        id: `opt-${d.iso}`, role: 'option', 'aria-selected': 'false', class: 'opt', dataset: { i: String(i) },
+      listEl.replaceChildren(...results.map(({ d, place }, i) => h('li', {
+        id: `opt-${i}`, role: 'option', 'aria-selected': 'false', class: place ? 'opt opt-place' : 'opt', dataset: { i: String(i) },
       },
-      h('span', { class: 'opt-names' }, h('span', { class: 'opt-name', text: nameOf(d) }), h('span', { class: 'opt-alt', text: `${altNameOf(d)} · ${d.iso}` })),
+      place
+        ? h('span', { class: 'opt-names' },
+          h('span', { class: 'opt-name' }, h('span', { class: 'opt-kind', 'aria-hidden': 'true', text: place.kind === 'airport' ? '✈ ' : '● ' }), placeName(place, isEn())),
+          h('span', { class: 'opt-alt', text: `${place.code ? `${place.code} · ` : ''}${nameOf(d)}` }))
+        : h('span', { class: 'opt-names' }, h('span', { class: 'opt-name', text: nameOf(d) }), h('span', { class: 'opt-alt', text: `${altNameOf(d)} · ${d.iso}` })),
       h('span', { class: 'opt-chips' },
         d.w ? mofaChip(d.mofa, { size: 'xs', text: d.mofa == null ? t('mofa_regional_only') : undefined }) : mofaChip(null, { size: 'xs' }),
         cdcChip(d.cdc, { size: 'xs' })))));
@@ -67,14 +78,17 @@ export function createSearch({ input, listEl, statusEl, onOpen }) {
   }
 
   function choose(i) {
-    const d = results[i];
+    const d = results[i]?.d;
     if (!d) return;
     input.value = nameOf(d);
     close();
     onOpen(d.iso);
   }
 
-  input.addEventListener('input', update);
+  // the place index loads on first use; re-run the query when it arrives
+  const warm = () => loadPlaces().then(() => { if (input.value.trim() && document.activeElement === input) update(); }).catch(() => {});
+  input.addEventListener('focus', warm, { once: true });
+  input.addEventListener('input', () => { warm(); update(); });
   input.addEventListener('focus', () => { if (input.value.trim()) update(); });
   input.addEventListener('keydown', (ev) => {
     if (ev.key === 'ArrowDown') {
