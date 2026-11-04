@@ -324,6 +324,8 @@ export default {
   footer_warnings: '旅遊警示：',
   footer_boca: '外交部領事事務局',
   footer_mac: '陸委會',
+  m_link: '快查',
+  m_link_title: '旅遊疫情快查：搜尋優先、字大、不載入地圖（適合個人電腦與手機）',
   trip_link: '出國查詢',
   trip_link_title: '出國前旅遊安全查詢：並列外交部旅遊警示與疾管署疫情建議（給民眾與旅行社）',
   panel_wl_tr_note: '',

@@ -1383,7 +1383,7 @@ body.arr-open .flights-canvas { opacity: .35; }
 body.watch-on .flights-canvas { opacity: .4; }
 
 @media (max-width: 1180px) {
-  .watch-toggle span[data-i18n], .arr-toggle span[data-i18n], .trip-link span[data-i18n] { display: none; }
+  .watch-toggle span[data-i18n], .arr-toggle span[data-i18n], .trip-link span[data-i18n], .m-link span[data-i18n] { display: none; }
 }
 @media (max-width: 760px) {
   .watch-menu { left: 8px !important; right: 8px; width: auto !important; max-height: 70vh; }
@@ -1546,8 +1546,8 @@ body.watch-on .flights-canvas { opacity: .4; }
 }
 
 /* link to the public pre-trip page (trip.html) */
-.trip-link { color: var(--fg); text-decoration: none; }
-@media (max-width: 1440px) { .trip-link span[data-i18n] { display: none; } } /* icon only: keeps the title row from wrapping */
+.trip-link, .m-link { color: var(--fg); text-decoration: none; }
+@media (max-width: 1440px) { .trip-link span[data-i18n], .m-link span[data-i18n] { display: none; } } /* icon only: keeps the title row from wrapping */
 @media (max-width: 1440px) { .ts-toggle .ts-val, .sound-toggle > span[data-i18n="sound_label"] { display: none; } } /* icons only (the text-size and sound buttons keep their title / screen-reader label) */
 /* long English level names ("Level 4: Red – leave as soon as possible") + the date: wrap instead of overflowing */
 .psec-wl .adv-top { flex-wrap: wrap; row-gap: 4px; }
@@ -1836,7 +1836,9 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
   .menu-toggle { display: inline-flex; gap: 4px; }
   .menu-toggle span { font-size: calc(12px * var(--ts)); }
   /* everything else of the header lives in the menu (labelled, with its state) */
-  .hud .toggles > .lang-toggle, .hud .toggles > .trip-link, .hud .toggles > .watch-toggle, .hud .toggles > .sound-toggle,
+  .hud .toggles > .lang-toggle, .hud .toggles > .trip-link, .hud .toggles > .m-link, .hud .toggles > .watch-toggle, .hud .toggles > .sound-toggle,
   .hud .toggles > .ts-toggle, .hud .toggles > .theme-toggle { display: none; }
   .arrivals, .arrivals[data-mode] { background: var(--bg); } /* opaque over the map and footer */
 }
+/* narrow desktops: the poster link (also in the footer and the arrivals board) leaves the header so the title fits */
+@media (max-width: 1365px) and (min-width: 761px) and (orientation: landscape) { .hud .toggles > .slides-link { display: none; } }
