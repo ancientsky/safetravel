@@ -12,9 +12,9 @@
 | **旅遊警示圖層 / Travel-warning layer** | **出國前旅遊安全查詢 / Pre-trip safety check** |
 | ![外交部旅遊警示圖層：柬埔寨](docs/screenshots/warnings-kh-zh.jpg) | ![trip.html 目的地資訊卡：柬埔寨](docs/screenshots/trip-card-zh.jpg) |
 
-| 直式牆面螢幕 / Portrait wall screen | 手機 / Phone |
-|---|---|
-| <img src="docs/screenshots/wall-portrait-zh.jpg" alt="直式螢幕：入境航班看板＋國家面板" width="360"> | <img src="docs/screenshots/phone-en.jpg" alt="Phone layout" width="292"> |
+| 直式牆面螢幕 / Portrait wall screen | 手機 / Phone | 衛教海報輪播 / Health posters |
+|---|---|---|
+| <img src="docs/screenshots/wall-portrait-zh.jpg" alt="直式螢幕：入境航班看板＋國家面板" width="300"> | <img src="docs/screenshots/phone-en.jpg" alt="Phone layout" width="245"> | <img src="docs/screenshots/slide-ebola-zh.jpg" alt="衛教海報輪播：伊波拉疫情警示（直式）" width="300"> |
 
 ---
 
@@ -31,9 +31,9 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 - **入境航班看板**（給機場檢疫站）：目前時間前後 60 分鐘內抵達的國際客機，可依機場與檢疫站（桃園 A、B＝第一航廈，C、D＝第二航廈）篩選，並顯示出發地國家的建議等級與主要疫病。
 - **旅遊警示圖層**：地圖可切換為外交部領事事務局「國外旅遊警示分級」（灰、黃、橙、紅；中國大陸、香港、澳門為陸委會燈號），評估治安、衝突、災害等整體安全，與疾管署的疫情建議分開呈現、不合併成單一分數；部分地區較高的國家以虛線標示。英文版顯示外交部摘要的非官方英譯，全文為中文原文。
 - **出國前旅遊安全查詢**（[`trip.html`](https://ancientsky.github.io/safetravel/trip.html)，給民眾與旅行社）：查詢目的地即可並列兩種官方分級、各地區警示與近期疫情；另有三圖層世界地圖（旅遊警示／疫情建議／天氣：80 個城市的天氣與最高溫標在地圖上，可逐日切換或播放）、**全球都市天氣預報**（中央氣象署 80 個城市未來 7 天，可依地區篩選、°C／°F 切換，點城市即開啟該國資訊卡，資訊卡內也列出當地城市預報）、近期變動、全部目的地表格（篩選、排序、匯出 CSV、列印）。預設淺色主題。
-- **衛教海報輪播**（[`slide.html`](https://ancientsky.github.io/safetravel/slide.html)，給機場檢疫站螢幕）：疾管署衛教海報（伊波拉疫情警示、入境症狀報到、症狀提醒、別把病菌帶回國）以 HTML 重新排版並加上短暫進場動畫，直式 1080×1920／橫式 1920×1080 各有版面，自動縮放到任何螢幕；海報清單 `web/slides/slides.json` 可設定啟用、起訖日期與停留秒數，螢幕每 5 分鐘自動更新清單；可列印或另存 PDF，並由 GitHub Actions 自動輸出 PNG。維護方式見 [SLIDES.md](docs/SLIDES.md)。
+- **衛教海報輪播**（[`slide.html`](https://ancientsky.github.io/safetravel/slide.html)，給機場檢疫站螢幕）：疾管署衛教海報（伊波拉疫情警示、入境症狀報到、症狀提醒、別把病菌帶回國）以 HTML 重新排版並加上短暫進場動畫，直式 1080×1920／橫式 1920×1080 各有版面，自動縮放到任何螢幕；伊波拉海報的地圖以轉機航線（金夏沙經巴黎或阿布達比轉機來臺）示意、不標地名以免標籤化。海報清單 `web/slides/slides.json` 可設定啟用、起訖日期與停留秒數；**現成的海報圖檔丟進 `web/slides/auto/` 資料夾就會自動上架**（檔名可帶上架／下架日期、秒數、直式／橫式），刪除即下架。螢幕每 5 分鐘自動更新清單；可列印或另存 PDF，並由 GitHub Actions 自動輸出 PNG。維護方式見 [SLIDES.md](docs/SLIDES.md)。
 - **疫區航線監測**：在地圖上顯示疫情城市的直飛航線網（目前有伊爾庫次克〔疑似鼠疫〕與金夏沙〔本迪布焦病毒 BDBV 伊波拉疫情〕），標出與桃園有直航、可能轉機來臺的航點，以及已通報輸出病例的航點。
-- **繁中／英文**、**深色（預設）／淺色主題**、可開關的**神秘音效**；資料更新後畫面會**自動重新載入**，適合長時間開著的展示螢幕。
+- **繁中／英文**、**深色（預設）／淺色主題**、可開關的**神秘音效**；資料或網站程式更新後畫面會在不打擾使用的時機**自動重新載入**，適合長時間開著的展示螢幕；也可用 [`scripts/mirror/`](docs/MIRROR.md) 部署成署內鏡像站，供 kiosk 使用而不重覆抓取資料。
 
 ### 使用說明
 
@@ -231,9 +231,9 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 - **Inbound flights board** for airport quarantine stations: international passenger flights arriving within ±60 minutes, filtered by airport and checkpoint (Taoyuan A/B = Terminal 1, C/D = Terminal 2), with the origin country's advisory level and main diseases.
 - **Travel-warning layer**: switch the map to the MOFA (BOCA) travel warning levels (grey, yellow, orange, red; mainland China, Hong Kong and Macau use the MAC rating). They rate overall safety — crime, conflict, disasters — and are shown beside, never merged with, the CDC health advisories; countries rated higher in some areas get a dashed outline. The English UI shows unofficial English translations of the MOFA summaries; the full text is the Chinese original.
 - **Pre-trip safety check** ([`trip.html`](https://ancientsky.github.io/safetravel/trip.html), for travellers and travel agencies): search a destination to see both official ratings side by side, regional warnings and recent epidemic news; plus a three-layer world map (travel warnings / health notices / weather: each city's weather and high on the map, day by day or played), a **world-city weather forecast** (CWA, 80 cities × 7 days, region filter, °C/°F; a city opens its country card, which also lists the local forecast), recent changes and an all-destinations table (filter, sort, CSV export, print). Light theme by default.
-- **Health poster carousel** ([`slide.html`](https://ancientsky.github.io/safetravel/slide.html), for airport quarantine-station screens): Taiwan CDC health-education posters (Ebola alert, report symptoms on arrival, symptom guide, don't bring germs back) rebuilt as live HTML with short entrance animations, with separate portrait 1080×1920 and landscape 1920×1080 layouts scaled to any screen. The playlist `web/slides/slides.json` sets active flags, date windows and per-poster durations; screens re-read it every 5 minutes. Printable / save as PDF, with PNG exports built by GitHub Actions. See [SLIDES.md](docs/SLIDES.md).
+- **Health poster carousel** ([`slide.html`](https://ancientsky.github.io/safetravel/slide.html), for airport quarantine-station screens): Taiwan CDC health-education posters (Ebola alert, report symptoms on arrival, symptom guide, don't bring germs back) rebuilt as live HTML with short entrance animations, with separate portrait 1080×1920 and landscape 1920×1080 layouts scaled to any screen. The Ebola poster's map shows the real connecting itineraries (Kinshasa via Paris or Abu Dhabi to Taiwan) without place names, to avoid stigmatising cities. The playlist `web/slides/slides.json` sets active flags, date windows and per-poster durations; **a finished poster image dropped into `web/slides/auto/` is published automatically** (dates, seconds and portrait/landscape pairing ride in the file name) and deleting it retires it. Screens re-read the playlist every 5 minutes. Printable / save as PDF, with PNG exports built by GitHub Actions. See [SLIDES.md](docs/SLIDES.md).
 - **Outbreak route watch**: the direct-flight networks of outbreak cities (currently Irkutsk — suspected plague — and Kinshasa — Bundibugyo virus (BDBV) Ebola), highlighting destinations that also fly to Taoyuan and destinations with a reported exported case.
-- Bilingual (zh-Hant default, English), dark (default) and light themes, optional ambient sound, and automatic reload when new data is published — built to run unattended on display screens.
+- Bilingual (zh-Hant default, English), dark (default) and light themes, optional ambient sound, and automatic reload at a quiet moment when new data or new site code is published — built to run unattended on display screens; an intranet mirror kit ([`scripts/mirror/`](docs/MIRROR.md)) serves it to kiosks without fetching any source twice.
 
 ### How to use
 
