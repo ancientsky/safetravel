@@ -736,6 +736,22 @@ async function run(browser) {
     return 'one automatic reload with fresh modules';
   });
 
+  await check('spotlight card steps aside while the arrivals board or the country panel is open', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1600, height: 900 } });
+    const pg = await ctx.newPage();
+    await pg.goto(BASE_URL, { waitUntil: 'load' });
+    await pg.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    const hid = () => pg.evaluate(() => document.querySelector('#spotlight').classList.contains('is-hidden'));
+    const seq = [await hid()];
+    await pg.click('[data-testid="arrivals-toggle"]'); seq.push(await hid());
+    await pg.evaluate(() => window.__safetravel.openCountry('JP')); seq.push(await hid());
+    await pg.evaluate(() => window.__safetravel.closePanel()); seq.push(await hid());
+    await pg.click('[data-testid="arrivals-toggle"]'); seq.push(await hid());
+    await ctx.close();
+    assert(seq.join() === 'false,true,true,true,false', `hidden sequence ${seq}`);
+    return 'board / panel hide it, both closed bring it back';
+  });
+
   await check('timeline range: 6 months by default, 3/6/12/24 switch the list, choice remembered, ?months= overrides', async () => {
     const pr = await context.newPage();
     const errs = [];

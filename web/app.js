@@ -395,10 +395,18 @@ async function main() {
   };
   let relayoutTimer = 0;
   function relayoutSoon() { clearTimeout(relayoutTimer); relayoutTimer = setTimeout(relayout, 60); }
+  // The spotlight card steps aside while the country panel (docked or dragged) or the arrivals board is open: the
+  // tour keeps running (map highlight; the panel itself with "show full details"), only the card is put away.
+  function syncSpotCard() {
+    $('#spotlight')?.classList.toggle('is-hidden', !!(panel?.isOpen() || arrivals?.isOn()));
+  }
+  on('arrivals:open', syncSpotCard);
+  on('arrivals:close', syncSpotCard);
   arrivals = createArrivals({
     root: $('#arrivals'), button: $('[data-testid="arrivals-toggle"]'), map, openCountry, onLayout: relayout,
   });
   arrivals.init();
+  syncSpotCard(); // a board restored on load
   $('#legend').classList.remove('is-held');
   $('#flight-hud').classList.remove('is-held');
   window.__safetravel.arrivals = arrivals.debug;
@@ -576,10 +584,10 @@ async function main() {
 
   // keep the spotlight effect (outline + reticle) on the country whose panel is shown
   on('panel:open', (iso) => {
-    $('#spotlight')?.classList.add('is-hidden');
+    syncSpotCard();
     map.setSpotlight(iso);
   });
-  on('panel:close', () => $('#spotlight')?.classList.remove('is-hidden'));
+  on('panel:close', syncSpotCard);
 
   // ---- deep links ----
   const fromHash = () => {
