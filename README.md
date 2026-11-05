@@ -211,6 +211,7 @@ python -m pytest pipeline/tests -q        # 單元測試
 python -m http.server -d web 8080         # 預覽：http://localhost:8080/
 node tests/smoke.mjs http://localhost:8080/            # 主站冒煙測試（需 Playwright 與 Chromium）
 node tests/trip-smoke.mjs http://localhost:8080/trip.html   # 出國前查詢頁冒煙測試
+node tests/malaria-smoke.mjs http://localhost:8080/malaria.html   # 瘧疾預防用藥試算（試行版）冒煙測試
 node tests/slide-smoke.mjs http://localhost:8080/slide.html # 衛教海報輪播冒煙測試
 node scripts/export-slides.mjs http://localhost:8080/       # 輸出海報 PNG 到 web/slides/export/（加 --pdf-dir 目錄 另存 PDF）
 npm ci && npm run vendor && node scripts/check-d3.mjs  # 重建 web/vendor/（D3 只打包 scripts/d3-entry.mjs 列出的函式）
@@ -330,6 +331,7 @@ python -m pipeline validate && python -m pytest pipeline/tests -q
 python -m http.server -d web 8080         # http://localhost:8080/
 node tests/smoke.mjs http://localhost:8080/
 node tests/trip-smoke.mjs http://localhost:8080/trip.html
+node tests/malaria-smoke.mjs http://localhost:8080/malaria.html
 node tests/slide-smoke.mjs http://localhost:8080/slide.html
 node scripts/export-slides.mjs http://localhost:8080/   # poster PNGs into web/slides/export/ (--pdf-dir DIR for PDFs)
 npm ci && npm run vendor && node scripts/check-d3.mjs   # rebuild web/vendor/ (D3 subset from scripts/d3-entry.mjs)

@@ -319,3 +319,25 @@ One file per country whose CDC web page has been read (`countries[ISO].page` in 
 - Section keys ∈ `before, vaccines, diseases, during, after`; any may be missing. `hotline` may be empty (no Taiwan
   mission there); `where` names the mission's city when there are several, else `""`.
 
+## `malaria.json` (malaria prophylaxis calculator, draft)
+
+Built with `travelmed.json` (`pipeline/travelmed.py build_malaria`); one entry per `travelmed.json` country.
+
+```json
+{
+  "generated_at": "…",
+  "source": "https://www.cdc.gov.tw/Category/ListContent/YipvR33b32K-dsMI2eIrIg?uaid=ZSgu_4NoQ7NTp0zZ-HC8rg",
+  "countries": {
+    "KE": { "zh": "肯亞", "en": "Kenya", "risk": "drug",
+            "lines": [ { "t": "全境海拔2500公尺以下地區均有感染風險…" }, { "t": "氯奎寧(chloroquine)", "d": 1, "k": "瘧原蟲抗藥性" } ],
+            "groups": { "pregnancy": [ { "t": "…", "d": 1 } ], "infants": […], "immuno": […], "longstay": […] },
+            "mef_resistant": false,
+            "subs": [ … ] }                       // only for countries CDC splits (same keys, no "subs")
+  }
+}
+```
+
+- `risk` ∈ `drug` (CDC asks a doctor to assess preventive medicine), `bites` (mosquito protection only), `none`
+  (no risk / eradicated / no malaria row), `unknown` (the CSV lists a malaria row but the page text is missing).
+- `lines` / `groups`: lines as in `travelmed/<ISO>.json` (`groups` keyed by traveller group, without `g`).
+

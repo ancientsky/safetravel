@@ -65,6 +65,16 @@ def test_hotlines_per_mission():
     assert P.parse(html)["hotline"] == [{"where": "河內", "tel": "+84-913-219-986"}, {"where": "胡志明市", "tel": "+84-903-927-019"}]
 
 
+def test_malaria_risk_follows_cdc_wording():
+    r = travelmed.malaria_risk
+    assert r([{"t": "建議前往前述風險區旅客採取防蚊措施，並請醫師評估是否需口服預防藥物。"}]) == "drug"
+    assert r([{"t": "該國於2019年證實根除瘧疾。"}]) == "none"
+    assert r([{"t": "境內無感染風險，無特別預防用藥之建議。", "k": "當地預防用藥建議"}]) == "none"
+    assert r([{"t": "南部省份有感染風險。"}, {"t": "建議至前述風險地區旅客採取防蚊措施。"}]) == "bites"
+    # a traveller-group note never decides the class
+    assert r([{"t": "南部省份有感染風險。"}, {"t": "瘧疾預防藥物需依體重調整", "g": "infants"}]) == "bites"
+
+
 def test_split_name():
     assert P.split_name("Thailand 泰國") == ("泰國", "Thailand")
     assert P.split_name("Lao People's Dem Rep 寮國") == ("寮國", "Lao People's Dem Rep")
@@ -103,6 +113,13 @@ def test_build_exports_countries_clinics_and_page_details(root):
     v = validate.V()
     validate.check_travelmed(v, doc)
     validate.check_travelmed_details(v, out / "travelmed", doc)
+    assert v.errors == []
+    mal = json.loads((out / "malaria.json").read_text(encoding="utf-8"))
+    th_m = mal["countries"]["TH"]
+    assert th_m["risk"] == "drug" and th_m["mef_resistant"] and "pregnancy" in th_m["groups"]
+    assert any("曼谷" in ln["t"] for ln in th_m["lines"])
+    assert mal["countries"]["JP"]["risk"] == "none"  # no page in this fixture and no malaria row in the CSV
+    validate.check_malaria(v, mal, doc)
     assert v.errors == []
     # same input → same "updated" date and identical output apart from generated_at
     again = travelmed.build(out)

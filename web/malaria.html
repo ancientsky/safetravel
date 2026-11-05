@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>瘧疾預防用藥試算（試行版）· SafeTravel TW</title>
+  <meta name="description" content="依疾管署國際旅遊處方箋與瘧疾預防用藥建議，試算行程是否需要瘧疾預防藥物、可考慮的藥物、服藥時程與顆數，並匯出服藥提醒。試行版，內容待防疫醫師審閱。">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <!-- theme / language before first paint (same stored theme as trip.html) -->
+  <script src="js/trip-boot.js"></script>
+  <script src="js/textsize-boot.js"></script>
+  <script src="js/boot-guard.js"></script>
+  <link rel="stylesheet" href="trip.css">
+  <link rel="stylesheet" href="malaria.css">
+  <script type="module" src="js/malaria.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#trip" data-i18n="skip">跳至行程</a>
+  <header class="top">
+    <div class="wrap bar">
+      <a class="back" href="trip.html" data-i18n-attr="title:back_title">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        <span data-i18n="back">出國前旅遊安全查詢</span>
+      </a>
+      <div class="toggles">
+        <button type="button" class="btn btn-tg lang-toggle" data-testid="lang-toggle" lang="en">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg>
+          <span class="lang-text" data-i18n="lang_toggle">EN</span>
+        </button>
+        <button type="button" class="btn btn-tg ts-toggle" data-testid="textsize-toggle">
+          <span class="ts-a" aria-hidden="true">A<small>A</small></span><span class="ts-val">標準</span>
+        </button>
+        <button type="button" class="btn btn-tg theme-toggle" data-testid="theme-toggle">
+          <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>
+          <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <span class="theme-text"></span>
+        </button>
+      </div>
+    </div>
+    <div class="wrap hero">
+      <p class="kicker" data-i18n="kicker">SafeTravel TW · 旅遊醫學</p>
+      <h1 data-i18n="title">瘧疾預防用藥試算</h1>
+      <p class="lede" data-i18n="lede"></p>
+      <p class="ml-draft" role="note" data-testid="draft-banner"><b data-i18n="draft_h">試行版</b> <span data-i18n="draft"></span></p>
+    </div>
+  </header>
+
+  <main class="wrap ml">
+    <section id="trip" class="sec ml-step" aria-labelledby="trip-h">
+      <h2 id="trip-h"><span class="ml-n" aria-hidden="true">1</span><span data-i18n="trip_h">行程</span></h2>
+      <p class="sec-sub" data-i18n="trip_sub"></p>
+      <ol class="ml-legs" data-testid="legs"></ol>
+      <button type="button" class="btn ml-add" data-testid="add-leg"><span aria-hidden="true">＋</span> <span data-i18n="add_leg">新增目的地</span></button>
+    </section>
+
+    <section id="who" class="sec ml-step" aria-labelledby="who-h">
+      <h2 id="who-h"><span class="ml-n" aria-hidden="true">2</span><span data-i18n="who_h">旅客</span></h2>
+      <p class="sec-sub" data-i18n="who_sub"></p>
+      <div class="ml-who filters">
+        <div class="ml-row">
+          <div class="f-field"><label for="age" data-i18n="age">年齡（歲）</label><input id="age" class="f-input ml-num" type="number" inputmode="decimal" min="0" max="120" step="0.5" data-testid="age"></div>
+          <div class="f-field"><label for="weight" data-i18n="weight">體重（公斤）</label><input id="weight" class="f-input ml-num" type="number" inputmode="decimal" min="1" max="250" step="0.5" data-testid="weight"></div>
+          <div class="f-field"><label for="pregnant" data-i18n="pregnant">懷孕</label>
+            <select id="pregnant" class="f-input" data-testid="pregnant">
+              <option value="no" data-i18n="preg_no">否</option>
+              <option value="yes" data-i18n="preg_yes">懷孕中</option>
+              <option value="planning" data-i18n="preg_planning">計畫懷孕</option>
+            </select></div>
+        </div>
+        <fieldset class="ml-checks">
+          <legend data-i18n="conditions">身體狀況與用藥（有的請勾選）</legend>
+          <label><input type="checkbox" data-k="breastfeeding"> <span data-i18n="c_breastfeeding">哺乳中</span></label>
+          <label class="ml-sub" hidden><input type="checkbox" data-k="infantUnder5"> <span data-i18n="c_infantUnder5">哺乳的嬰兒未滿 5 公斤</span></label>
+          <label><input type="checkbox" data-k="psych" data-testid="c-psych"> <span data-i18n="c_psych">憂鬱症、焦慮症、思覺失調症等精神疾病（含病史）</span></label>
+          <label><input type="checkbox" data-k="seizure"> <span data-i18n="c_seizure">癲癇或痙攣病史</span></label>
+          <label><input type="checkbox" data-k="arrhythmia"> <span data-i18n="c_arrhythmia">心律不整病史</span></label>
+          <label><input type="checkbox" data-k="renal"> <span data-i18n="c_renal">嚴重腎功能不全（肌酸酐清除率 ≦ 30 mL/min）</span></label>
+          <label><input type="checkbox" data-k="liver"> <span data-i18n="c_liver">肝功能不全</span></label>
+          <label><input type="checkbox" data-k="hiv"> <span data-i18n="c_hiv">免疫不全，或正在服用 HIV 藥物</span></label>
+          <label><input type="checkbox" data-k="yeast"> <span data-i18n="c_yeast">使用抗生素後容易陰道念珠菌感染</span></label>
+          <label><input type="checkbox" data-k="bupropion"> <span data-i18n="c_bupropion">正在服用戒菸藥 Bupropion</span></label>
+          <label><input type="checkbox" data-k="precision"> <span data-i18n="c_precision">工作或活動需要精細協調（駕駛車輛或飛機、操作機械、深海潛水）</span></label>
+          <label><input type="checkbox" data-k="acneDox"> <span data-i18n="c_acneDox">已在長期服用 Doxycycline（例如治療痤瘡）</span></label>
+          <span class="ml-checks-h" data-i18n="allergy_h">曾對以下藥物過敏：</span>
+          <label><input type="checkbox" data-k="allergyMef"> <span data-i18n="c_allergyMef">Mefloquine、Quinine 或 Quinidine</span></label>
+          <label><input type="checkbox" data-k="allergyDox"> <span data-i18n="c_allergyDox">Doxycycline 或其他四環黴素類</span></label>
+          <label><input type="checkbox" data-k="allergyAtq"> <span data-i18n="c_allergyAtq">Atovaquone 或 Proguanil（Malarone®）</span></label>
+        </fieldset>
+      </div>
+    </section>
+
+    <section id="result" class="sec ml-step" aria-labelledby="res-h" aria-live="polite" data-testid="result">
+      <h2 id="res-h"><span class="ml-n" aria-hidden="true">3</span><span data-i18n="res_h">試算結果</span></h2>
+      <div class="ml-res"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <h2 class="foot-h" data-i18n="foot_sources">資料來源</h2>
+      <ul class="foot-list">
+        <li><a href="https://www.cdc.gov.tw/Category/ListContent/YipvR33b32K-dsMI2eIrIg?uaid=ZSgu_4NoQ7NTp0zZ-HC8rg" target="_blank" rel="noopener noreferrer" data-i18n="foot_drugs">衛生福利部疾病管制署 瘧疾預防用藥（國內現用藥品簡介）</a></li>
+        <li><a href="https://www.cdc.gov.tw/Internationaltravel/Index/ZkNLTkRxQ0NyQmc5Rk50dmZZZlI2Zz09" target="_blank" rel="noopener noreferrer" data-i18n="foot_rx">衛生福利部疾病管制署 國際旅遊處方箋（各國瘧疾風險地區與抗藥性）</a></li>
+      </ul>
+      <p class="foot-disc" data-i18n="foot_disc"></p>
+      <p><a href="trip.html" data-i18n="back">出國前旅遊安全查詢</a> · <a href="trip.html#clinics" data-i18n="foot_clinics">旅遊醫學門診</a></p>
+    </div>
+  </footer>
+  <noscript><p class="noscript">本頁需要啟用 JavaScript。This page needs JavaScript.</p></noscript>
+</body>
+</html>

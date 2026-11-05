@@ -780,6 +780,44 @@ def check_travelmed_details(v: V, d: Path, doc) -> None:
                 _tm_page(v, f"{w}.subs[{i}].page", sb["page"])
 
 
+MAL_RISK = ("drug", "bites", "none", "unknown")
+
+
+def _mal_entry(v: V, where: str, e, sub: bool) -> None:
+    req = ["zh", "en", "risk", "lines", "groups", "mef_resistant"]
+    if not v.keys(where, e, req, () if sub else ("subs",)):
+        return
+    if e["risk"] not in MAL_RISK:
+        v.err(where, f"risk {e['risk']!r} is not one of {MAL_RISK}")
+    _tm_lines(v, f"{where}.lines", e["lines"])
+    if not isinstance(e["groups"], dict) or any(g not in TM_GROUPS for g in e["groups"]):
+        v.err(where, "groups should map traveller groups to lines")
+    else:
+        for g, lines in e["groups"].items():
+            _tm_lines(v, f"{where}.groups.{g}", lines)
+    v.typ(where, e["mef_resistant"], bool, "mef_resistant")
+    for i, sb in enumerate(e.get("subs", []) if not sub else []):
+        _mal_entry(v, f"{where}.subs[{i}]", sb, True)
+
+
+def check_malaria(v: V, doc, travelmed) -> None:
+    """malaria.json (pipeline/travelmed.py build_malaria, malaria.html)."""
+    w = "malaria.json"
+    if not v.keys(w, doc, ["generated_at", "source", "countries"]):
+        return
+    v.pat(w, doc["generated_at"], TS, "generated_at")
+    if not CDC_URL.match(str(doc["source"])):
+        v.err(w, "source must be a cdc.gov.tw page")
+    cs = doc["countries"] if isinstance(doc["countries"], dict) else {}
+    tm = (travelmed or {}).get("countries", {}) if isinstance(travelmed, dict) else {}
+    if tm and set(cs) != set(tm):
+        v.err(w, "countries should be exactly those of travelmed.json")
+    for iso, e in cs.items():
+        if not ISO2.match(iso):
+            v.err(w, f"country key {iso!r} is not ISO alpha-2")
+        _mal_entry(v, f"{w}.countries[{iso}]", e, False)
+
+
 def validate_dir(d: Path) -> list[str]:
     d = Path(d)
     v = V()
@@ -834,6 +872,9 @@ def validate_dir(d: Path) -> list[str]:
             tmd = json.loads(tm.read_text(encoding="utf-8"))
             check_travelmed(v, tmd)
             check_travelmed_details(v, d / "travelmed", tmd)
+            ml = d / "malaria.json"
+            if ml.exists():
+                check_malaria(v, json.loads(ml.read_text(encoding="utf-8")), tmd)
         except ValueError as e:
             v.err("travelmed.json", f"cannot parse: {e}")
     if "epidemics" in data:

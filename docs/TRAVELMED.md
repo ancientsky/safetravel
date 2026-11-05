@@ -74,3 +74,26 @@ The CMS rich text is flattened into lines `{t, d?, h?, k?, g?}`:
   18:00–21:30 Taipei time — CDC publishes only 早/午/夜), "可接種 M 痘疫苗", "離我最近" (Geolocation API; the position
   is used in the browser only), a 7 × 3 week grid per clinic, next-session label, call / website / map links (map =
   coordinate search on Google Maps). Wide screens (≥ 1000 px) add a locator map with Kinmen and Matsu insets.
+
+## Malaria prophylaxis calculator (`malaria.html`, draft)
+
+A standalone page, not linked from the other pages and `noindex`, until Taiwan CDC-affiliated physicians have reviewed it.
+- **Data**: `web/data/malaria.json` (built with `travelmed.json`): per destination, CDC's `瘧疾預防用藥` row from the
+  travel prescription page — risk areas, resistance, traveller-group notes — and a class taken from CDC's own wording:
+  `drug` when it asks a doctor to assess preventive medicine (「請醫師評估是否需口服預防藥物」), `none` when it says
+  there is no risk or malaria was eradicated, else `bites` (mosquito protection only); `unknown` when the CSV lists the
+  row but the page text is missing. `mef_resistant` when the row mentions mefloquine resistance (Thailand, Myanmar,
+  Cambodia, Laos, Vietnam — the same five areas as CDC's drug table).
+- **Rules**: `web/js/malaria-calc.js`, from CDC's 「瘧疾預防用藥」 page (國內現用藥品簡介, updated 2026-02-05): the
+  three drugs in use in Taiwan, their schedules (Malarone and doxycycline daily from 1–2 days before, mefloquine weekly
+  from 2–3 weeks before; 7 days / 4 weeks / 4 weeks after leaving), adult and child doses, contraindications and
+  cautions. Where CDC leaves the dose to the doctor (Malarone < 40 kg — no paediatric tablet in Taiwan; doxycycline
+  2.2 mg/kg for children; mefloquine ≤ 9 kg) no tablet count is given.
+- **Trip**: several stops; a stop counts when its class is `drug`/`unknown` and the traveller answers that the trip
+  goes (or may go) to CDC's risk areas. The risk window runs from the first such arrival to the last departure.
+  Weekly doses fall on the first dose's weekday and always include 4 doses after leaving.
+- **Output**: per drug: can be considered / needs the doctor's attention / not suitable (with CDC's reasons), first
+  and last dose, number of doses, tablets to buy (fractions rounded up), optional price → cost, a timeline, a
+  repeating reminder for Google Calendar (event template with an RRULE) and an `.ics` file (floating local time, an
+  alarm on each dose, plus a 90-day "malaria watch" after return). Nothing typed is stored or sent.
+- Tests: `tests/malaria-smoke.mjs` (regimens, contraindications, resistance, calendar output, phone width).

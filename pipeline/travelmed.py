@@ -364,6 +364,8 @@ def build(out_dir: Path | None = None, raw: Path | None = None) -> dict | None:
         return None
     C.write_json(out_dir / "travelmed.json", doc)
     _write_details(out_dir / "travelmed", details)
+    mal = build_malaria(details, countries)
+    C.write_json(out_dir / "malaria.json", mal)
     C.log.info("travel medicine: %d countries (%d unmapped), %d clinics, %d terms",
                len(countries), len(unmapped), len(clinics), len(terms.items))
     return doc
@@ -419,3 +421,53 @@ def _write_details(d: Path, details: dict[str, dict]) -> None:
     for p in d.glob("*.json"):
         if p.stem not in details:
             p.unlink()
+
+
+# ------------------------------------------------------------------- malaria.json (malaria.html calculator)
+MALARIA_ROW = "瘧疾預防用藥"
+MALARIA_PAGE = "https://www.cdc.gov.tw/Category/ListContent/YipvR33b32K-dsMI2eIrIg?uaid=ZSgu_4NoQ7NTp0zZ-HC8rg"
+_MEF = re.compile(r"mefloquine|美爾奎寧", re.I)
+
+
+def malaria_risk(lines: list[dict]) -> str:
+    """CDC's own wording decides: "drug" when the row asks a doctor to assess preventive medicine
+    (「請醫師評估是否需口服預防藥物」), "none" when it states there is no risk / malaria was eradicated,
+    else "bites" (mosquito protection only)."""
+    text = " ".join(f"{ln.get('k', '')} {ln['t']}" for ln in lines if not ln.get("g"))
+    if "預防藥物" in text:
+        return "drug"
+    if re.search(r"根除|境內無(瘧疾)?感染風險|無特別預防用藥之建議", text):
+        return "none"
+    return "bites"
+
+
+def _malaria_entry(page: dict) -> dict | None:
+    row = next((v for v in page.get("vaccines", []) if v.get("name") == MALARIA_ROW), None)
+    if not row:
+        return None
+    general = [ln for ln in row["lines"] if not ln.get("g")]
+    groups: dict[str, list] = {}
+    for ln in row["lines"]:
+        if ln.get("g"):
+            groups.setdefault(ln["g"], []).append({k: v for k, v in ln.items() if k != "g"})
+    text = " ".join(ln["t"] for ln in general)
+    return {"risk": malaria_risk(row["lines"]), "lines": general, "groups": groups,
+            "mef_resistant": bool(_MEF.search(text))}
+
+
+def build_malaria(details: dict[str, dict], countries: dict[str, dict]) -> dict:
+    """Per destination: CDC's malaria row (risk areas, resistance, traveller-group notes) and a risk class."""
+    out: dict[str, dict] = {}
+    for iso, b in sorted(countries.items()):
+        det = details.get(iso)
+        entry = _malaria_entry(det["page"]) if det else None
+        if entry is None:
+            entry = {"risk": "unknown" if MALARIA_ROW in b.get("vax", []) else "none",
+                     "lines": [], "groups": {}, "mef_resistant": False}
+        subs = []
+        for sb in (det or {}).get("subs", []):
+            se = _malaria_entry(sb["page"])
+            if se:
+                subs.append({"zh": sb["zh"], "en": sb["en"], **se})
+        out[iso] = {"zh": b["zh"], "en": b["en"], **entry, **({"subs": subs} if subs else {})}
+    return {"generated_at": C.iso_ts(), "source": MALARIA_PAGE, "countries": out}

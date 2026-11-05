@@ -1,0 +1,123 @@
+/* malaria.html (瘧疾預防用藥試算) — on top of trip.css (tokens, header, buttons, form fields, footer). */
+.ml-draft {
+  margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: calc(14.5px * var(--ts));
+  background: rgba(217, 122, 0, .12); border: 1px solid var(--lvl2); color: var(--fg);
+}
+.ml-draft b { color: var(--lvl2); margin-right: 4px; }
+:root[data-theme="dark"] .ml-draft b { color: var(--lvl2); }
+.ml { padding-bottom: 40px; }
+.ml-step h2 { display: flex; align-items: center; gap: 10px; font-size: calc(22px * var(--ts)); }
+.ml-n {
+  display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%;
+  background: var(--accent); color: var(--bg); font-size: .8em; font-weight: 800;
+}
+.ml-step > .sec-sub { margin: 4px 0 12px; }
+.ml-legs { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 10px; }
+.ml-leg { padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border-strong); display: grid; gap: 10px; }
+.ml-leg-row { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 12px; }
+.ml-leg-n {
+  align-self: center; display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid var(--border-strong); font-weight: 800; color: var(--fg-dim);
+}
+.ml-f-country { flex: 1 1 14em; }
+.ml-country { width: 100%; }
+.ml-leg input[type="datetime-local"] { width: 13.5em; }
+.ml-del { margin-left: auto; }
+.ml-cdc { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); display: grid; gap: 6px; }
+.ml-cdc-drug { border-color: var(--lvl2); }
+.ml-cdc-h { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: calc(14.5px * var(--ts)); }
+.ml-risk { padding: 1px 10px; border-radius: 999px; font-weight: 800; font-size: calc(13.5px * var(--ts)); white-space: nowrap; }
+.ml-risk-drug, .ml-risk-unknown { background: var(--lvl2); color: var(--lvl2-fg); }
+.ml-risk-bites { background: var(--surface); border: 1px solid var(--lvl1); color: var(--fg); }
+.ml-risk-none { background: var(--surface); border: 1px dashed var(--border-strong); color: var(--fg-dim); }
+.ml-lines { display: grid; gap: 3px; font-size: calc(14.5px * var(--ts)); }
+.ml-ln { position: relative; }
+.ml-ln.d1, .ml-ln.d2, .ml-ln.d3 { padding-left: 1.1em; }
+.ml-ln.d2 { margin-left: 1.1em; color: var(--fg-dim); }
+.ml-ln.d1::before, .ml-ln.d2::before { content: "•"; position: absolute; left: .2em; color: var(--accent); }
+.ml-ln-h { font-weight: 800; }
+.ml-visit { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding-top: 4px; font-weight: 600; }
+.ml-visit-q { flex-basis: 100%; font-weight: 800; }
+.ml-radio { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; cursor: pointer; }
+.ml-radio input { width: 18px; height: 18px; accent-color: var(--accent); }
+.ml-add { margin-top: 2px; }
+
+.ml-who { display: grid; gap: 12px; }
+.ml-row { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+.ml-num { width: 8em; }
+.ml-checks { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22em), 1fr)); gap: 4px 16px; }
+.ml-checks legend { font-weight: 700; font-size: calc(14px * var(--ts)); margin-bottom: 6px; padding: 0; }
+.ml-checks label { display: flex; align-items: flex-start; gap: 8px; min-height: 32px; font-size: calc(14.5px * var(--ts)); cursor: pointer; }
+.ml-checks input { width: 18px; height: 18px; margin-top: .25em; flex: none; accent-color: var(--accent); }
+.ml-checks .ml-sub { padding-left: 26px; }
+.ml-checks-h { grid-column: 1 / -1; margin-top: 6px; font-weight: 700; font-size: calc(14px * var(--ts)); }
+
+.ml-res { display: grid; gap: 14px; }
+.ml-verdict { padding: 14px 16px; border-radius: 12px; border: 2px solid var(--border-strong); background: var(--surface); }
+.ml-v-h { font-size: calc(19px * var(--ts)); font-weight: 800; line-height: 1.4; }
+.ml-v-s { margin-top: 4px; color: var(--fg-dim); }
+.ml-v-need { border-color: var(--lvl2); background: rgba(217, 122, 0, .08); }
+.ml-v-avoid-areas, .ml-v-bites, .ml-v-none { border-color: var(--lvl1); }
+.ml-v-incomplete { border-style: dashed; }
+.ml-win { font-weight: 700; }
+.ml-go {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; padding: 10px 14px;
+  border-radius: 12px; background: rgba(var(--accent-rgb), .1); border: 1px solid rgba(var(--accent-rgb), .45);
+}
+.ml-warn { padding: 10px 14px; border-radius: 10px; border-left: 4px solid var(--lvl3); background: var(--surface-2); font-weight: 600; }
+.ml-drugs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22em), 1fr)); gap: 12px; align-items: start; }
+.ml-drug { padding: 14px 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border-strong); display: grid; gap: 10px; min-width: 0; }
+.ml-drug.ml-st-ok { border: 2px solid var(--lvl1); }
+.ml-drug.ml-st-caution { border: 2px solid var(--lvl2); }
+.ml-drug.ml-st-no, .ml-drug.ml-st-covered { background: var(--surface-2); opacity: .9; }
+.ml-drug-h { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+.ml-drug-h h3 { font-size: calc(18px * var(--ts)); font-weight: 800; }
+.ml-brand { font-weight: 600; color: var(--fg-dim); }
+.ml-drug-zh { color: var(--fg-dim); font-size: calc(14px * var(--ts)); }
+.ml-st { flex: none; padding: 2px 10px; border-radius: 999px; font-weight: 800; font-size: calc(13px * var(--ts)); }
+.ml-st.ml-st-ok { background: var(--lvl1); color: var(--lvl1-fg); }
+.ml-st.ml-st-caution { background: var(--lvl2); color: var(--lvl2-fg); }
+.ml-st.ml-st-no { background: var(--lvl3); color: var(--lvl3-fg); }
+.ml-st.ml-st-covered { background: var(--cyan); color: var(--bg); }
+.ml-reasons { margin: 0; padding-left: 1.2em; display: grid; gap: 2px; font-size: calc(14.5px * var(--ts)); }
+.ml-reasons .ml-r-info { color: var(--fg-dim); }
+.ml-reg { font-size: calc(14.5px * var(--ts)); }
+.ml-tab { font-size: calc(13.5px * var(--ts)); color: var(--fg-mute); }
+.ml-calc { display: grid; gap: 8px; }
+.ml-dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5em, 1fr)); gap: 6px 12px; }
+.ml-dl div { padding: 6px 10px; border-radius: 8px; background: var(--surface-2); }
+.ml-dl dt { font-size: calc(12.5px * var(--ts)); color: var(--fg-mute); font-weight: 700; }
+.ml-dl dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ml-buy { outline: 2px solid var(--accent); }
+.ml-note { font-size: calc(13.5px * var(--ts)); color: var(--fg-mute); }
+.ml-dose-note { color: var(--fg-dim); }
+.ml-tlw { display: grid; gap: 4px; }
+.ml-tl { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--surface-2); }
+.ml-tl-pre { width: var(--pre); background: var(--cyan); opacity: .55; }
+.ml-tl-in { width: var(--in); background: var(--lvl2); }
+.ml-tl-post { width: var(--post); background: var(--accent); opacity: .7; }
+.ml-tl-l { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: calc(12.5px * var(--ts)); color: var(--fg-dim); }
+.ml-tl-l span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.ml-tl-l .k-pre::before { background: var(--cyan); opacity: .55; }
+.ml-tl-l .k-in::before { background: var(--lvl2); }
+.ml-tl-l .k-post::before { background: var(--accent); opacity: .7; }
+.ml-price { display: flex; flex-wrap: wrap; align-items: end; gap: 6px 14px; }
+.ml-cost { font-weight: 800; }
+.ml-calb { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 6px; border-top: 1px dashed var(--border); }
+.ml-time { width: 8em; }
+.ml-calb .ml-note { flex-basis: 100%; }
+.ml-gns { display: grid; gap: 10px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--surface); }
+.ml-gns h3, .ml-general h3 { font-size: calc(17px * var(--ts)); font-weight: 800; }
+.ml-gn { display: grid; gap: 4px; }
+.ml-gn-h { font-weight: 800; color: var(--cyan); }
+.ml-general { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); }
+.ml-general ul { margin: 6px 0 0; padding-left: 1.2em; display: grid; gap: 2px; }
+.ml-src { font-size: calc(13.5px * var(--ts)); color: var(--fg-mute); }
+@media (max-width: 719px) {
+  .ml-leg input[type="datetime-local"] { width: 100%; }
+  .ml-leg-row .f-field { flex: 1 1 100%; }
+}
+@media print {
+  .top .toggles, .ml-add, .ml-del, .ml-calb, .ml-go .btn, .ml-actions, .skip-link, #who { display: none !important; }
+  .ml-drug, .ml-gns, .ml-general, .ml-leg { break-inside: avoid; }
+}
