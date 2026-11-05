@@ -256,11 +256,13 @@ async function run(browser) {
   });
 
   // 10. Outbreak route watch: menu switch draws the Irkutsk network and switching it off removes it
-  await check('outbreak route watch toggles the map layer', async () => {
-    await page.locator('[data-testid="watch-toggle"]').click();
+  await check('outbreak route watch (from the menu) toggles the map layer and marks the menu button', async () => {
+    await page.locator('[data-testid="menu-toggle"]').click();
+    await page.locator('#phone-menu [data-proxy="watch-toggle"]').click();
     await page.locator('[data-testid="watch-menu"] .wt-switch').first().click();
     await page.waitForFunction(() => document.querySelectorAll('.watch-layer:not([hidden]) .wt-arc').length > 10, null, { timeout: 8000, polling: 250 });
     const arcs = await page.locator('.wt-arc').count();
+    assert(await page.evaluate(() => document.querySelector('[data-testid="menu-toggle"]').classList.contains('has-active')), 'no dot on the menu button');
     await shot(page, '06-watch.png');
     await page.locator('[data-testid="watch-menu"] .wt-switch').first().click();
     await page.waitForFunction(() => document.querySelector('.watch-layer')?.hidden === true, null, { timeout: 4000 });

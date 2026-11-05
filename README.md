@@ -53,15 +53,13 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 | 入境航班 | 開關入境航班看板（預設關閉） |
 | 出國查詢 | 前往出國前旅遊安全查詢頁（`trip.html`） |
 | 快查 | 前往「旅遊疫情快查」（`m.html`）：搜尋優先、字大、不載入地圖，適合自己的電腦與手機（手機版在「選單」裡） |
-| 衛教輪播 | 前往機場檢疫站衛教海報輪播（`slide.html`；手機版在「選單」裡，入境航班看板與頁尾也有連結） |
-| 疫區航線 | 開啟監測選單，用開關顯示／隱藏疫區直飛航線圖 |
-| 音效 | 開關音效（預設關閉；瀏覽器擋自動播放時，按鈕會出現提示點，點一下即可開啟） |
 | Aa 字級 | 切換字體大小：小（100%）→ 標準（112%）→ 大（125%）→ 特大（140%，桌機與牆面螢幕預設），每台螢幕記住；手機預設「標準」；畫面高度不到 900 px（筆電或瀏覽器放大 125% 以上）時「特大」自動以「大」顯示並隱藏統計數字卡。也可用網址 `?text=s／m／l／xl` 固定 |
 | 月亮／太陽 | 切換深色／淺色主題 |
+| 選單 | 手機與電腦都有：其他頁面（快查、出國前查詢、全螢幕入境航班看板、衛教海報輪播、使用說明）與這頁的功能——**疫區航線**（開啟監測選單；開啟時選單按鈕出現小紅點）、**音效**（預設關閉）、字級、深淺色、語言，並顯示目前狀態 |
 
-**手機版選單**：手機上地圖頁的標題列只留「入境航班」和「**選單**」；選單列出其他頁面（旅遊疫情快查、出國前查詢、全螢幕入境航班看板、衛教海報輪播，各附一句說明）與這一頁的功能（入境航班看板、疫區航線、字體大小、深色／淺色、English、音效，並顯示目前狀態）。
+**手機版選單**：手機上地圖頁的標題列只留「入境航班」和「**選單**」（電腦版另有語言、出國查詢、快查、字級、主題按鈕）；選單列出其他頁面（旅遊疫情快查、出國前查詢、全螢幕入境航班看板、衛教海報輪播，各附一句說明）與這一頁的功能（入境航班看板、疫區航線、字體大小、深色／淺色、English、音效，並顯示目前狀態）。
 
-**地圖操作**：滾輪縮放、拖曳平移、雙擊重設；按 `/` 跳到搜尋框，`Esc` 關閉國家面板。搜尋框可輸入國家、**城市或機場**（中英文名稱、常見俗稱或機場代碼，例如「成田」「曼谷」「名古屋」「NRT」），選取後開啟該國面板（出國前查詢頁的搜尋也一樣）。左上可切換「疫情建議・疾管署／旅遊警示・外交部」圖層；**左下圖例就是等級篩選**：點某一等級只顯示該等級（可複選，「全部」還原），圖例右上 ⌄ 可收合（每台螢幕記住）。**國家面板可拖曳**：按住面板最上方拖到任何位置、右下角調整大小（每台螢幕記住），▯ 按鈕放回右側。旁邊的「天氣」開關（預設關閉）會在地圖上疊加中央氣象署 80 個城市的天氣與最高溫，可逐日切換或播放，國家面板也會多一段「當地天氣預報」；圖例旁的「航線雷達」預設**只看入境**航線（全部同一顏色），可切到「出入境」或關閉動畫；開啟疫區航線時，圖例會說明虛線代表哪個疫區的直飛航線。手機上單指點選國家、雙指才移動縮放地圖，避免誤觸。滑鼠提示與國家面板一律並列兩種分級；國家面板的「外交部旅遊警示」區塊可展開全文並連回領事事務局原文。
+**地圖操作**：滾輪縮放、拖曳平移、雙擊重設；按 `/` 跳到搜尋框，`Esc` 關閉國家面板。搜尋框可輸入國家、**城市或機場**（中英文名稱、常見俗稱或機場代碼，例如「成田」「曼谷」「名古屋」「NRT」），選取後開啟該國面板（出國前查詢頁的搜尋也一樣）。左上可切換「疫情建議・疾管署／旅遊警示・外交部」圖層；**左下圖例就是等級篩選**：點某一等級只顯示該等級（可複選，「全部」還原），圖例右上 ⌄ 可收合（每台螢幕記住）。**國家面板可拖曳**：按住面板最上方拖到任何位置、右下角調整大小（每台螢幕記住），▯ 按鈕放回右側。旁邊的「天氣」開關（預設關閉）會在地圖上疊加中央氣象署 80 個城市的天氣與最高溫，可逐日切換或播放，國家面板也會多一段「當地天氣預報」；圖例旁的「航線雷達」預設**只看入境**航線（全部同一顏色），可切到「出入境」或關閉動畫；入境航班看板停靠在左側時，航線雷達縮成開關、圖例收成標題列（點一下展開），讓出地圖空間；開啟疫區航線時，圖例會說明虛線代表哪個疫區的直飛航線。手機上單指點選國家、雙指才移動縮放地圖，避免誤觸。滑鼠提示與國家面板一律並列兩種分級；國家面板的「外交部旅遊警示」區塊可展開全文並連回領事事務局原文。
 
 **入境航班看板**
 
@@ -259,7 +257,7 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 
 ### How to use
 
-- **Header buttons**: language · **Arrivals** (inbound board, off by default) · **Trip check** (`trip.html`) · **Quick check** (`m.html`) · **Health posters** (`slide.html`; in the menu on phones, also linked from the arrivals board and the footer) · **Outbreak routes** (menu with one switch per watched city) · Sound · **Aa text size** (S 100 % → M 112 % → L 125 % → XL 140 %, the default on desktops and wall screens; remembered per screen, phones default to S; `?text=s|m|l|xl` pins it) · Theme.
+- **Header buttons**: language · **Arrivals** (inbound board, off by default) · **Trip check** (`trip.html`) · **Quick check** (`m.html`) · **Aa** text size · theme · **Menu** (other pages incl. health posters `slide.html` and help, outbreak routes, sound and the other switches with their state; a dot while outbreak routes are on). **Aa text size**: S 100 % → M 112 % → L 125 % → XL 140 % (the default on desktops and wall screens; remembered per screen, phones default to M, screens under 900 px tall show XL as L; `?text=s|m|l|xl` pins it).
 - **Phone menu**: on phones the map page's header keeps only *Arrivals* and *Menu*; the menu lists the other pages (quick check, trip check, full-screen arrivals board, health posters — each with a one-line description) and this page's switches (arrivals board, outbreak routes, text size, dark/light, language, sound) with their current state.
 - **Map**: wheel to zoom, drag to pan, double-click to reset; `/` focuses search (countries, **cities and airports** by Chinese / English name, common nickname or IATA code, e.g. 成田, Bangkok, 名古屋, NRT — also on `trip.html`), `Esc` closes the panel; layer switch (CDC health / MOFA safety) and a **Weather** overlay switch (off by default: CWA forecasts for 80 cities with a 7-day selector, plus a local-weather section in the country panel) top-left; tooltips and the panel always show both ratings; the **legend is the level filter** (tap a level to show only it; collapsible, remembered); the **country panel can be dragged** anywhere by its top and resized from its corner (▯ docks it back); the route radar bottom-left shows inbound routes only by default (*Both ways* adds departures), and the legend explains the dotted outbreak routes while they are on. On phones one finger taps, two fingers pan and zoom.
 - **Inbound board**: pick the airport, one or several checkpoints (e.g. B + C) and a time window (drop-down), or **search a flight** (`JK202`, `JK-202`, `jk 202`, codeshares too) or an origin (`NRT`, `東京`, or a city / nickname such as `名古屋`, `Nagoya`, `Centrair` for NGO 中部) — a search covers every checkpoint and 2 h back to 4 h ahead; each row shows gate, terminal, checkpoint and the **baggage carousel** (assigned before landing at Taoyuan); click a row to open the origin country; hover to highlight its route. *Auto-scroll* (on by default) glides through the list and pauses for 8 s after the mouse moves or 15 s after a touch/wheel/click — a parked cursor does not stop it. *Large* is for wall screens. Drag the title bar to float the board (position remembered per orientation); *Dock* restores it. Data refreshes every 10 minutes (every 30 minutes from 00:00 to 04:59 Taipei).

@@ -19,7 +19,7 @@ import { createArrivals } from './js/arrivals.js';
 import { createWatch } from './js/watch.js';
 import { createSearch, renderLayerSwitch } from './js/search.js';
 import {
-  startClock, renderTiles, renderFreshness, renderLegend, renderFlightHud, setLegendExtra, setLegendWatch,
+  startClock, renderTiles, renderFreshness, renderLegend, renderFlightHud, setLegendExtra, setLegendWatch, legendDocked,
 } from './js/hud.js';
 
 const LANG_KEY = 'safetravel.lang';
@@ -255,6 +255,15 @@ async function main() {
   renderFlightHud($('#flight-hud'));
   const layerNode = $('#layer-switch');
   const legendNode = $('#legend');
+  // a left-docked arrivals board collapses the legend (and shrinks the route box, CSS): re-render when it docks / undocks
+  let wasDocked = legendDocked();
+  new MutationObserver(() => {
+    const d = legendDocked();
+    if (d === wasDocked) return;
+    wasDocked = d;
+    state.legendDockOpen = false;
+    renderLegend(legendNode);
+  }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   // portrait screens stack the route box on top of the legend: keep --legend-h (its height) current
   if ('ResizeObserver' in window) {
     new ResizeObserver(([e]) => {
@@ -269,8 +278,11 @@ async function main() {
   // The legend is also the level filter (one place instead of tiles + chips + legend): tap a level to show only it.
   legendNode.addEventListener('click', (e) => {
     if (e.target.closest('[data-legend-min]')) {
-      state.legendMin = !state.legendMin;
-      storageSet(LEGEND_KEY, state.legendMin ? 'min' : 'open');
+      if (legendDocked()) state.legendDockOpen = !state.legendDockOpen; // beside a docked board: just for now
+      else {
+        state.legendMin = !state.legendMin;
+        storageSet(LEGEND_KEY, state.legendMin ? 'min' : 'open');
+      }
       renderLegend(legendNode);
       legendNode.querySelector('[data-legend-min]')?.focus();
       return;
@@ -391,7 +403,10 @@ async function main() {
   // Outbreak route watch (e.g. Irkutsk direct flights): header menu, off by default; ?watch=irkutsk deep link.
   const watch = createWatch({ button: $('[data-testid="watch-toggle"]'), menu: $('#watch-menu'), map });
   setLegendWatch(watch.legendItems); // the dashed outbreak routes get a legend entry while they are on the map
-  on('watch:change', () => renderLegend(legendNode));
+  on('watch:change', (ids) => {
+    renderLegend(legendNode);
+    $('[data-testid="menu-toggle"]')?.classList.toggle('has-active', !!ids?.length); // the routes' button is in the menu
+  });
   if (state.data.world) watch.init();
   window.__safetravel.watch = watch.debug;
 

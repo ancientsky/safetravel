@@ -18,6 +18,7 @@ export const state = {
   flightsOn: true,
   flightDir: 'in', // TPE routes: 'in' arrivals only (default) | 'both' directions
   legendMin: false, // legend collapsed to its title bar
+  legendDockOpen: false, // legend opened by hand while a left-docked arrivals board collapses it
   spotlight: { iso: null, playing: true },
   mapPinned: false, // true while an overlay owns the map view (outbreak route watch): the tour does not move the map
   fps: 0,

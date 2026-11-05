@@ -1276,9 +1276,15 @@ body.arr-open .flights-canvas { opacity: .35; }
 .arr-hub-dot { fill: var(--cyan); }
 @keyframes arr-hub { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
 
-@media (max-width: 1799px) { /* a left-docked board + legend leave no room for the route box beside the spotlight */
-  body.arr-dock-left .flight-hud { display: none; }
+/* beside a left-docked arrivals board: the legend starts as its title bar and the route box shrinks to its switch,
+   stacked above the legend in one narrow column (--legend-h is measured in app.js) */
+body.arr-dock-left .legend.is-min { width: auto; min-width: calc(200px * var(--ts)); }
+body.arr-dock-left .flight-hud {
+  left: calc(var(--gutter) * 2 + var(--arr-w)); bottom: calc(var(--foot-h) + 22px + var(--legend-h, 48px));
+  min-width: 0; width: auto; padding: 6px 10px;
 }
+body.arr-dock-left .flight-hud .fh-stats, body.arr-dock-left .flight-hud .fh-dir { display: none; }
+body.arr-dock-left .flight-hud .fh-head { margin: 0; }
 /* portrait wall screens (1080x1920): the spotlight card spans most of the width, so the route box sits on top of the
    legend in the left column instead of beside it */
 @media (orientation: portrait) and (min-width: 761px) {
@@ -1778,7 +1784,6 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
   .hud-right .slides-link { min-width: 32px; padding: 0 7px; }
   .hud-right .toggles { gap: 4px; }
 }
-@media (max-width: 760px) { .slides-link { display: none; } }
 
 /* text-size button (js/textsize.js) */
 .ts-a { font-weight: 800; letter-spacing: -.02em; line-height: 1; }
@@ -1848,6 +1853,21 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
 .pm-state.is-on { border-color: var(--accent); color: var(--accent); }
 .pm-hot { border-color: var(--accent); background: rgba(var(--accent-rgb), .08); }
 .pm-tip { margin: 12px 2px 0; font-size: calc(12px * var(--ts)); color: var(--fg-mute); }
+/* the menu button is on every screen: outbreak routes, sound and the poster page live in it (labelled, with state) */
+.menu-toggle { display: inline-flex; gap: 4px; position: relative; }
+.hud .toggles > .watch-toggle, .hud .toggles > .sound-toggle { display: none; }
+.mt-dot { display: none; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--watch); box-shadow: 0 0 8px var(--watch); }
+.menu-toggle.has-active .mt-dot { display: block; }
+/* desktops: the menu drops down under the header's right end instead of rising from the bottom */
+@media (min-width: 761px) {
+  .phone-menu { align-items: flex-start; justify-content: flex-end; background: rgba(0, 0, 0, .3); }
+  .pm-sheet {
+    width: min(420px, calc(100vw - 2 * var(--gutter))); max-height: calc(100vh - var(--hud-top-b, 80px) - 24px);
+    margin: calc(var(--hud-top-b, 80px) + 6px) var(--gutter) 0 0; border: 1px solid var(--border-strong); border-radius: 14px;
+    box-shadow: var(--shadow);
+  }
+  .pm-tip { display: none; } /* the touch tip is for phones */
+}
 @media (max-width: 760px) {
   .menu-toggle { display: inline-flex; gap: 4px; }
   .menu-toggle span { font-size: calc(12px * var(--ts)); }
@@ -1881,7 +1901,8 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
 /* country panel dragged off its dock (js/floatable.js): placed by inline left/top/width/height, resizable from its corner */
 @media (min-width: 761px) { .panel-head, .panel-autobar { cursor: grab; } }
 .panel.is-floating { right: auto; bottom: auto; resize: both; overflow: hidden; min-width: 320px; min-height: 240px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
-.panel-dock { position: absolute; top: 10px; right: 54px; z-index: 2; }
+.panel-dock { position: absolute; top: 10px; right: 52px; z-index: 2; } /* same row and size as the close button */
+.panel:has(.panel-autobar:not([hidden])) .panel-dock { top: 4px; }
 .panel-dock[hidden] { display: none; }
 body.is-dragging, body.is-dragging * { user-select: none; cursor: grabbing !important; }
 body.panel-open.panel-floating .zoom-ctrl, body.panel-open.panel-floating .wx-bar { transform: none; }

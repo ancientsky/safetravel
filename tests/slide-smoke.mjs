@@ -439,17 +439,17 @@ async function run(browser) {
   // ------------------------------------------------------------ entry points on the other pages
   {
     const { context, page } = await newPage(browser, { viewport: { width: 1600, height: 900 } });
-    await check('main page: header button, arrivals-board button and footer link to slide.html', async () => {
+    await check('main page: menu entry, arrivals-board button and footer link to slide.html', async () => {
       await page.goto(new URL('index.html', SITE).href, { waitUntil: 'load' });
-      await page.waitForFunction(() => !document.documentElement.classList.contains('i18n-pending') && document.querySelector('[data-testid="slides-link"]'));
-      for (const sel of ['[data-testid="slides-link"]', '[data-testid="arrivals-slides-link"]', '[data-testid="footer-slides-link"]']) {
+      await page.waitForFunction(() => !document.documentElement.classList.contains('i18n-pending') && document.querySelector('[data-testid="menu-slides"]'));
+      for (const sel of ['[data-testid="menu-slides"]', '[data-testid="arrivals-slides-link"]', '[data-testid="footer-slides-link"]']) {
         const href = await page.getAttribute(sel, 'href');
         assert(href === 'slide.html', `${sel} → ${href}`);
       }
-      assert(await page.locator('[data-testid="slides-link"]').isVisible(), 'header button hidden at 1600');
+      assert(await page.locator('[data-testid="menu-toggle"]').isVisible(), 'menu button hidden at 1600');
       return '3 links';
     });
-    await check('main header fits with the new button (1181/1280/1441/1600 px, 390 px hides it; zh + en)', async () => {
+    await check('main header fits on one row with the menu button (1181/1280/1441/1600/390 px; zh + en)', async () => {
       const out = [];
       for (const lang of ['zh-Hant', 'en']) {
         await page.evaluate((l) => localStorage.setItem('safetravel.lang', l), lang);
@@ -463,7 +463,7 @@ async function run(browser) {
             const btns = [...document.querySelectorAll('.hud-right .toggles > *')].filter(vis).map((e) => e.getBoundingClientRect());
             const right = document.querySelector('.hud-right').getBoundingClientRect();
             const brand = document.querySelector('.brand').getBoundingClientRect();
-            const link = document.querySelector('[data-testid="slides-link"]');
+            const link = document.querySelector('[data-testid="menu-toggle"]');
             return {
               rows: new Set(btns.map((b) => Math.round(b.top))).size,
               overflow: right.right > innerWidth + 1 || btns.some((b) => b.right > innerWidth + 1),
@@ -473,7 +473,7 @@ async function run(browser) {
             };
           });
           if (w === 1600 || w === 1181) await page.screenshot({ path: path.join(SHOTS_DIR, `slide-header-${w}-${lang}.png`), clip: { x: 0, y: 0, width: w, height: 160 } });
-          const bad = r.rows !== 1 || r.overflow || r.overlap || r.linkShown !== (w > 760);
+          const bad = r.rows !== 1 || r.overflow || r.overlap || !r.linkShown;
           if (bad) out.push(`${lang}@${w}: ${JSON.stringify(r)}`);
         }
       }
