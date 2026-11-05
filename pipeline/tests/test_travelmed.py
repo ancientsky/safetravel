@@ -11,3 +11,19 @@ def test_check_header_rows_and_encoding():
     big5 = "疾病,疫苗\nA,B\n".encode("cp950")
     assert travelmed.check(big5, ["疾病", "疫苗"], 1) == (1, None)
     assert travelmed.check(b"", ["x"], 1)[1] == "empty file"
+
+
+def test_fetch_skips_the_rest_when_the_host_is_unreachable(monkeypatch, tmp_path):
+    import requests
+    calls = []
+
+    def boom(url, **kw):
+        calls.append(url)
+        raise requests.exceptions.ConnectTimeout("Connection to od.cdc.gov.tw timed out")
+
+    monkeypatch.setattr(travelmed.http, "get", boom)
+    monkeypatch.setattr(travelmed, "raw_dir", lambda: tmp_path)
+    (tmp_path / "TMClinicsList.csv").write_text("kept")
+    st = travelmed.fetch()
+    assert len(calls) == 1 and not st["ok"] and "skipped" in st["reason"]
+    assert (tmp_path / "TMClinicsList.csv").read_text() == "kept"

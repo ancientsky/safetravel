@@ -4,6 +4,8 @@ per-country "travel prescription" (vaccines, preventive advice, prevalent diseas
     fetch()   download the three CSVs into data/raw/travelmed/ (keeps the previous file when a download looks wrong)
 
 Run in GitHub Actions only (no network to cdc.gov.tw from the dev sandbox). Never blocks the data update.
+od.cdc.gov.tw (like data.gov.tw) does not answer GitHub-hosted runners (connect timeout, 2026-11): files placed in
+data/raw/travelmed/ by hand are kept and used; a connect failure skips the remaining files so a run loses ~8 s, not 90.
 """
 from __future__ import annotations
 
@@ -61,15 +63,20 @@ def fetch(session=None) -> dict:
     d = raw_dir()
     d.mkdir(parents=True, exist_ok=True)
     problems = []
+    unreachable = False
     for name, (url, fname, cols, min_rows) in SOURCES.items():
+        if unreachable:  # one host for all three: do not spend another connect timeout per file
+            problems.append(f"{name}: skipped (host unreachable)")
+            continue
         try:
-            body = http.get(url, session=session, tries=2, timeout=(10, 60)).content
+            body = http.get(url, session=session, tries=1, timeout=(8, 60)).content
             n, problem = check(body, cols, min_rows)
             if problem:
                 raise ValueError(problem)
             (d / fname).write_bytes(body)
             st["files"][name] = n
         except Exception as e:  # network / format trouble: keep the previous file, report, carry on
+            unreachable = unreachable or "Connect" in type(e).__name__ or "Connect" in str(e)
             problems.append(f"{name}: {type(e).__name__}: {e}")
             C.log.warning("travel medicine %s not refreshed: %s", name, e)
     st["ok"] = not problems
