@@ -75,6 +75,18 @@ def do_fetch(conn, only: str | None = None) -> dict:
             db.set_source_state(conn, "cwa", url=st["url"], fetched_at=st["fetched_at"], ok=1, reason=None)
         elif st["reason"] != "CWA_API_KEY not set":
             db.set_source_state(conn, "cwa", url=st["url"], ok=0, reason=st["reason"])
+    if only in (None, "travelmed"):
+        from . import travelmed
+        try:
+            st = travelmed.fetch()
+        except Exception as e:  # never break the data update
+            C.log.exception("travel medicine fetch crashed")
+            st = {"url": travelmed.SOURCES["prescription"][0], "ok": False, "reason": f"crash: {type(e).__name__}: {e}"}
+        out["travelmed"] = st
+        if st["ok"]:
+            db.set_source_state(conn, "travelmed", url=st["url"], fetched_at=st["fetched_at"], ok=1, reason=None)
+        else:
+            db.set_source_state(conn, "travelmed", url=st["url"], ok=0, reason=st["reason"])
     if only in (None, "flights"):
         try:
             res = fetch.fetch_flights(cached_names=db.get_airport_names(conn))
@@ -215,7 +227,7 @@ def main(argv=None) -> int:
     ai_args(p)
     p.set_defaults(fn=cmd_run)
     p = sub.add_parser("fetch")
-    p.add_argument("--only", choices=["cdc", "flights", "boca", "cwa"])
+    p.add_argument("--only", choices=["cdc", "flights", "boca", "cwa", "travelmed"])
     p.set_defaults(fn=cmd_fetch)
     sub.add_parser("load").set_defaults(fn=cmd_load)
     p = sub.add_parser("enrich")
