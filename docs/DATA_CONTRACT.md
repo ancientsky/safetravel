@@ -251,3 +251,71 @@ station number); stations missing there are still exported (empty `name_en`, `is
 - `icon` ∈ `sun, partly, cloud, overcast, rain, showers, thunder, snow, sleet, fog`, derived from the Chinese phrase
   (thunder > snow/sleet > showers > rain > fog > sun/partly > overcast > cloud) so new CWA codes still get an icon; `wx_en`
   comes from a phrase table in `weather.py`, falling back to the icon's name. `max`/`min` are integer °C or `null`.
+
+## `travelmed.json` (travel prescription and travel medicine clinics)
+
+Built by `pipeline/travelmed.py` from Taiwan CDC's three travel medicine CSVs (`data/raw/travelmed/`, uploaded by hand)
+and the per-country web pages (`data/raw/travelmed/pages/`); see `docs/TRAVELMED.md`. Absent until the CSVs exist.
+
+```json
+{
+  "generated_at": "2026-11-05T22:00:00+08:00",
+  "updated": "2026-11-05",                       // date the three CSVs last changed (SHA-1 in "sha")
+  "sha": "…",
+  "sources": { "clinics": "https://od.cdc.gov.tw/quarantine/TMClinicsList.csv", "hours": "…", "prescription": "…" },
+  "terms": [ { "zh": "登革熱", "en": "Dengue fever" },
+             { "zh": "蜱媒腦炎(北海道南部有少數通報病例)", "en": "Tick-borne encephalitis (a few cases reported in southern Hokkaido)", "base": "蜱媒腦炎" },
+             { "zh": "正確使用防蚊蟲劑", "en": "Use insect repellent correctly." }, … ],
+  "vaccines": { "日本腦炎疫苗": { "zh": "日本腦炎疫苗", "en": "Japanese encephalitis vaccine", "for": ["日本腦炎"] }, … },
+  "countries": {
+    "TH": { "zh": "泰國", "en": "Thailand",
+            "vax": ["日本腦炎疫苗", "黃熱病疫苗", …],                   // keys of "vaccines", CDC order
+            "dis": { "vector": [27, 0, …], "food": [5, 6], "contact": [9, 37], "other": [22] },   // indexes into terms
+            "adv": { "bites": [2, 3, …], "food": [7, 8], "animals": [10, …], "water": [14, 15, 16], "other": [23, 24, 25] },
+            "page": "2026-11-05",                                       // only when travelmed/TH.json exists: date checked
+            "subs": [ { "zh": "葡屬亞速群島", "en": "Azores", "vax": …, "dis": …, "adv": … } ] }   // only for split countries
+  },
+  "unmapped": [],
+  "cities": [ { "zh": "基隆市", "en": "Keelung City" }, … ],      // north → south, cities with a clinic
+  "clinics": [
+    { "id": "401180014", "name": "國立臺灣大學醫學院附設醫院", "name_en": "National Taiwan University Hospital",
+      "city": "臺北市", "zip": "100229", "addr": "臺北市中正區常德街1號", "lat": 25.041616, "lon": 121.517194,
+      "dept": "家庭醫學科第10診(旅遊醫學特別門診)", "dept_en": "Family Medicine, room 10 (travel medicine clinic)",
+      "tel": "(02)23123456", "url": "http://www.ntuh.gov.tw/ntuh_chinese.aspx", "since": "2008-01-01", "mpox": true,
+      "hours": ["110", "110", "110", "110", "110", "000", "000"] }   // Mon..Sun × morning/afternoon/evening, null if unknown
+  ]
+}
+```
+
+- `dis` groups: `vector` (蟲媒傳染), `food` (食物或飲水傳染), `contact` (接觸傳染), `other`. `adv` groups: `bites`
+  (預防蚊蟲叮咬), `food` (注意飲食安全), `animals` (避免接觸動物), `water` (感染血吸蟲風險), `other` (其他類).
+- `en` equals `zh` when no translation is known (logged). `name_en` / `dept_en` may be `""`.
+- `url` is http or https (not every hospital serves https); `lat`/`lon` may be `null`.
+
+## `travelmed/<ISO>.json` (travel prescription page text)
+
+One file per country whose CDC web page has been read (`countries[ISO].page` in `travelmed.json`); loaded when its card opens.
+
+```json
+{
+  "iso": "TH", "cid": "498", "zh": "泰國", "en": "Thailand", "checked": "2026-11-05",
+  "url": "https://www.cdc.gov.tw/Internationaltravel/Index/ZkNLTkRxQ0NyQmc5Rk50dmZZZlI2Zz09",
+  "page": {
+    "sections": {
+      "before":   [ { "t": "孩童和成人的免疫狀態不同…", "d": 1, "k": "建議諮詢旅醫門診", "g": "infants" }, … ],
+      "vaccines": [ { "t": "大部分疫苗接種後需要2週才會產生足夠保護力…" } ],
+      "diseases": [ { "t": "預防蚊蟲叮咬", "h": 1 }, { "t": "日本腦炎、瘧疾…", "k": "重要流行疾病" }, { "t": "…", "d": 2 }, … ],
+      "during":   [ … ], "after": [ … ]
+    },
+    "vaccines": [ { "name": "黃熱病疫苗", "lines": [ { "k": "入境預防接種規定", "t": "…" }, { "t": "…", "g": "pregnancy" }, … ] } ],
+    "hotline": [ { "where": "", "tel": "+66-81-666-4006" } ]     // Taiwan missions' emergency lines; Vietnam: 河內, 胡志明市
+  },
+  "subs": [ { "cid": "…", "zh": "葡屬亞速群島", "en": "Azores", "checked": "…", "page": { … } } ]
+}
+```
+
+- A line: `t` plain text (never HTML); optional `d` list depth 1–4, `h` 1 = sub-heading, `k` bold label shown before `t`,
+  `g` traveller group ∈ `infants, pregnancy, chronic, immuno, longstay, aid` (shown only when the traveller picks it).
+- Section keys ∈ `before, vaccines, diseases, during, after`; any may be missing. `hotline` may be empty (no Taiwan
+  mission there); `where` names the mission's city when there are several, else `""`.
+

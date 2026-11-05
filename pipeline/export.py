@@ -391,6 +391,11 @@ def export_all(conn, out_dir=None) -> dict:
         places.build(conn, out_dir)
     except Exception as e:  # pragma: no cover
         C.log.warning("places.json not rebuilt: %s", e)
+    try:  # CDC travel medicine: prescriptions + clinics (data/raw/travelmed); never blocks the main export
+        from . import travelmed
+        travelmed.build(out_dir)
+    except Exception as e:  # pragma: no cover
+        C.log.exception("travelmed.json not rebuilt: %s", e)
     try:  # outbreak route watch (static, hand-maintained input); never blocks the main export
         from . import watch
         watch.build(out_dir)

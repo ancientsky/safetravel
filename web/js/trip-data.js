@@ -19,6 +19,39 @@ export function loadEpidemics() {
   return epiPromise;
 }
 
+// CDC travel medicine (travelmed.json + travelmed/<ISO>.json): loaded on demand
+let tmPromise = null;
+const tmDetail = new Map();
+export function loadTravelmed() {
+  tmPromise ||= getJSON('data/travelmed.json').catch((e) => { tmPromise = null; throw e; });
+  return tmPromise;
+}
+export function loadTravelmedDetail(iso) {
+  const k = String(iso || '');
+  if (!/^[A-Z]{2}$/.test(k)) return Promise.reject(new Error('bad ISO'));
+  if (!tmDetail.has(k)) tmDetail.set(k, getJSON(`data/travelmed/${k}.json`).catch((e) => { tmDetail.delete(k); throw e; }));
+  return tmDetail.get(k);
+}
+
+/** tel: link for one phone number ("(04)22294411", "+66-81-666-4006"); '' when it does not look like one. */
+export function telHref(s) {
+  const d = String(s || '').replace(/[^\d+]/g, '');
+  return /^\+?\d{6,16}$/.test(d) ? `tel:${d}` : '';
+}
+/** Hospital websites (from CDC's clinic list): http(s) without credentials; not every hospital serves https. */
+export function webHref(u) {
+  try {
+    const x = new URL(String(u));
+    if ((x.protocol === 'https:' || x.protocol === 'http:') && !x.username && !x.password) return x.href;
+  } catch { /* not a URL */ }
+  return '';
+}
+/** Map search for a coordinate pair (numbers only, so nothing from the data reaches the URL as text). */
+export function mapsHref(lat, lon) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return '';
+  return `https://www.google.com/maps/search/?api=1&query=${lat.toFixed(6)},${lon.toFixed(6)}`;
+}
+
 const LINK_HOSTS = ['boca.gov.tw', 'mac.gov.tw', 'cdc.gov.tw', 'cwa.gov.tw'];
 /** Data-sourced links: only https pages of BOCA, MAC, Taiwan CDC or CWA may become an href; anything else → ''. */
 export function safeHref(u) {

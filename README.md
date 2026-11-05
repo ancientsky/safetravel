@@ -15,6 +15,8 @@
 | ![伊爾庫次克直飛航線，圖例說明虛線](docs/screenshots/watch-irkutsk-zh.jpg) | ![Light theme, English](docs/screenshots/light-en.jpg) |
 | **旅遊警示圖層 / Travel-warning layer** | **出國前旅遊安全查詢 / Pre-trip safety check** |
 | ![外交部旅遊警示圖層：柬埔寨](docs/screenshots/warnings-kh-zh.jpg) | ![trip.html 目的地資訊卡：柬埔寨](docs/screenshots/trip-card-zh.jpg) |
+| **出國前健康準備（疾管署國際旅遊處方箋）/ Health preparation** | **旅遊醫學門診 / Travel medicine clinics** |
+| ![泰國：疫苗與預防用藥、懷孕旅客補充建議、當地疾病與預防](docs/screenshots/trip-med-zh.jpg) | ![33 家合約醫院：縣市與門診篩選、一週門診表、位置圖](docs/screenshots/trip-clinics-zh.jpg) |
 
 | 直式牆面螢幕 / Portrait wall screen | 手機選單 / Phone menu | 衛教海報輪播 / Health posters |
 |---|---|---|
@@ -38,7 +40,7 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 - **桃園機場航線雷達**：以當日桃園機場（TPE）航點畫出動態航線，預設只看入境，可切換出入境。
 - **入境航班看板**（給機場檢疫站）：目前時間前後 60 分鐘（可改 30 分、2 小時或全部）內抵達的國際客機，來自第二級以上地區的班機特別標示，也有不含地圖的全螢幕版 `arrivals.html`；可依機場與檢疫站（桃園 A、B＝第一航廈，C、D＝第二航廈）篩選，並顯示出發地國家的建議等級與主要疫病。
 - **旅遊警示圖層**：地圖可切換為外交部領事事務局「國外旅遊警示分級」（灰、黃、橙、紅；中國大陸、香港、澳門為陸委會燈號），評估治安、衝突、災害等整體安全，與疾管署的疫情建議分開呈現、不合併成單一分數；部分地區較高的國家以虛線標示。英文版顯示外交部摘要的非官方英譯，全文為中文原文。
-- **出國前旅遊安全查詢**（[`trip.html`](https://ancientsky.github.io/safetravel/trip.html)，給民眾與旅行社）：查詢目的地即可並列兩種官方分級、各地區警示與近期疫情；另有三圖層世界地圖（旅遊警示／疫情建議／天氣：80 個城市的天氣與最高溫標在地圖上，可逐日切換或播放）、**全球都市天氣預報**（中央氣象署 80 個城市未來 7 天，可依地區篩選、°C／°F 切換，點城市即開啟該國資訊卡，資訊卡內也列出當地城市預報）、近期變動、全部目的地表格（篩選、排序、匯出 CSV、列印）。預設淺色主題。
+- **出國前旅遊安全查詢**（[`trip.html`](https://ancientsky.github.io/safetravel/trip.html)，給民眾與旅行社）：查詢目的地即可並列兩種官方分級、各地區警示與近期疫情；另有三圖層世界地圖（旅遊警示／疫情建議／天氣：80 個城市的天氣與最高溫標在地圖上，可逐日切換或播放）、**全球都市天氣預報**（中央氣象署 80 個城市未來 7 天，可依地區篩選、°C／°F 切換，點城市即開啟該國資訊卡，資訊卡內也列出當地城市預報）、近期變動、全部目的地表格（篩選、排序、匯出 CSV、列印）。資訊卡另有**出國前健康準備**（疾管署「國際旅遊處方箋」：疫苗與預防用藥的說明與入境規定、依傳染途徑整理的當地疾病與預防、駐外館處急難專線可直接撥打；勾選「與嬰幼兒同行、懷孕、慢性病、免疫不全、長期居留、海外志工」會顯示疾管署針對這些旅客的補充建議），頁面有**旅遊醫學門診**（33 家合約醫院：縣市、現在有門診、M 痘疫苗篩選，離我最近排序，一週門診表、電話與地圖）。預設淺色主題。
 - **旅遊疫情快查**（[`m.html`](https://ancientsky.github.io/safetravel/m.html)，給自己的手機或電腦）：不載入地圖、字大、搜尋優先的個人版。第一次開啟選擇身分（之後右上角隨時切換，或網址 `?role=officer／public`）——**檢疫同仁**：首頁列出未來 60 分鐘來自第二級以上地區的入境班機，搜尋框也能查航班號（`BR384`），國家卡片附今日自該國入境的班機，另有「入境航班」分頁（時段、只看 L2+）；**一般民眾**：熱門目的地、疫情建議與外交部旅遊警示摘要、近 60 天疫情。兩者都有「疫情快訊」分頁（近 60 天，可只看第二級以上國家）。手機開啟地圖版時會提示一次改用快查（可關閉）；之後也可從地圖版右上角「**選單**」進入。
 - **使用說明**（[`help.html`](https://ancientsky.github.io/safetravel/help.html)，給同事與旅客）：每個頁面與功能怎麼用、展示螢幕網址設定、等級說明、各資料來源提供什麼與更新時間、常見問題；中英文、深淺色。手機在地圖頁「選單」、電腦在頁尾都能找到。**新增或修改功能時，請一併更新此頁**。
 - **衛教海報輪播**（[`slide.html`](https://ancientsky.github.io/safetravel/slide.html)，給機場檢疫站螢幕）：疾管署衛教海報（伊波拉疫情警示、入境症狀報到、症狀提醒、別把病菌帶回國）以 HTML 重新排版並加上短暫進場動畫，直式 1080×1920／橫式 1920×1080 各有版面，自動縮放到任何螢幕；伊波拉海報的地圖以轉機航線（金夏沙經巴黎或阿布達比轉機來臺）示意、不標地名以免標籤化。海報清單 `web/slides/slides.json` 可設定啟用、起訖日期與停留秒數；**現成的海報圖檔丟進 `web/slides/auto/` 資料夾就會自動上架**（檔名可帶上架／下架日期、秒數、直式／橫式），刪除即下架。螢幕每 5 分鐘自動更新清單；可列印或另存 PDF，並由 GitHub Actions 自動輸出 PNG。維護方式見 [SLIDES.md](docs/SLIDES.md)。
@@ -111,9 +113,10 @@ SafeTravel TW 是一個部署在 GitHub Pages 的靜態網站，把臺灣疾病�
 
 | 時間（台北） | 工作 | 觸發方式 |
 |---|---|---|
-| 每天 11:17、21:17 | 抓疾管署 CSV、TPE 航班、外交部旅遊警示與中央氣象署全球都市天氣預報 → SQLite（含警示等級變動紀錄）→ 匯出 JSON → 部署 | cron-job.org → `update-data.yml` |
+| 每天 11:17、21:17 | 抓疾管署 CSV、TPE 航班、外交部旅遊警示、中央氣象署全球都市天氣預報與數個國家的疾管署國際旅遊處方箋網頁 → SQLite（含警示等級變動紀錄）→ 匯出 JSON → 部署 | cron-job.org → `update-data.yml` |
 | 每天 11:52 | 翻譯新的疫情資訊與外交部旅遊警示摘要、更新各國兩年總覽與新病名（Claude 排程；無須 Gemini） | Claude Code 排程（[docs/TRANSLATION_GUIDE.md](docs/TRANSLATION_GUIDE.md)） |
 | 陸委會宣布調整時 | 更新中國大陸、香港、澳門燈號（陸委會網站擋自動抓取） | 人工編輯 `data/manual/mac_warnings.json` |
+| 每月（疾管署更新開放資料後） | 旅遊醫學門診與國際旅遊處方箋 CSV（`od.cdc.gov.tw` 擋 GitHub 主機）；各國處方箋網頁則隨每天兩次的更新自動檢查 | 人工上傳到 `data/raw/travelmed/`（見該資料夾 README） |
 | 05:00–23:59 每 10 分鐘；00:00–04:59 每 30 分鐘 | 入境航班（TDX，一次呼叫涵蓋全台機場）→ 直接發布到 Pages | cron-job.org → `arrivals.yml` |
 
 GitHub 內建的 `schedule` 在本 repo 實測會晚 4.5–8.5 小時才執行，因此已移除，改由 cron-job.org 透過 `workflow_dispatch` 準時觸發（設定方式：[docs/ARRIVALS_SETUP.md](docs/ARRIVALS_SETUP.md)）。入境航班每次執行前會先檢查資料新舊與本月用量（不耗 API 額度），TDX 免費方案每月 4,500 次內預留約 12% 緩衝。
@@ -167,6 +170,7 @@ flowchart LR
 | 桃園機場航線、全台入境航班 | [交通部 TDX 運輸資料流通服務](https://tdx.transportdata.tw/) FIDS API（`/v2/Air/FIDS/Airport/TPE`、`/v2/Air/FIDS/Airport/Arrival`） |
 | 國外旅遊警示分級 | [外交部領事事務局](https://www.boca.gov.tw/sp-trwa-list-1.html)列表頁與 RSS（每日兩次，見 [WARNINGS.md](docs/WARNINGS.md)） |
 | 中國大陸、香港、澳門旅遊警示 | [陸委會](https://www.mac.gov.tw/News.aspx?n=E0243AD02975213D&sms=EF1DC35EB9749B36)：網站有 Cloudflare 驗證，燈號以人工維護於 `data/manual/mac_warnings.json` |
+| 國際旅遊處方箋、旅遊醫學門診 | 疾管署開放資料 `od.cdc.gov.tw/quarantine/`（TMPrescription、TMClinicsList、ClinicsTime，每月；GitHub 主機連不上，由人工上傳到 `data/raw/travelmed/`）與各國[國際旅遊處方箋網頁](https://www.cdc.gov.tw/Internationaltravel/Index/ZkNLTkRxQ0NyQmc5Rk50dmZZZlI2Zz09)（每次更新檢查數個國家），見 [TRAVELMED.md](docs/TRAVELMED.md) |
 | 全球都市天氣預報 | [中央氣象署開放資料 F-C0032-007](https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007)（需 API 授權碼，存於 Secret `CWA`）；城市英文名與國家對應見 `data/manual/cwa_cities.json` |
 | 疫區直飛航線（伊爾庫次克、金夏沙） | [FlightConnections](https://www.flightconnections.com/)：直飛航點與每月航班數，整理於 `data/manual/watch/`（2026-10） |
 | 機場座標 | [OpenFlights `airports.dat`](https://openflights.org/data.html) |
@@ -225,6 +229,7 @@ npm ci && npm run vendor && node scripts/check-d3.mjs  # 重建 web/vendor/（D3
 - [ ] **外部排程**：建立只有「Actions 讀寫」權限的 fine-grained PAT，在 cron-job.org 設定兩個排程（步驟見 [docs/ARRIVALS_SETUP.md](docs/ARRIVALS_SETUP.md)）。PAT 到期前記得更換。
 - [ ] **翻譯**：預設由每日 Claude 排程處理（疫情資訊、各國總覽、病名、外交部旅遊警示摘要）；若改用 Gemini，設定變數 `AI_PROVIDER=gemini` 與 Secret `GEMINI_API_KEY`（選填 `GEMINI_MODEL`）。
 - [ ] **陸委會燈號**：陸委會調整中國大陸、香港、澳門旅遊警示時，更新 `data/manual/mac_warnings.json` 的燈號、日期、摘要與 `confirmed`（核對日期）。
+- [ ] **旅遊醫學資料（每月）**：在臺灣的網路下載 `od.cdc.gov.tw/quarantine/` 的 `TMClinicsList.csv`、`ClinicsTime.csv`、`TMPrescription.csv`，上傳到 `data/raw/travelmed/`（檔名不變）。
 - [ ] **手動執行**：Actions → *Update data* 或 *Arrivals board* → Run workflow。
 
 ### 免責聲明
@@ -251,7 +256,7 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 - **TPE route radar**: animated routes for today's Taoyuan Airport arrivals (inbound only by default; switch to both ways).
 - **Inbound flights board** for airport quarantine stations: international passenger flights arriving within ±60 minutes (or ±30, ±2 h, all), flights from level 2+ areas highlighted, also as a map-free full-screen page (`arrivals.html`), filtered by airport and checkpoint (Taoyuan A/B = Terminal 1, C/D = Terminal 2), with the origin country's advisory level and main diseases.
 - **Travel-warning layer**: switch the map to the MOFA (BOCA) travel warning levels (grey, yellow, orange, red; mainland China, Hong Kong and Macau use the MAC rating). They rate overall safety — crime, conflict, disasters — and are shown beside, never merged with, the CDC health advisories; countries rated higher in some areas get a dashed outline. The English UI shows unofficial English translations of the MOFA summaries; the full text is the Chinese original.
-- **Pre-trip safety check** ([`trip.html`](https://ancientsky.github.io/safetravel/trip.html), for travellers and travel agencies): search a destination to see both official ratings side by side, regional warnings and recent epidemic news; plus a three-layer world map (travel warnings / health notices / weather: each city's weather and high on the map, day by day or played), a **world-city weather forecast** (CWA, 80 cities × 7 days, region filter, °C/°F; a city opens its country card, which also lists the local forecast), recent changes and an all-destinations table (filter, sort, CSV export, print). Light theme by default.
+- **Pre-trip safety check** ([`trip.html`](https://ancientsky.github.io/safetravel/trip.html), for travellers and travel agencies): search a destination to see both official ratings side by side, regional warnings and recent epidemic news; plus a three-layer world map (travel warnings / health notices / weather: each city's weather and high on the map, day by day or played), a **world-city weather forecast** (CWA, 80 cities × 7 days, region filter, °C/°F; a city opens its country card, which also lists the local forecast), recent changes and an all-destinations table (filter, sort, CSV export, print). The card adds **health preparation** from Taiwan CDC's travel prescription (vaccines and preventive medicine with CDC's explanation and entry rules, local diseases by route of transmission with prevention advice, tap-to-call emergency numbers; pick *infants, pregnancy, chronic illness, weakened immunity, long stay* or *aid worker* for CDC's extra notes), and the page lists **travel medicine clinics** (CDC's 33 contract hospitals: city, open-now and mpox-vaccine filters, nearest first, weekly session grid, phone and map). Light theme by default.
 - **Travel health quick check** ([`m.html`](https://ancientsky.github.io/safetravel/m.html), for your own phone or computer): no map, large text, search first. Pick a role on first visit (switch any time, or `?role=officer|public`) — **quarantine staff** see flights arriving from level 2+ areas in the next 60 minutes, can search flight numbers (`BR384`), get today's flights from the country on its card and an *Arrivals* tab (time window, L2+ only); **travellers** get popular destinations, the health notice plus the MOFA warning summary and recent outbreaks. Both have an *Outbreaks* tab (last 60 days, optionally level 2+ countries only). Phones opening the map page are offered the quick check once (dismissible); it is also in the map page's **Menu**.
 - **Help** ([`help.html`](https://ancientsky.github.io/safetravel/help.html), for staff and travellers): how every page and feature works, kiosk URL settings, what the levels mean, what each source provides and when it updates, FAQ; zh/en, light/dark. In the phone menu and the footer. **Update it whenever a feature changes.**
 - **Health poster carousel** ([`slide.html`](https://ancientsky.github.io/safetravel/slide.html), for airport quarantine-station screens): Taiwan CDC health-education posters (Ebola alert, report symptoms on arrival, symptom guide, don't bring germs back) rebuilt as live HTML with short entrance animations, with separate portrait 1080×1920 and landscape 1920×1080 layouts scaled to any screen. The Ebola poster's map shows the real connecting itineraries (Kinshasa via Paris or Abu Dhabi to Taiwan) without place names, to avoid stigmatising cities. The playlist `web/slides/slides.json` sets active flags, date windows and per-poster durations; **a finished poster image dropped into `web/slides/auto/` is published automatically** (dates, seconds and portrait/landscape pairing ride in the file name) and deleting it retires it. Screens re-read the playlist every 5 minutes. Printable / save as PDF, with PNG exports built by GitHub Actions. See [SLIDES.md](docs/SLIDES.md).
@@ -272,9 +277,10 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 
 | Taipei time | Job | Trigger |
 |---|---|---|
-| 11:17 and 21:17 daily | TCDC CSVs + TPE flights + MOFA travel warnings + CWA world-city forecast → SQLite (incl. warning-level history) → JSON → deploy | cron-job.org → `update-data.yml` |
+| 11:17 and 21:17 daily | TCDC CSVs + TPE flights + MOFA travel warnings + CWA world-city forecast + a few TCDC travel prescription pages → SQLite (incl. warning-level history) → JSON → deploy | cron-job.org → `update-data.yml` |
 | 11:52 daily | translate new digests and MOFA warning summaries, refresh overviews and disease names (no Gemini needed) | scheduled Claude Code routine ([TRANSLATION_GUIDE](docs/TRANSLATION_GUIDE.md)) |
 | when MAC announces a change | update the mainland China / Hong Kong / Macau ratings (the MAC site blocks automated fetches) | edit `data/manual/mac_warnings.json` by hand |
+| monthly (after CDC refreshes its open data) | travel medicine clinic and travel prescription CSVs (`od.cdc.gov.tw` blocks GitHub runners); the per-country prescription pages are checked automatically in the twice-daily update | upload to `data/raw/travelmed/` by hand (see the README there) |
 | every 10 min 05:00–23:59, every 30 min 00:00–04:59 | inbound flights (one TDX call covers every Taiwan airport) → published straight to Pages | cron-job.org → `arrivals.yml` |
 
 GitHub's own cron started runs 4.5–8.5 h late on this repository, so it was removed; cron-job.org dispatches the workflows on time ([setup](docs/ARRIVALS_SETUP.md)). Before each TDX call the arrivals workflow checks data age and monthly usage at no cost, keeping about 12 % headroom inside the free 4,500 calls/month.
@@ -289,7 +295,7 @@ To serve the site from an internal Linux/nginx host without fetching any source 
 
 ### Data sources
 
-TCDC travel advisory levels (`CountryEpidLevel/ExportCSV`) and international epidemic digests (`TravelEpidemic/ExportCSV`); [MOTC TDX](https://tdx.transportdata.tw/) FIDS API for TPE routes and Taiwan inbound flights; MOFA [BOCA travel warnings](https://www.boca.gov.tw/sp-trwa-list-1.html) (list page + RSS, twice a day; [WARNINGS.md](docs/WARNINGS.md)) and the [MAC](https://www.mac.gov.tw/News.aspx?n=E0243AD02975213D&sms=EF1DC35EB9749B36) rating for mainland China, Hong Kong and Macau (hand-maintained in `data/manual/mac_warnings.json`; the MAC site sits behind a Cloudflare challenge); the [CWA world-city forecast F-C0032-007](https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007) (API key in secret `CWA`; city names and countries in `data/manual/cwa_cities.json`); [FlightConnections](https://www.flightconnections.com/) direct destinations and monthly flights for the outbreak route watch (curated in `data/manual/watch/`); [OpenFlights](https://openflights.org/data.html) airport coordinates; [world-atlas](https://github.com/topojson/world-atlas) and [world-countries](https://github.com/mledoze/countries) geometry and names; [D3 v7](https://d3js.org/) and [topojson-client](https://github.com/topojson/topojson-client).
+TCDC travel advisory levels (`CountryEpidLevel/ExportCSV`) and international epidemic digests (`TravelEpidemic/ExportCSV`); [MOTC TDX](https://tdx.transportdata.tw/) FIDS API for TPE routes and Taiwan inbound flights; MOFA [BOCA travel warnings](https://www.boca.gov.tw/sp-trwa-list-1.html) (list page + RSS, twice a day; [WARNINGS.md](docs/WARNINGS.md)) and the [MAC](https://www.mac.gov.tw/News.aspx?n=E0243AD02975213D&sms=EF1DC35EB9749B36) rating for mainland China, Hong Kong and Macau (hand-maintained in `data/manual/mac_warnings.json`; the MAC site sits behind a Cloudflare challenge); Taiwan CDC travel medicine open data (TMPrescription, TMClinicsList, ClinicsTime on `od.cdc.gov.tw`, monthly — unreachable from GitHub runners, uploaded by hand to `data/raw/travelmed/`) and the per-country [travel prescription pages](https://www.cdc.gov.tw/Internationaltravel/Index/ZkNLTkRxQ0NyQmc5Rk50dmZZZlI2Zz09) (a few checked per run; [TRAVELMED.md](docs/TRAVELMED.md)); the [CWA world-city forecast F-C0032-007](https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007) (API key in secret `CWA`; city names and countries in `data/manual/cwa_cities.json`); [FlightConnections](https://www.flightconnections.com/) direct destinations and monthly flights for the outbreak route watch (curated in `data/manual/watch/`); [OpenFlights](https://openflights.org/data.html) airport coordinates; [world-atlas](https://github.com/topojson/world-atlas) and [world-countries](https://github.com/mledoze/countries) geometry and names; [D3 v7](https://d3js.org/) and [topojson-client](https://github.com/topojson/topojson-client).
 
 ### How advisory levels are computed
 
@@ -341,6 +347,7 @@ To watch another outbreak city, add `data/manual/watch/<id>.json` plus its route
 - [ ] A fine-grained PAT with only *Actions: read and write* on this repository, used by two cron-job.org jobs ([steps](docs/ARRIVALS_SETUP.md)); renew it before it expires.
 - [ ] Translation (digests, overviews, disease names, MOFA warning summaries) runs in the daily Claude routine; to use Gemini instead set variable `AI_PROVIDER=gemini` and secret `GEMINI_API_KEY`.
 - [ ] When MAC changes its mainland China / Hong Kong / Macau rating, update level, dates, summaries and `confirmed` in `data/manual/mac_warnings.json`.
+- [ ] Monthly: download `TMClinicsList.csv`, `ClinicsTime.csv`, `TMPrescription.csv` from `od.cdc.gov.tw/quarantine/` (Taiwan network) and upload them to `data/raw/travelmed/`.
 
 ### Disclaimer
 

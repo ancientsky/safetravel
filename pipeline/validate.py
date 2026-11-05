@@ -624,6 +624,162 @@ def check_places(v: V, doc) -> None:
             v.err(pw, "looks like HTML")
 
 
+TM_DIS = ("vector", "food", "contact", "other")
+TM_ADV = ("bites", "food", "animals", "water", "other")
+TM_GROUPS = ("infants", "pregnancy", "chronic", "immuno", "longstay", "aid")
+TM_SECTIONS = ("before", "vaccines", "diseases", "during", "after")
+HOURS = re.compile(r"^[01]{3}$")
+
+
+def _tm_block(v: V, where: str, b, n_terms: int, vaccines: dict, top: bool) -> None:
+    opt = ("subs", "page") if top else ()
+    if not v.keys(where, b, ["zh", "en", "vax", "dis", "adv"], opt):
+        return
+    for k in ("zh", "en"):
+        if not isinstance(b[k], str) or not b[k]:
+            v.err(where, f"{k} should be a non-empty string")
+    if not isinstance(b["vax"], list) or any(x not in vaccines for x in b["vax"]):
+        v.err(where, "vax should list keys of vaccines")
+    for key, allowed in (("dis", TM_DIS), ("adv", TM_ADV)):
+        m = b[key]
+        if not isinstance(m, dict):
+            v.err(where, f"{key} should be an object")
+            continue
+        for g, ids in m.items():
+            if g not in allowed:
+                v.err(where, f"{key} group {g!r} is not one of {allowed}")
+            if not isinstance(ids, list) or not all(isinstance(i, int) and not isinstance(i, bool) and 0 <= i < n_terms for i in ids):
+                v.err(where, f"{key}.{g} should list indexes into terms")
+    if top and "page" in b:
+        v.pat(where, b["page"], DATE, "page")
+    for i, sb in enumerate(b.get("subs", []) if top else []):
+        _tm_block(v, f"{where}.subs[{i}]", sb, n_terms, vaccines, False)
+
+
+def check_travelmed(v: V, doc) -> None:
+    """travelmed.json (pipeline/travelmed.py, docs/TRAVELMED.md)."""
+    w = "travelmed.json"
+    if not v.keys(w, doc, ["generated_at", "updated", "sha", "sources", "terms", "vaccines", "countries", "unmapped",
+                           "cities", "clinics"]):
+        return
+    v.pat(w, doc["generated_at"], TS, "generated_at")
+    v.pat(w, doc["updated"], DATE, "updated")
+    terms = doc["terms"]
+    if not isinstance(terms, list) or not terms:
+        v.err(w, "terms should be a non-empty list")
+        terms = []
+    for i, t in enumerate(terms):
+        if v.keys(f"{w}.terms[{i}]", t, ["zh", "en"], ["base"]):
+            if not all(isinstance(t.get(k), str) and t.get(k) for k in ("zh", "en")):
+                v.err(f"{w}.terms[{i}]", "zh/en should be non-empty strings")
+    vac = doc["vaccines"] if isinstance(doc["vaccines"], dict) else {}
+    for k, x in vac.items():
+        if v.keys(f"{w}.vaccines[{k}]", x, ["zh", "en", "for"]):
+            if x["zh"] != k or not isinstance(x["en"], str) or not isinstance(x["for"], list):
+                v.err(f"{w}.vaccines[{k}]", "zh must equal the key; en a string; for a list")
+    cs = doc["countries"]
+    if not isinstance(cs, dict) or len(cs) < 150:
+        v.err(w, "countries should hold at least 150 destinations")
+        cs = {}
+    for iso, b in cs.items():
+        if not ISO2.match(iso):
+            v.err(w, f"country key {iso!r} is not ISO alpha-2")
+        _tm_block(v, f"{w}.countries[{iso}]", b, len(terms), vac, True)
+    cities = {c.get("zh") for c in doc["cities"] if isinstance(c, dict)} if isinstance(doc["cities"], list) else set()
+    cl = doc["clinics"]
+    if not isinstance(cl, list) or len(cl) < 10:
+        v.err(w, "clinics should list at least 10 clinics")
+        cl = []
+    ids = set()
+    for i, c in enumerate(cl):
+        cw = f"{w}.clinics[{i}]"
+        if not v.keys(cw, c, ["id", "name", "name_en", "city", "zip", "addr", "lat", "lon", "dept", "dept_en", "tel", "url",
+                               "since", "mpox", "hours"]):
+            continue
+        if not re.fullmatch(r"\d{6,12}", str(c["id"])) or c["id"] in ids:
+            v.err(cw, f"id {c['id']!r} should be a unique medical institution code")
+        ids.add(c["id"])
+        if c["city"] not in cities:
+            v.err(cw, f"city {c['city']!r} is missing from cities")
+        for k in ("lat", "lon"):
+            if c[k] is not None and not (isinstance(c[k], (int, float)) and -180 <= c[k] <= 180):
+                v.err(cw, f"{k} out of range")
+        if c["url"] and not re.match(r"^https?://", c["url"]):
+            v.err(cw, "url must be http(s)")
+        if c["since"]:
+            v.pat(cw, c["since"], DATE, "since")
+        v.typ(cw, c["mpox"], bool, "mpox")
+        if c["hours"] is not None and (not isinstance(c["hours"], list) or len(c["hours"]) != 7
+                                        or not all(isinstance(x, str) and HOURS.match(x) for x in c["hours"])):
+            v.err(cw, "hours should be 7 strings of three 0/1 flags (Mon..Sun x morning/afternoon/evening)")
+
+
+def _tm_lines(v: V, where: str, lines) -> None:
+    if not isinstance(lines, list):
+        v.err(where, "should be a list of lines")
+        return
+    for i, ln in enumerate(lines):
+        lw = f"{where}[{i}]"
+        if not v.keys(lw, ln, ["t"], ["d", "h", "k", "g"]):
+            continue
+        if not isinstance(ln["t"], str) or not ln["t"] or "<" in ln["t"] and re.search(r"<\s*/?\s*[a-zA-Z]", ln["t"]):
+            v.err(lw, "t should be plain non-empty text")
+        if "g" in ln and ln["g"] not in TM_GROUPS:
+            v.err(lw, f"g {ln['g']!r} is not one of {TM_GROUPS}")
+        if "d" in ln and ln["d"] not in (1, 2, 3, 4):
+            v.err(lw, "d should be 1..4")
+
+
+def _tm_page(v: V, where: str, page) -> None:
+    if not v.keys(where, page, ["sections", "vaccines", "hotline"]):
+        return
+    if not isinstance(page["sections"], dict):
+        v.err(where, "sections should be an object")
+    else:
+        for k, lines in page["sections"].items():
+            if k not in TM_SECTIONS:
+                v.err(where, f"section {k!r} is not one of {TM_SECTIONS}")
+            _tm_lines(v, f"{where}.sections.{k}", lines)
+    for i, vx in enumerate(page["vaccines"] if isinstance(page["vaccines"], list) else []):
+        if v.keys(f"{where}.vaccines[{i}]", vx, ["name", "lines"]):
+            _tm_lines(v, f"{where}.vaccines[{i}].lines", vx["lines"])
+    hl = page["hotline"]
+    if not isinstance(hl, list):
+        v.err(where, "hotline should be a list")
+    else:
+        for i, x in enumerate(hl):
+            if v.keys(f"{where}.hotline[{i}]", x, ["where", "tel"]):
+                if not isinstance(x["where"], str) or not re.fullmatch(r"\+?[\d\-()]{6,30}", str(x["tel"])):
+                    v.err(f"{where}.hotline[{i}]", "where should be a string, tel a phone number")
+
+
+def check_travelmed_details(v: V, d: Path, doc) -> None:
+    cs = doc.get("countries", {}) if isinstance(doc, dict) else {}
+    if not d.is_dir():
+        return
+    for p in sorted(d.glob("*.json")):
+        w = f"travelmed/{p.name}"
+        iso = p.stem
+        if not ISO2.match(iso) or iso not in cs:
+            v.err(w, "file name must be <ISO2>.json of a country in travelmed.json")
+            continue
+        try:
+            det = json.loads(p.read_text(encoding="utf-8"))
+        except ValueError as e:
+            v.err(w, f"cannot parse: {e}")
+            continue
+        if not v.keys(w, det, ["iso", "cid", "zh", "en", "checked", "url", "page", "subs"]):
+            continue
+        if det["iso"] != iso:
+            v.err(w, "iso differs from the file name")
+        if not CDC_URL.match(str(det["url"])):
+            v.err(w, "url must be a cdc.gov.tw page")
+        _tm_page(v, f"{w}.page", det["page"])
+        for i, sb in enumerate(det["subs"] if isinstance(det["subs"], list) else []):
+            if v.keys(f"{w}.subs[{i}]", sb, ["cid", "zh", "en", "checked", "page"]):
+                _tm_page(v, f"{w}.subs[{i}].page", sb["page"])
+
+
 def validate_dir(d: Path) -> list[str]:
     d = Path(d)
     v = V()
@@ -672,6 +828,14 @@ def validate_dir(d: Path) -> list[str]:
             check_watch(v, json.loads(wp.read_text(encoding="utf-8")))
         except ValueError as e:
             v.err("watch.json", f"cannot parse: {e}")
+    tm = d / "travelmed.json"
+    if tm.exists():
+        try:
+            tmd = json.loads(tm.read_text(encoding="utf-8"))
+            check_travelmed(v, tmd)
+            check_travelmed_details(v, d / "travelmed", tmd)
+        except ValueError as e:
+            v.err("travelmed.json", f"cannot parse: {e}")
     if "epidemics" in data:
         check_epidemic_details(v, d / "epidemics", data["epidemics"])
     if {"meta", "alerts", "epidemics"} <= set(data) and isinstance(data["meta"], dict):

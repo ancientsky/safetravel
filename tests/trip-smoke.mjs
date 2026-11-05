@@ -563,6 +563,84 @@ async function run(page, context) {
     return `NRT → ${a}; 曼谷 → ${b}`;
   });
 
+  await check('travel prescription in the card: vaccines, traveller-group notes on demand, emergency tel links', async () => {
+    const pr = await context.newPage();
+    await pr.addInitScript(() => { try { localStorage.removeItem('safetravel.trip.groups'); } catch {} });
+    await pr.goto(`${PAGE_URL.split('#')[0]}#TH`, { waitUntil: 'load' });
+    await pr.waitForSelector('[data-testid="med"] [data-testid="med-vax"]', { timeout: 15000 });
+    const names = await pr.$$eval('[data-testid="med-vax"] .med-vax-name', (els) => els.map((e) => e.textContent));
+    assert(names.length >= 5 && names.some((n) => n.includes('黃熱病疫苗')), `vaccines: ${names.join('、')}`);
+    const hit = await pr.$$eval('[data-testid="med-vax"]', (els) => els.filter((e) => e.querySelector('.med-tag-hit')).map((e) => e.querySelector('.med-vax-name').textContent));
+    assert(hit.some((n) => n.includes('日本腦炎')), `「當地有此疾病」 on ${hit.join('、')}`);
+    const yf = pr.locator('[data-testid="med-vax"]', { hasText: '黃熱病疫苗' });
+    await yf.locator('summary').click();
+    const hiddenNote = await yf.locator('.med-ln[data-g="pregnancy"]').first().isVisible();
+    assert(!hiddenNote, 'pregnancy note visible before the group was picked');
+    await pr.click('[data-testid="med-group-pregnancy"]');
+    assert(await yf.locator('.med-ln[data-g="pregnancy"]').first().isVisible(), 'pregnancy note did not appear');
+    const stored = await pr.evaluate(() => localStorage.getItem('safetravel.trip.groups'));
+    assert(stored && stored.includes('pregnancy'), `group not remembered (${stored})`);
+    const tel = await pr.$$eval('[data-testid="med"] a.med-tel', (as) => as.map((a) => a.getAttribute('href')));
+    assert(tel.includes('tel:+66816664006') && tel.includes('tel:0800085095'), `tel links: ${tel.join(' ')}`);
+    const chips = await pr.$$eval('.med-dis-vector .med-chips li', (els) => els.map((e) => e.textContent));
+    assert(chips.some((c) => c.includes('登革熱')), `vector-borne: ${chips.join('、')}`);
+    await pr.close();
+    return `${names.length} vaccines; local: ${hit.length}; tel ${tel.length}`;
+  });
+
+  await check('travel prescription: a country split by CDC (Portugal) offers its island areas', async () => {
+    const pr = await context.newPage();
+    await pr.goto(`${PAGE_URL.split('#')[0]}#PT`, { waitUntil: 'load' });
+    await pr.waitForSelector('[data-testid="med"] .med-places .med-pbtn', { timeout: 15000 });
+    const tabs = await pr.$$eval('.med-places .med-pbtn', (bs) => bs.map((b) => b.textContent));
+    assert(tabs.length === 3 && tabs.some((x) => x.includes('亞速')), `areas: ${tabs.join(' / ')}`);
+    await pr.close();
+    return tabs.join(' / ');
+  });
+
+  await check('clinic finder: 33 clinics with week grids; city and M痘 filters; card button jumps here', async () => {
+    const pr = await context.newPage();
+    await pr.goto(`${PAGE_URL.split('#')[0]}#JP`, { waitUntil: 'load' });
+    await pr.waitForSelector('[data-testid="cl-card"]', { timeout: 15000 });
+    const all = await pr.locator('[data-testid="cl-card"]').count();
+    assert(all >= 30, `only ${all} clinics`);
+    const cells = await pr.locator('[data-testid="cl-card"]').first().locator('.cl-wk-x').count();
+    assert(cells === 21, `week grid has ${cells} cells`);
+    await pr.selectOption('[data-testid="cl-city"]', '臺北市');
+    const tp = await pr.locator('[data-testid="cl-card"]').count();
+    assert(tp > 0 && tp < all, `臺北市 → ${tp}`);
+    const cities = await pr.$$eval('[data-testid="cl-card"] .cl-meta span:first-child', (els) => [...new Set(els.map((e) => e.textContent))]);
+    assert(cities.length === 1 && cities[0] === '臺北市', `cities after filter: ${cities}`);
+    await pr.selectOption('[data-testid="cl-city"]', '');
+    await pr.click('[data-testid="cl-mpox"]');
+    const mp = await pr.locator('[data-testid="cl-card"]').count();
+    const badges = await pr.locator('[data-testid="cl-card"] .cl-b-mpox').count();
+    assert(mp > 0 && mp < all && badges === mp, `M痘 filter → ${mp} (badges ${badges})`);
+    await pr.click('[data-testid="cl-mpox"]');
+    const tel = await pr.locator('[data-testid="cl-card"] a[href^="tel:"]').count();
+    assert(tel >= 30, `${tel} call buttons`);
+    await pr.waitForSelector('[data-testid="med-find-clinic"]', { timeout: 15000 });
+    await pr.click('[data-testid="med-find-clinic"]');
+    await pr.waitForFunction(() => document.activeElement?.id === 'cl-h', null, { timeout: 5000 });
+    await pr.close();
+    return `${all} clinics, 臺北市 ${tp}, M痘 ${mp}`;
+  });
+
+  await check('phone width 390: travel prescription and clinic list do not overflow', async () => {
+    const ctx = await context.browser().newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const pr = await ctx.newPage();
+    await pr.goto(`${PAGE_URL.split('#')[0]}#TH`, { waitUntil: 'load' });
+    await pr.waitForSelector('[data-testid="med-vax"]', { timeout: 15000 });
+    await pr.waitForSelector('[data-testid="cl-card"]', { timeout: 15000 });
+    await pr.locator('[data-testid="med-vax"]').first().locator('summary').click();
+    const over = await pr.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    const mapHidden = await pr.$eval('.cl-map', (m) => m.hidden);
+    await ctx.close();
+    assert(over <= 0, `overflow ${over}px`);
+    assert(mapHidden, 'locator map should stay hidden on phones');
+    return 'no overflow';
+  });
+
   await check('no console errors during the run', async () => {
     assert(consoleErrors.length === 0, `${consoleErrors.length}: ${consoleErrors[0]}`);
     return '';

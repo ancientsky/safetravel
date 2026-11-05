@@ -82,6 +82,11 @@ def do_fetch(conn, only: str | None = None) -> dict:
         except Exception as e:  # never break the data update
             C.log.exception("travel medicine fetch crashed")
             st = {"url": travelmed.SOURCES["prescription"][0], "ok": False, "reason": f"crash: {type(e).__name__}: {e}"}
+        try:  # full per-country text from www.cdc.gov.tw (a few pages per run)
+            from . import travelmed_pages
+            st["pages"] = travelmed_pages.crawl()
+        except Exception as e:  # pragma: no cover
+            C.log.exception("travel prescription pages crashed: %s", e)
         out["travelmed"] = st
         if st["ok"]:
             db.set_source_state(conn, "travelmed", url=st["url"], fetched_at=st["fetched_at"], ok=1, reason=None)

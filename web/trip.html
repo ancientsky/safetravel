@@ -129,6 +129,7 @@
       <dl id="stamps" class="stamps"></dl>
       <nav class="jump" data-i18n-attr="aria-label:nav_label">
         <a href="#map-sec" data-i18n="nav_map">地圖</a>
+        <a href="#clinics" data-i18n="nav_clinics">旅遊醫學門診</a>
         <a href="#weather" data-i18n="nav_weather">天氣預報</a>
         <a href="#changes" data-i18n="nav_changes">近期變動</a>
         <a href="#all" data-i18n="nav_all">全部目的地</a>
@@ -180,6 +181,24 @@
     </section>
 
     <section id="card" class="wrap sec card" data-testid="card" aria-labelledby="card-title" hidden></section>
+
+    <section id="clinics" class="wrap sec cl" aria-labelledby="cl-h" data-testid="clinics">
+      <div class="sec-head">
+        <div>
+          <h2 id="cl-h" tabindex="-1" data-i18n="cl_h">旅遊醫學門診</h2>
+          <p class="sec-sub cl-sub" data-i18n="cl_sub0"></p>
+        </div>
+      </div>
+      <div class="cl-tools filters"></div>
+      <div class="cl-meta-row">
+        <p class="cl-count" role="status" aria-live="polite"></p>
+        <p class="cl-note" data-i18n="cl_note"></p>
+      </div>
+      <div class="cl-body">
+        <ul class="cl-list" data-testid="cl-list"><li class="cl-empty muted" data-i18n="cl_loading">門診資料載入中…</li></ul>
+        <div class="cl-map" hidden></div>
+      </div>
+    </section>
 
     <section id="weather" class="wrap sec wx" aria-labelledby="wx-h" data-testid="weather">
       <div class="sec-head">
@@ -266,6 +285,7 @@
         <li><a href="https://www.boca.gov.tw/sp-trwa-list-1.html" target="_blank" rel="noopener noreferrer" data-i18n="foot_boca">外交部領事事務局 國外旅遊警示分級表</a></li>
         <li><span class="foot-mac"></span><span class="foot-mac-note"></span></li>
         <li><a href="https://www.cdc.gov.tw/" target="_blank" rel="noopener noreferrer" data-i18n="foot_cdc">衛生福利部疾病管制署 國際旅遊疫情建議</a></li>
+        <li><a href="https://www.cdc.gov.tw/Internationaltravel/Index/ZkNLTkRxQ0NyQmc5Rk50dmZZZlI2Zz09" target="_blank" rel="noopener noreferrer" data-i18n="foot_travelmed">衛生福利部疾病管制署 國際旅遊處方箋、旅遊醫學門診（開放資料）</a></li>
         <li><a class="foot-cwa" href="https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007" target="_blank" rel="noopener noreferrer" data-i18n="foot_cwa">交通部中央氣象署 全球都市天氣預報（F-C0032-007）</a></li>
       </ul>
       <p class="foot-disc" data-i18n="foot_disclaimer">非官方整理，請以各機關最新公告為準。</p>

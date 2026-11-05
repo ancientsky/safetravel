@@ -6,6 +6,7 @@ import {
 } from './trip-i18n.js';
 import { loadWarningsText, loadEpidemics, safeHref, mofaLv, cdcLv, dayAgo } from './trip-data.js';
 import { clean } from './util.js';
+import { medSection } from './trip-med.js';
 
 const CDC_COUNTRY_URL = 'https://www.cdc.gov.tw/InternationalEpidemicLevel/Index/NlUwZUNvckRWQ09CbDJkRVFjaExjUT09';
 const HAS_CJK = /[　-鿿＀-￯]/;
@@ -214,7 +215,7 @@ function epiSection(d, token) {
 }
 
 /** Render destination `d` into the card element. `localWeather(iso)` returns the weather block (or null). */
-export function renderCard(el, d, { model, onClose, onPrint, localWeather }) {
+export function renderCard(el, d, { model, onClose, onPrint, localWeather, onClinics }) {
   const token = ++renderToken;
   el.replaceChildren(
     h('div', { class: 'card-head' },
@@ -227,6 +228,7 @@ export function renderCard(el, d, { model, onClose, onPrint, localWeather }) {
         h('button', { type: 'button', class: 'btn btn-icon', 'aria-label': t('card_close'), title: t('card_close'), onclick: onClose, text: '×' }))),
     h('div', { class: 'ratings' }, mofaBlock(d, model), cdcBlock(d, model)),
     epiSection(d, token),
+    medSection(d, { alive: () => token === renderToken, onClinics }),
     localWeather ? localWeather(d.iso) : null,
     h('div', { class: 'card-disc' },
       h('p', { text: t('card_disclaimer_mofa') }),

@@ -13,6 +13,7 @@ import { renderChanges } from './trip-changes.js';
 import { createSearch } from './trip-search.js';
 import { createWeather, loadWeather } from './trip-weather.js';
 import { createWxMap } from './trip-wxmap.js';
+import { createClinics } from './trip-clinics.js';
 import { autoReload } from './autoreload.js';
 import { bindTextSize } from './textsize.js';
 
@@ -39,6 +40,7 @@ const table = createTable({ root: $('#all'), onOpen: (iso) => openCard(iso), onP
 const search = createSearch({
   input: $('#q'), listEl: $('#q-list'), statusEl: $('#q-status'), onOpen: (iso) => openCard(iso),
 });
+const clinics = createClinics({ root: $('#clinics') });
 const weather = createWeather({
   root: $('#weather'),
   onOpen: (iso) => openCard(iso),
@@ -189,6 +191,7 @@ function openCard(iso, { focus = true, scroll = true } = {}) {
   app.open = d.iso;
   renderCard(cardEl, d, {
     model: app.model, onClose: closeCard, onPrint: () => printPart('card'), localWeather: weather.localSection,
+    onClinics: () => { clinics.start(); clinics.focus(); },
   });
   cardEl.hidden = false;
   app.map?.select(d.iso);
@@ -235,6 +238,7 @@ function renderAll() {
   table.render(app.model);
   renderChanges($('#changes'), app.model, (iso) => openCard(iso));
   weather.render();
+  clinics.render();
   app.wxmap?.refresh();
   search.refresh();
   if (app.open) openCard(app.open, { focus: false, scroll: false });
@@ -267,6 +271,7 @@ async function main() {
   const iso = location.hash.slice(1).toUpperCase();
   if (/^[A-Z]{2}$/.test(iso)) openCard(iso, { focus: false });
   const wxDone = weather.attach(wxData);
+  clinics.start(); // travelmed.json: non-critical, after the first paint
   await initMap();
   await wxDone;
   document.body.dataset.ready = '1';

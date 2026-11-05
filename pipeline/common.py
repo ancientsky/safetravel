@@ -100,6 +100,14 @@ def nfkc(s: str | None) -> str:
     return unicodedata.normalize("NFKC", s or "").strip()
 
 
+_ZH_PUNCT = re.compile(r"(?<=[\u3400-\u9fff\uf900-\ufaff」』）)])\s*([,;:])(?!\d)")
+
+
+def zh_punct(s: str) -> str:
+    """Display text after NFKC: a , ; : that follows a CJK character goes back to full width (「時，穿著」)."""
+    return _ZH_PUNCT.sub(lambda m: {",": "，", ";": "；", ":": "："}[m.group(1)], s or "")
+
+
 def sha1(*parts: str) -> str:
     h = hashlib.sha1()
     for p in parts:

@@ -94,6 +94,11 @@ the same re-fetch first (`freshReload`), so kiosks never mix versions. New pages
    (c) disease names not in `data/manual/diseases.json`.
    Everything is cached in SQLite keyed by content hash; without an API key the pipeline still runs and exports with `*_en` falling back to zh and `ai: false`.
 
+5. **Travel medicine** (疾管署國際旅遊處方箋、旅遊醫學門診) — three monthly CSVs on `od.cdc.gov.tw` (uploaded by
+   hand to `data/raw/travelmed/`: the host does not answer GitHub runners) plus the per-country prescription pages on
+   `www.cdc.gov.tw` (crawled a few per run). `pipeline/travelmed.py`, `pipeline/travelmed_pages.py` →
+   `web/data/travelmed.json`, `web/data/travelmed/<ISO>.json`. Details: `docs/TRAVELMED.md`.
+
 ## Scheduling
 
 - `update-data.yml`: `workflow_dispatch` only (inputs: `max_calls`, `skip_gemini`), triggered at 11:17 / 21:17 Asia/Taipei by the external scheduler below.
@@ -130,6 +135,12 @@ the same re-fetch first (`freshReload`), so kiosks never mix versions. New pages
   nothing weather-related is fetched or built. State in `localStorage` `safetravel.weather` (`on`/`off`, default off),
   overridden by `?wx=1` / `?wx=0`. Markers are HTML buttons in their own layer (above the map, flights canvas and route watch,
   below the HUD), placed in screen pixels on every zoom/pan frame and kept clear of the HUD cards.
+
+## Travel medicine on `trip.html`
+
+`trip-med.js` (card section "出國前健康準備": vaccines, local diseases and prevention, emergency numbers, traveller-group
+notes) and `trip-clinics.js` (section "旅遊醫學門診": city / open-now / M痘 filters, nearest-first, week grid, locator
+map). Data and refresh: `docs/TRAVELMED.md`.
 
 ## Quick check (`m.html`, personal / phone version)
 
