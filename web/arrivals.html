@@ -65,7 +65,7 @@
   <aside id="arrivals" class="arrivals glass" data-testid="arrivals" role="region" aria-labelledby="arr-title">
     <div class="arr-head" data-i18n-attr="title:arr_drag_hint">
       <div class="arr-heading">
-        <span class="arr-kicker mono"><i class="rec" aria-hidden="true"></i><span data-i18n="arr_kicker">INBOUND // ±60 MIN</span></span>
+        <span class="arr-kicker mono"><i class="rec" aria-hidden="true"></i><span data-i18n="arr_kicker">INBOUND</span><span class="arr-status" role="status"></span></span>
         <h2 id="arr-title" data-i18n="arr_title">入境航班</h2>
       </div>
       <div class="arr-actions">
@@ -75,12 +75,11 @@
       </div>
     </div>
     <div class="arr-controls">
-      <label class="arr-field"><span data-i18n="arr_airport">機場</span><select class="arr-airport" data-testid="arrivals-airport"></select></label>
-      <div class="arr-cps" role="group" data-i18n-attr="aria-label:arr_checkpoint"></div>
-      <div class="arr-win" role="group" data-testid="arrivals-window" data-i18n-attr="aria-label:arr_win_label"></div>
+      <label class="arr-field"><span class="sr-only" data-i18n="arr_airport">機場</span><select class="arr-airport" data-testid="arrivals-airport"></select></label>
+      <div class="arr-cpf"><button type="button" class="arr-cp-btn" data-testid="arrivals-cp" aria-haspopup="true" aria-expanded="false"></button><div class="arr-cp-pop" role="group" data-i18n-attr="aria-label:arr_checkpoint" hidden></div></div>
+      <label class="arr-field"><span class="sr-only" data-i18n="arr_win_label">查詢時段</span><select class="arr-win" data-testid="arrivals-window"></select></label>
       <label class="arr-field arr-find"><span class="sr-only" data-i18n="arr_find_label">搜尋航班</span><input type="search" class="arr-q" data-testid="arrivals-search" autocomplete="off" spellcheck="false" enterkeyhint="search" data-i18n-attr="placeholder:arr_find_placeholder;title:arr_find_title"></label>
     </div>
-    <div class="arr-status mono" role="status"></div>
     <div class="arr-body" tabindex="-1"></div>
   </aside>
 </body>

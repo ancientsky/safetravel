@@ -184,7 +184,7 @@
   <aside id="arrivals" class="arrivals glass" data-testid="arrivals" role="region" aria-labelledby="arr-title" hidden>
     <div class="arr-head" data-i18n-attr="title:arr_drag_hint">
       <div class="arr-heading">
-        <span class="arr-kicker mono"><i class="rec" aria-hidden="true"></i><span data-i18n="arr_kicker">INBOUND // ±60 MIN</span></span>
+        <span class="arr-kicker mono"><i class="rec" aria-hidden="true"></i><span data-i18n="arr_kicker">INBOUND</span><span class="arr-status" role="status"></span></span>
         <h2 id="arr-title" data-i18n="arr_title">入境航班</h2>
       </div>
       <div class="arr-actions">
@@ -198,12 +198,11 @@
       </div>
     </div>
     <div class="arr-controls">
-      <label class="arr-field"><span data-i18n="arr_airport">機場</span><select class="arr-airport" data-testid="arrivals-airport"></select></label>
-      <div class="arr-cps" role="group" data-i18n-attr="aria-label:arr_checkpoint"></div>
-      <div class="arr-win" role="group" data-testid="arrivals-window" data-i18n-attr="aria-label:arr_win_label"></div>
+      <label class="arr-field"><span class="sr-only" data-i18n="arr_airport">機場</span><select class="arr-airport" data-testid="arrivals-airport"></select></label>
+      <div class="arr-cpf"><button type="button" class="arr-cp-btn" data-testid="arrivals-cp" aria-haspopup="true" aria-expanded="false"></button><div class="arr-cp-pop" role="group" data-i18n-attr="aria-label:arr_checkpoint" hidden></div></div>
+      <label class="arr-field"><span class="sr-only" data-i18n="arr_win_label">查詢時段</span><select class="arr-win" data-testid="arrivals-window"></select></label>
       <label class="arr-field arr-find"><span class="sr-only" data-i18n="arr_find_label">搜尋航班</span><input type="search" class="arr-q" data-testid="arrivals-search" autocomplete="off" spellcheck="false" enterkeyhint="search" data-i18n-attr="placeholder:arr_find_placeholder;title:arr_find_title"></label>
     </div>
-    <div class="arr-status mono" role="status"></div>
     <div class="arr-body" tabindex="-1"></div>
   </aside>
 
@@ -300,6 +299,9 @@
 
   <aside id="panel" class="panel glass" data-testid="country-panel" role="dialog" aria-modal="false" aria-labelledby="panel-title" hidden>
     <div class="panel-grip" aria-hidden="true"></div>
+    <button type="button" class="btn-icon panel-dock" data-testid="panel-dock" data-i18n-attr="aria-label:panel_dock;title:panel_dock" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M14.5 4.5v15"/></svg>
+    </button>
     <button type="button" class="btn-icon panel-close" data-i18n-attr="aria-label:panel_close;title:panel_close">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
@@ -331,6 +333,7 @@
       <span class="foot-k" data-i18n="footer_src_k">資料來源</span>
       <a href="https://www.cdc.gov.tw/" target="_blank" rel="noopener noreferrer" data-i18n="footer_cdc" data-i18n-attr="title:footer_cdc_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://www.taoyuan-airport.com/" target="_blank" rel="noopener noreferrer" data-i18n="footer_airport" data-i18n-attr="title:footer_airport_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener noreferrer" data-i18n="footer_tdx" data-i18n-attr="title:footer_tdx_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://www.boca.gov.tw/sp-trwa-list-1.html" target="_blank" rel="noopener noreferrer" data-i18n="footer_boca" data-i18n-attr="title:footer_boca_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://www.mac.gov.tw/News.aspx?n=E0243AD02975213D&amp;sms=EF1DC35EB9749B36" target="_blank" rel="noopener noreferrer" data-i18n="footer_mac" data-i18n-attr="title:footer_mac_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://opendata.cwa.gov.tw/dataset/forecast/F-C0032-007" target="_blank" rel="noopener noreferrer" class="foot-cwa" data-i18n="footer_cwa" data-i18n-attr="title:footer_cwa_title"></a><span class="foot-dot" aria-hidden="true">·</span><a href="https://www.flightconnections.com/" target="_blank" rel="noopener noreferrer" data-i18n="footer_fc" data-i18n-attr="title:footer_fc_title"></a>
       <a class="foot-more" href="help.html#sources" data-i18n="footer_more">各單位提供哪些資料 ›</a>
+      <span class="foot-quota mono" data-arr-quota hidden></span>
     </p>
     <p class="foot-disclaimer"><span data-i18n="footer_disclaimer">非官方資訊整理，AI 翻譯與摘要可能有誤，出國前請以疾管署最新公告為準。</span>
       <a class="foot-help" href="help.html" data-testid="footer-help-link" data-i18n="footer_help">使用說明</a><span class="foot-dot" aria-hidden="true">·</span><a href="slide.html" data-testid="footer-slides-link" data-i18n="footer_slides">衛教海報輪播</a></p>

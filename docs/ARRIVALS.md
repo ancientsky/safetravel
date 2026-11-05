@@ -145,7 +145,7 @@ Rules:
 
 ## UI
 
-Time window (`cfg.win`, remembered; `&win=30|60|120|all`): ±30, ±60 (default) or ±120 minutes around now, or the
+Checkpoints (`cfg.cps`, a set; empty = all; `?arr=TPE-BC` for several): one button opens a list of toggles. The update time sits in the kicker next to "INBOUND"; the TDX API quota goes to the map page footer (`[data-arr-quota]`) or the status tooltip. Time window (`cfg.win`, remembered; `&win=30|60|120|all`): ±30, ±60 (default) or ±120 minutes around now, or the
 whole file window (−2 h … +4 h). Flights from level 2+ areas get a tinted row and a thicker level bar; the summary's
 "from L2+ areas · show only these" button filters to them (`cfg.risk`). `arrivals.html` runs the same board standalone
 (`createArrivals({ standalone: true })`, js/board.js): full page, no map layer / dock / drag / close, two columns of

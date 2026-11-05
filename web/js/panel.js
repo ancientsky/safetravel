@@ -501,7 +501,9 @@ export function createPanel({ root, map }) {
     if (fly) {
       const narrow = window.innerWidth < 760;
       map.flyTo(up, {
-        pad: narrow ? { top: 140, bottom: window.innerHeight * 0.62 } : { right: Math.min(460 * textScale(), window.innerWidth * 0.46) + 24, top: 150, left: 40, bottom: 60 }, // = --panel-w, no layout read
+        pad: narrow ? { top: 140, bottom: window.innerHeight * 0.62 }
+          : root.classList.contains('is-floating') ? { right: 40, top: 150, left: 40, bottom: 60 } // dragged off its dock: no side to keep clear
+            : { right: Math.min(460 * textScale(), window.innerWidth * 0.46) + 24, top: 150, left: 40, bottom: 60 }, // = --panel-w, no layout read
         maxScale: 4.5,
       });
     }

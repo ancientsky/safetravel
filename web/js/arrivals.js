@@ -36,15 +36,15 @@ function readJSON(key) {
   try { return JSON.parse(storageGet(key) || 'null'); } catch { return null; }
 }
 
-/** ?arr=TPE-C (airport + checkpoint), ?arr=KHH, &big=1, &win=30|60|120|all */
+/** ?arr=TPE-C (airport + checkpoint), ?arr=TPE-BC (several), ?arr=KHH, &big=1, &win=30|60|120|all */
 function fromUrl(standalone) {
   const q = new URLSearchParams(location.search);
-  const m = /^([A-Za-z]{3})(?:-([A-Da-d]))?$/.exec(q.get('arr') || '');
+  const m = /^([A-Za-z]{3})(?:-([A-Da-d]{1,4}))?$/.exec(q.get('arr') || '');
   const w = q.get('win');
   const win = w === 'all' ? 0 : WINDOWS.includes(Number(w)) && w ? Number(w) : undefined;
   if (!m) return standalone && (win !== undefined || q.get('big')) ? { win, big: q.get('big') === '1' ? true : undefined } : null;
   return {
-    airport: m[1].toUpperCase(), cp: m[2] ? m[2].toUpperCase() : 'ALL', big: q.get('big') === '1' ? true : undefined, win,
+    airport: m[1].toUpperCase(), cps: m[2] ? [...new Set(m[2].toUpperCase())].sort() : [], big: q.get('big') === '1' ? true : undefined, win,
   };
 }
 
@@ -60,7 +60,8 @@ export const bestTime = (f) => ts(f.status === 'cancelled' ? f.scheduled : (f.ac
 export function createArrivals({ root, button, map, openCountry, onLayout, standalone = false }) {
   const head = root.querySelector('.arr-head');
   const selAirport = root.querySelector('.arr-airport');
-  const cpsNode = root.querySelector('.arr-cps');
+  const cpBtn = root.querySelector('.arr-cp-btn');
+  const cpPop = root.querySelector('.arr-cp-pop');
   const statusNode = root.querySelector('.arr-status');
   const body = root.querySelector('.arr-body');
   const qInput = root.querySelector('.arr-q');
@@ -72,8 +73,12 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
 
   const winNode = root.querySelector('.arr-win');
   const url = fromUrl(standalone);
-  const cfg = { airport: 'TPE', cp: 'ALL', big: false, scroll: true, win: 60, risk: false, ...(readJSON(CFG_KEY) || {}) };
+  const cfg = { airport: 'TPE', cps: [], big: false, scroll: true, win: 60, risk: false, ...(readJSON(CFG_KEY) || {}) };
   if (!WINDOWS.includes(cfg.win)) cfg.win = 60;
+  // checkpoints: a set (empty = all); older saved settings had a single 'cp'
+  if (!Array.isArray(cfg.cps)) cfg.cps = [];
+  if (typeof cfg.cp === 'string' && cfg.cp !== 'ALL' && !cfg.cps.length) cfg.cps = [cfg.cp];
+  delete cfg.cp;
   if (url) Object.assign(cfg, Object.fromEntries(Object.entries(url).filter(([, v]) => v !== undefined)));
   let positions = readJSON(POS_KEY) || {};
   let on = standalone || (url ? true : storageGet(ON_KEY) === 'on');
@@ -218,10 +223,10 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
   const checkpoints = () => (Array.isArray(airportInfo()?.checkpoints) ? airportInfo().checkpoints : []);
 
   function matchesCp(f) {
-    if (cfg.cp === 'ALL' || !checkpoints().length) return true;
-    if (f.checkpoint) return f.checkpoint === cfg.cp;
-    const term = checkpoints().find((c) => c.id === cfg.cp)?.terminal;
-    return !term || !f.terminal || String(f.terminal) === String(term); // gate TBD: every checkpoint of its terminal
+    if (!cfg.cps.length || !checkpoints().length) return true;
+    if (f.checkpoint) return cfg.cps.includes(f.checkpoint);
+    const terms = checkpoints().filter((c) => cfg.cps.includes(c.id)).map((c) => String(c.terminal));
+    return !terms.length || !f.terminal || terms.includes(String(f.terminal)); // gate TBD: every checkpoint of its terminal
   }
 
   // ---------------------------------------------------------------- flight search ("JK202", "jk-202", "JK 0202", "NRT", "東京", "名古屋")
@@ -267,21 +272,26 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     }).join('');
     if (selAirport.innerHTML !== opts) selAirport.innerHTML = opts;
     const cps = checkpoints();
-    if (cfg.cp !== 'ALL' && cps.length && !cps.some((c) => c.id === cfg.cp)) cfg.cp = 'ALL';
-    const btn = (id, label, aria) => `<button type="button" class="arr-cp${cfg.cp === id ? ' is-on' : ''}" data-cp="${esc(id)}" aria-pressed="${cfg.cp === id}"${aria ? ` aria-label="${esc(aria)}"` : ''}>${esc(label)}</button>`;
-    cpsNode.innerHTML = cps.length
-      ? btn('ALL', t('arr_cp_all')) + cps.map((c) => btn(c.id, t('arr_cp_label', { id: c.id, term: c.terminal }), t('arr_cp_aria', { id: c.id, term: c.terminal }))).join('')
-      : '';
-    cpsNode.hidden = !cps.length;
-    if (winNode) {
-      winNode.innerHTML = WINDOWS.map((w) => `<button type="button" class="arr-wbtn" data-win="${w}" aria-pressed="${cfg.win === w}">${
-        esc(w ? t('arr_win_btn', { n: w }) : t('arr_win_all'))}</button>`).join('');
+    if (cps.length) cfg.cps = cfg.cps.filter((id) => cps.some((c) => c.id === id));
+    if (cps.length && cfg.cps.length === cps.length) cfg.cps = []; // every checkpoint = all
+    // one filter button ("檢疫站：B、C ▾") with a small list of toggles: several checkpoints at once
+    if (cpBtn) {
+      cpBtn.hidden = !cps.length;
+      const label = cfg.cps.length ? cfg.cps.join('、') : t('arr_cp_all');
+      cpBtn.innerHTML = `<span class="arr-cp-k">${esc(t('arr_checkpoint'))}</span><b>${esc(label)}</b><span aria-hidden="true">▾</span>`;
+      cpBtn.classList.toggle('is-on', cfg.cps.length > 0);
+      const item = (id, text, on) => `<button type="button" class="arr-cp-opt" data-cp="${esc(id)}" aria-pressed="${on}"><i aria-hidden="true"></i>${esc(text)}</button>`;
+      cpPop.innerHTML = item('ALL', t('arr_cp_all'), !cfg.cps.length)
+        + cps.map((c) => item(c.id, t('arr_cp_aria', { id: c.id, term: c.terminal }), cfg.cps.includes(c.id))).join('');
     }
-    const kicker = root.querySelector('.arr-kicker [data-i18n="arr_kicker"]');
-    if (kicker) kicker.textContent = cfg.win ? t('arr_kicker_n', { n: cfg.win }) : t('arr_kicker_all');
+    if (winNode && winNode.tagName === 'SELECT') {
+      const opts = WINDOWS.map((w) => `<option value="${w}"${cfg.win === w ? ' selected' : ''}>${esc(w ? t('arr_win_btn', { n: w }) : t('arr_win_all_long'))}</option>`).join('');
+      if (winNode.innerHTML !== opts) winNode.innerHTML = opts;
+      winNode.value = String(cfg.win);
+    }
     const pageLink = root.querySelector('.arr-page'); // the full-screen page opens on the same airport / checkpoint / window
     if (pageLink) {
-      pageLink.href = `arrivals.html?arr=${encodeURIComponent(cfg.airport)}${cfg.cp !== 'ALL' ? `-${encodeURIComponent(cfg.cp)}` : ''}&win=${cfg.win || 'all'}`;
+      pageLink.href = `arrivals.html?arr=${encodeURIComponent(cfg.airport)}${cfg.cps.length ? `-${encodeURIComponent(cfg.cps.join(''))}` : ''}&win=${cfg.win || 'all'}`;
     }
     btnBig.setAttribute('aria-pressed', String(!!cfg.big));
     renderScrollSwitch();
@@ -289,7 +299,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
   }
 
   function renderStatus(now) {
-    if (status === 'loading' && !data) { statusNode.textContent = t('arr_loading'); statusNode.className = 'arr-status mono'; return; }
+    if (status === 'loading' && !data) { statusNode.textContent = t('arr_loading'); statusNode.className = 'arr-status'; return; }
     if (!data) { statusNode.textContent = ''; return; }
     const gen = ts(data.tdx_updated || data.generated_at);
     const mins = Math.max(0, Math.round((now - gen) / 60000));
@@ -297,10 +307,15 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     const every = (hour < 5 ? data.refresh_minutes?.night : data.refresh_minutes?.day) || 10;
     const ago = t('arr_ago', { n: mins });
     const stale = mins > every * 2 + 5;
-    statusNode.className = `arr-status mono${stale ? ' is-stale' : ''}`;
+    statusNode.className = `arr-status${stale ? ' is-stale' : ''}`;
+    root.classList.toggle('is-stale', stale);
+    statusNode.textContent = stale ? t('arr_stale', { ago }) : t('arr_updated', { time: hm(gen), ago });
+    // TDX API usage is for whoever runs the site: a quiet footer note (map page), else the status tooltip
     const q = data.quota;
-    statusNode.innerHTML = `<i class="pulse-dot" aria-hidden="true"></i><span>${esc(stale ? t('arr_stale', { ago }) : t('arr_updated', { time: hm(gen), ago }))}</span>${
-      q?.cap_month ? `<span class="arr-quota">${esc(t('arr_quota', { used: q.calls_month ?? 0, cap: q.cap_month }))}</span>` : ''}`;
+    const quota = q?.cap_month ? t('arr_quota', { used: q.calls_month ?? 0, cap: q.cap_month }) : '';
+    const slot = document.querySelector('[data-arr-quota]');
+    if (slot) { slot.textContent = quota; slot.hidden = !quota; }
+    statusNode.title = quota;
   }
 
   function diseasesFor(iso) {
@@ -338,7 +353,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
         </span>
         <span class="arr-gate${gate ? '' : ' is-tbd'}"${gate ? '' : ` title="${esc(t('arr_gate_tbd_title'))}"`}>
           <b class="mono">${esc(gate || t('arr_gate_tbd'))}</b>
-          <span class="mono">${f.terminal ? esc(t('arr_terminal', { term: f.terminal })) : ''}${f.checkpoint && cfg.cp === 'ALL' ? ` · ${esc(f.checkpoint)}` : ''}</span>
+          <span class="mono">${f.terminal ? esc(t('arr_terminal', { term: f.terminal })) : ''}${f.checkpoint && cfg.cps.length !== 1 ? ` · ${esc(f.checkpoint)}` : ''}</span>
           ${belt ? `<span class="arr-belt" title="${esc(t('arr_carousel_title', { n: belt }))}">${esc(t('arr_carousel'))}<span class="arr-belt-n mono">${esc(belt)}</span></span>` : ''}
           <span class="arr-st st-${st}">${esc(statusText)}</span>
         </span>
@@ -369,7 +384,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     body.innerHTML = `${q ? `<p class="arr-found mono">${esc(t('arr_find_count', { q, n: up.length + past.length }))}</p>` : ''}<p class="arr-summary"><span>${esc(t('arr_count', { up: up.length, past: past.length }))}</span>${
       risky || cfg.risk ? `<button type="button" class="arr-risk" data-risk aria-pressed="${!!cfg.risk}" title="${esc(t('arr_risk_title'))}">${
         esc(cfg.risk ? t('arr_risk_on', { n: risky }) : t('arr_risk', { n: risky }))}</button>` : ''}</p>${
-      empty ? `<p class="arr-empty">${esc(q ? t('arr_find_none') : cfg.risk ? t('arr_empty_risk') : cfg.cp !== 'ALL' ? t('arr_empty_cp') : t('arr_empty'))}</p>` : ''}${
+      empty ? `<p class="arr-empty">${esc(q ? t('arr_find_none') : cfg.risk ? t('arr_empty_risk') : cfg.cps.length ? t('arr_empty_cp') : t('arr_empty'))}</p>` : ''}${
       section('upcoming', 'next', up)}${section('arrived', 'past', past)}`;
     layer.update([...up, ...past]);
   }
@@ -525,15 +540,28 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     onLayout?.();
   });
   const toTop = () => { body.scrollTop = 0; glide.pos = 0; glide.phase = 'rest-top'; glide.until = performance.now() + REST_TOP_MS; };
-  selAirport.addEventListener('change', () => { cfg.airport = selAirport.value; cfg.cp = 'ALL'; saveCfg(); hotId = null; render(); toTop(); });
-  cpsNode.addEventListener('click', (e) => {
+  selAirport.addEventListener('change', () => { cfg.airport = selAirport.value; cfg.cps = []; saveCfg(); hotId = null; render(); toTop(); });
+  // checkpoint filter: the button opens the list; each checkpoint toggles, "all" clears
+  const openCp = (v) => {
+    if (!cpPop) return;
+    cpPop.hidden = !v;
+    cpBtn.setAttribute('aria-expanded', String(v));
+    if (v) cpPop.querySelector('[data-cp]')?.focus();
+  };
+  cpBtn?.addEventListener('click', () => openCp(cpPop.hidden));
+  cpPop?.addEventListener('click', (e) => {
     const b = e.target.closest('[data-cp]');
     if (!b) return;
-    cfg.cp = b.dataset.cp;
+    const id = b.dataset.cp;
+    if (id === 'ALL') cfg.cps = [];
+    else cfg.cps = cfg.cps.includes(id) ? cfg.cps.filter((x) => x !== id) : [...cfg.cps, id].sort();
     saveCfg();
     render();
     toTop();
+    cpPop.querySelector(`[data-cp="${CSS.escape(id)}"]`)?.focus();
   });
+  document.addEventListener('pointerdown', (e) => { if (cpPop && !cpPop.hidden && !e.target.closest('.arr-cpf')) openCp(false); });
+  cpPop?.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); openCp(false); cpBtn.focus(); } });
   body.addEventListener('click', (e) => {
     if (e.target.closest('[data-risk]')) {
       cfg.risk = !cfg.risk;
@@ -546,14 +574,11 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     const b = e.target.closest('.arr-hit[data-iso]');
     if (b) openCountry(b.dataset.iso);
   });
-  winNode?.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-win]');
-    if (!b) return;
-    cfg.win = Number(b.dataset.win);
+  winNode?.addEventListener('change', () => {
+    cfg.win = Number(winNode.value);
     saveCfg();
     render();
     toTop();
-    winNode.querySelector(`[data-win="${cfg.win}"]`)?.focus();
   });
   const setHot = (id) => {
     if (id === hotId) return;

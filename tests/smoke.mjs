@@ -520,6 +520,15 @@ async function run(browser) {
     await pr.press('[data-testid="arrivals-search"]', 'Escape');
     await pr.waitForTimeout(150);
     const after = await rows();
+    // several checkpoints at once (A + C), then back to all
+    await pr.click('[data-testid="arrivals-cp"]');
+    await pr.click('#arrivals .arr-cp-opt[data-cp="C"]');
+    const ac = (await rows()).sort();
+    const cpLabel = (await pr.textContent('[data-testid="arrivals-cp"]')).replace(/\s+/g, '');
+    await pr.click('#arrivals .arr-cp-opt[data-cp="ALL"]');
+    const all = (await rows()).sort();
+    await pr.keyboard.press('Escape');
+    const status = await pr.evaluate(() => ({ kicker: document.querySelector('#arrivals .arr-kicker').textContent, quota: document.querySelector('[data-arr-quota]')?.textContent || '' }));
     const belt = await pr.$eval('#arrivals .arr-belt', (e) => e.textContent.replace(/\s+/g, ''));
     await pr.close();
     assert(base.join() === 'CI 101', `checkpoint A without search: ${base}`);
@@ -528,6 +537,9 @@ async function run(browser) {
     assert(res['CI 777'].join() === 'CI 777', `90 min ago, outside ±60 → ${res['CI 777']}`);
     assert(res.ZZ9.length === 0 && after.join() === 'CI 101', `none ${res.ZZ9}, after Esc ${after}`);
     assert(/03/.test(belt), `carousel ${belt}`);
+    assert(ac.join() === 'CI 101,JK 202' && /A、C/.test(cpLabel), `A + C: ${ac} (${cpLabel})`);
+    assert(all.join() === 'CI 101,JK 202', `all checkpoints: ${all}`);
+    assert(!/MIN|±/.test(status.kicker) && /API/.test(status.quota), `status ${JSON.stringify(status)}`);
     assert(!errs.length, errs[0]);
     return 'all formats find JK 202 (other checkpoint), codeshare and −90 min flights found, Esc restores';
   });
@@ -557,9 +569,9 @@ async function run(browser) {
     await pr.waitForFunction(() => document.querySelectorAll('#arrivals .arr-row').length > 0, null, { timeout: 15000 });
     const rows = () => pr.$$eval('#arrivals .arr-row .arr-flight', (ls) => ls.map((l) => l.textContent.trim()).sort());
     const r60 = await rows();
-    await pr.click('[data-testid="arrivals-window"] [data-win="30"]');
+    await pr.selectOption('[data-testid="arrivals-window"]', '30');
     const r30 = await rows();
-    await pr.click('[data-testid="arrivals-window"] [data-win="0"]');
+    await pr.selectOption('[data-testid="arrivals-window"]', '0');
     const rAll = await rows();
     await pr.click('#arrivals [data-risk]');
     const rRisk = await rows();
@@ -675,6 +687,34 @@ async function run(browser) {
     assert(en.lang === 'en' && en.top >= 0 && en.top < 200 && en.secs === zh.secs, `en ${JSON.stringify(en)}`);
     assert(!errs.length, errs[0]);
     return `${zh.secs} sections in both languages, #sources → #en-sources`;
+  });
+
+  await check('country panel: drag its head to float it (remembered after reload), the dock button puts it back', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1600, height: 900 } });
+    const pp = await ctx.newPage();
+    await pp.goto(`${BASE_URL}#/country/JP`, { waitUntil: 'load' });
+    await pp.waitForFunction(() => document.querySelector('#panel')?.classList.contains('is-open'), null, { timeout: 30000 });
+    await pp.waitForTimeout(600);
+    const r0 = await pp.locator('#panel').boundingBox();
+    await pp.mouse.move(r0.x + 140, r0.y + 18);
+    await pp.mouse.down();
+    await pp.mouse.move(r0.x - 100, r0.y + 60, { steps: 6 });
+    await pp.mouse.move(r0.x - 400, r0.y + 80, { steps: 6 });
+    await pp.mouse.up();
+    const r1 = await pp.locator('#panel').boundingBox();
+    const fl = await pp.evaluate(() => document.querySelector('#panel').classList.contains('is-floating') && !document.querySelector('.panel-dock').hidden);
+    await pp.reload({ waitUntil: 'load' });
+    await pp.waitForFunction(() => document.querySelector('#panel')?.classList.contains('is-open'), null, { timeout: 30000 });
+    await pp.waitForTimeout(700); // slide-in transition
+    const r2 = await pp.locator('#panel').boundingBox();
+    await pp.click('.panel-dock');
+    const r3 = await pp.locator('#panel').boundingBox();
+    const stored = await pp.evaluate(() => localStorage.getItem('safetravel.panel.pos'));
+    await ctx.close();
+    assert(fl && Math.abs(r1.x - (r0.x - 400 - 140)) < 3, `not floating where dropped: ${JSON.stringify(r0)} → ${JSON.stringify(r1)}`);
+    assert(Math.abs(r2.x - r1.x) < 3 && Math.abs(r2.y - r1.y) < 3, `position not remembered: ${JSON.stringify(r2)}`);
+    assert(Math.abs(r3.x - r0.x) < 3 && stored === '{}', `dock: ${JSON.stringify(r3)} ${stored}`);
+    return 'floats, survives a reload, docks back';
   });
 
   await check('timeline range: 6 months by default, 3/6/12/24 switch the list, choice remembered, ?months= overrides', async () => {

@@ -13,6 +13,7 @@ import { initTooltip } from './js/tooltip.js';
 import { createMap } from './js/map.js';
 import { createFlights } from './js/flights.js';
 import { createPanel } from './js/panel.js';
+import { makeFloatable } from './js/floatable.js';
 import { createSpotlight } from './js/spotlight.js';
 import { createArrivals } from './js/arrivals.js';
 import { createWatch } from './js/watch.js';
@@ -227,6 +228,8 @@ async function main() {
   };
   const map = createMap({ svgEl: $('#map-svg'), onOpen: (iso) => openCountry(iso), getInsets });
   const panel = createPanel({ root: $('#panel'), map });
+  // the country panel can be dragged off its dock (and resized), like the arrivals board; the dock button returns it
+  makeFloatable({ root: $('#panel'), handles: '.panel-head, .panel-autobar', key: 'safetravel.panel.pos', dockBtn: $('.panel-dock') });
   let flights = null;
   let spotlight = null;
 

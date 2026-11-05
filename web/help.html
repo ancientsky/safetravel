@@ -86,6 +86,7 @@
         <li>AI 兩年疫情總覽；疫情時間軸（預設近 6 個月，可切換 3／6／12／24 個月）。</li>
         <li>外交部旅遊警示可展開全文並連回領事事務局原文；開天氣時另有當地天氣預報。</li>
       </ul>
+      <p><b>移動國家面板</b>：拖曳面板最上方（國名一帶或「自動輪播中」那一列）就能把面板移到任何位置，右下角可調整大小，每台螢幕記住；面板右上的 ▯ 按鈕放回右側預設位置。</p>
       <h3>焦點輪播</h3>
       <p>右下卡片每 15 秒介紹一個國家。打開「查看完整資訊」會自動開啟國家面板並以閱讀速度自動捲動；面板上方的「精簡資訊」回到卡片。</p>
       <h3>航線雷達</h3>
@@ -94,7 +95,7 @@
       <p>按「疫區航線」開啟選單，打開伊爾庫次克（疑似鼠疫）或金夏沙（本迪布焦病毒伊波拉）開關，地圖顯示該城市的直飛航線網；青色航點為與桃園有直航、旅客可能轉機來臺的城市。開啟時圖例會說明虛線的意思。</p>
       <h3>其他按鈕</h3>
       <ul>
-        <li><b>Aa 字級</b>：小（100%）→ 標準（112%）→ 大（125%）→ 特大（140%）。電腦與牆面螢幕預設特大、手機預設標準，每台裝置記住。</li>
+        <li><b>Aa 字級</b>：小（100%）→ 標準（112%）→ 大（125%）→ 特大（140%）。電腦與牆面螢幕預設特大、手機預設標準，每台裝置記住。畫面高度不到 900 px（筆電、或瀏覽器放大到 125% 以上）時，「特大」會自動以「大」顯示，並隱藏上方的統計數字卡（左下圖例有相同數字），讓看板與面板放得下。</li>
         <li><b>EN／中</b>切換語言；<b>月亮／太陽</b>切換深淺色；<b>音效</b>預設關閉。</li>
       </ul>
     </section>
@@ -103,12 +104,12 @@
       <h2>入境航班看板</h2>
       <p>情報板右上「入境航班」打開，或使用全螢幕版 <a href="arrivals.html">arrivals.html</a>（不載入地圖、寬螢幕分兩欄）。</p>
       <ul>
-        <li><b>機場與檢疫站</b>：桃園 A·T1、B·T1、C·T2、D·T2；登機門未定或停靠遠端機坪的航班會列在該航廈每個檢疫站。</li>
-        <li><b>查詢時段</b>：前後 30 分、60 分（預設）、2 小時，或「全部」（前 2 小時～後 4 小時）。</li>
+        <li><b>機場與檢疫站</b>：「檢疫站」按鈕可<b>同時勾選多個</b>（例如 B 和 C），「全部」還原；桃園 A·T1、B·T1、C·T2、D·T2。登機門未定或停靠遠端機坪的航班會列在該航廈每個檢疫站。</li>
+        <li><b>查詢時段</b>（下拉選單）：前後 30 分、60 分（預設）、2 小時，或「全部」（前 2 小時～後 4 小時）。標題「INBOUND」旁顯示資料更新時間，延遲時變橘色。</li>
         <li><b>需注意的班機</b>：來自第二級以上地區的班機整列加底色；按「來自 L2+ 地區 N 班 · 只看這些」只列出它們。</li>
         <li><b>搜尋航班</b>：JK202、JK-202、jk 202、共掛班號都可以；也可輸入出發地（NRT、東京、名古屋）。搜尋時不分檢疫站、涵蓋前 2 小時～後 4 小時。</li>
         <li>每列：抵達時間（表定不同時以刪除線標示）、出發地與國家、<b>出發國等級與主要疫病</b>、航班與機型、<b>登機門／航廈／檢疫站</b>、<b>行李轉盤</b>、狀態。點一列開啟該國資訊。</li>
-        <li><b>自動捲動</b>（預設開）：以閱讀速度往下捲，有人操作時暫停。<b>大字</b>適合牆面螢幕。地圖頁的看板可拖曳標題列移動位置，↗ 按鈕開啟全螢幕版。</li>
+        <li><b>自動捲動</b>（↓ 圖示，預設開）：以閱讀速度往下捲，有人操作時暫停。<b>大字</b>適合牆面螢幕。地圖頁的看板可拖曳標題列移動位置，▯ 按鈕放回預設位置，↗ 按鈕開啟全螢幕版。</li>
         <li>資料約每 10 分鐘更新（00:00–04:59 約每 30 分鐘）；延遲時狀態列會變橘色。</li>
       </ul>
     </section>
@@ -154,7 +155,7 @@
         <thead><tr><th>網址</th><th>效果</th></tr></thead>
         <tbody>
           <tr><td><code>#/country/CD</code></td><td>直接開啟某國面板（ISO 兩碼）</td></tr>
-          <tr><td><code>?arr=TPE-C</code></td><td>開啟入境航班看板：桃園 C 檢疫站（<code>TPE-A</code>～<code>TPE-D</code>；其他機場 <code>TSA</code>、<code>KHH</code>、<code>RMQ</code>…）</td></tr>
+          <tr><td><code>?arr=TPE-C</code></td><td>開啟入境航班看板：桃園 C 檢疫站（<code>TPE-A</code>～<code>TPE-D</code>；多個檢疫站寫在一起，如 <code>TPE-BC</code>；其他機場 <code>TSA</code>、<code>KHH</code>、<code>RMQ</code>…）</td></tr>
           <tr><td><code>&amp;big=1</code></td><td>看板大字</td></tr>
           <tr><td><code>&amp;win=30</code></td><td>看板時段 <code>30／60／120／all</code></td></tr>
           <tr><td><code>arrivals.html?arr=TPE-C</code></td><td>全螢幕入境航班看板</td></tr>
@@ -261,11 +262,11 @@
         <li><b>The legend is the filter</b>: tap a level to show only it (several allowed, “All” resets); ⌄ collapses the legend.</li>
         <li><b>Navigate</b>: wheel to zoom, drag to pan, double-click to reset; <kbd>/</kbd> focuses search, <kbd>Esc</kbd> closes the panel. On phones one finger taps, two fingers pan and zoom.</li>
         <li><b>Search</b> countries, cities and airports by Chinese / English name, nickname or IATA code (Bangkok, 名古屋, Nagoya, NRT).</li>
-        <li><b>Country panel</b>: both official ratings, every active notice, an AI two-year overview, an outbreak timeline (3 / 6 / 12 / 24 months), the MOFA warning text and local weather.</li>
+        <li><b>Country panel</b>: both official ratings, every active notice, an AI two-year overview, an outbreak timeline (3 / 6 / 12 / 24 months), the MOFA warning text and local weather. Drag its top (name area or the tour bar) to move it anywhere, resize it from its corner; ▯ docks it back on the right.</li>
         <li><b>Spotlight tour</b>: a country every 15 s; “Show full details” opens and auto-scrolls the panel.</li>
         <li><b>Route radar</b>: today's Taoyuan routes, inbound only by default (“Both ways” adds departures).</li>
         <li><b>Outbreak routes</b>: the direct-flight networks of Irkutsk (suspected plague) and Kinshasa (Bundibugyo Ebola); cyan stops have direct flights to Taoyuan. The legend explains the dotted lines.</li>
-        <li><b>Weather</b>: CWA forecasts for 80 cities with a 7-day selector. <b>Aa</b>: text size 100 / 112 / 125 / 140 % (computers default to 140 %, phones to 112 %).</li>
+        <li><b>Weather</b>: CWA forecasts for 80 cities with a 7-day selector. <b>Aa</b>: text size 100 / 112 / 125 / 140 % (computers default to 140 %, phones to 112 %). On screens under 900 px tall (laptops, or browser zoom 125 %+) 140 % shows as 125 % and the stat tiles are hidden, so the board and panel fit.</li>
       </ul>
     </section>
 
@@ -273,7 +274,7 @@
       <h2>Inbound flights board</h2>
       <ul>
         <li>Open it from the map's <b>Arrivals</b> button or use the full-screen <a href="arrivals.html">arrivals.html</a> (no map, two columns on wide screens).</li>
-        <li><b>Airport &amp; checkpoint</b>: Taoyuan A·T1, B·T1, C·T2, D·T2. <b>Time window</b>: ±30, ±60 (default), ±2 h or all (−2 h … +4 h).</li>
+        <li><b>Airport &amp; checkpoints</b>: the checkpoint button lets you tick <b>several at once</b> (e.g. B and C); Taoyuan A·T1, B·T1, C·T2, D·T2. <b>Time window</b> (drop-down): ±30, ±60 (default), ±2 h or all (−2 h … +4 h). The update time sits next to “INBOUND” and turns orange when data is late.</li>
         <li><b>Flights that matter</b>: rows from level 2+ areas are tinted; “from L2+ areas · show only these” filters to them.</li>
         <li><b>Search</b> a flight (JK202, JK-202, codeshares) or an origin (NRT, Tokyo, Nagoya) across all checkpoints and the whole window.</li>
         <li>Each row: time, origin and country, <b>origin level and main diseases</b>, flight and aircraft, <b>gate / terminal / checkpoint</b>, <b>baggage carousel</b>, status. Auto-scroll and large type for wall screens. Data refresh about every 10 minutes (30 at night).</li>
@@ -301,7 +302,7 @@
         <thead><tr><th>URL</th><th>Effect</th></tr></thead>
         <tbody>
           <tr><td><code>#/country/CD</code></td><td>Open a country panel (ISO code)</td></tr>
-          <tr><td><code>?arr=TPE-C</code></td><td>Arrivals board for Taoyuan checkpoint C (<code>TPE-A</code>…<code>TPE-D</code>, <code>TSA</code>, <code>KHH</code>, <code>RMQ</code>…)</td></tr>
+          <tr><td><code>?arr=TPE-C</code></td><td>Arrivals board for Taoyuan checkpoint C (<code>TPE-A</code>…<code>TPE-D</code>, several: <code>TPE-BC</code>; <code>TSA</code>, <code>KHH</code>, <code>RMQ</code>…)</td></tr>
           <tr><td><code>&amp;big=1</code> · <code>&amp;win=30</code></td><td>Large type · time window <code>30 / 60 / 120 / all</code></td></tr>
           <tr><td><code>arrivals.html?arr=TPE-C</code></td><td>Full-screen arrivals board</td></tr>
           <tr><td><code>?routes=both</code></td><td>Route radar both ways (default <code>in</code>)</td></tr>
