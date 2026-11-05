@@ -803,8 +803,23 @@ def _mal_entry(v: V, where: str, e, sub: bool) -> None:
 def check_malaria(v: V, doc, travelmed) -> None:
     """malaria.json (pipeline/travelmed.py build_malaria, malaria.html)."""
     w = "malaria.json"
-    if not v.keys(w, doc, ["generated_at", "source", "countries"]):
+    if not v.keys(w, doc, ["generated_at", "source", "countries"], ["who"]):
         return
+    if "who" in doc:
+        who = doc["who"]
+        if v.keys(f"{w}.who", who, ["source", "categories"], ["exclude", "verify", "notes"]):
+            cats = who["categories"]
+            seen: set = set()
+            if not isinstance(cats, dict) or set(cats) - {"endemic", "certified", "zero3y", "na"}:
+                v.err(f"{w}.who", "categories should be endemic / certified / zero3y / na")
+            else:
+                for k, lst in cats.items():
+                    for iso in lst if isinstance(lst, list) else []:
+                        if not ISO2.match(str(iso)) or iso in seen:
+                            v.err(f"{w}.who.categories.{k}", f"{iso!r} is not a unique ISO alpha-2 code")
+                        seen.add(iso)
+            if not CDC_URL.match(str(who["source"].get("image", ""))):
+                v.err(f"{w}.who", "source.image must be the cdc.gov.tw copy of the WHO map")
     v.pat(w, doc["generated_at"], TS, "generated_at")
     if not CDC_URL.match(str(doc["source"])):
         v.err(w, "source must be a cdc.gov.tw page")

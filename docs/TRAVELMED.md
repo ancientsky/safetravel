@@ -99,4 +99,18 @@ A standalone page, not linked from the other pages and `noindex`, until Taiwan C
 - `WHO_NOTES` (in `malaria-calc.js`): the CDC malaria page's own notes (註 c and the footnote of its WHO map) for
   countries whose travel prescription may lag behind — Malaysia, Saudi Arabia, Bhutan, Belize, Azerbaijan, Timor-Leste,
   Suriname. Shown beside the country; the class still follows the prescription text, the doctor decides.
+- **Risk map** (`web/js/malaria-map.js`, top of the page): one SVG world map, two layers — Taiwan CDC's advice per
+  destination (`malaria.json` `countries[].risk`) and WHO's malaria status in 2024 (`malaria.json` `who`). Hover shows
+  both; clicking a country with a CDC entry fills the first empty stop or adds one; stops are outlined on the map.
+  The source line credits WHO (World Malaria Report 2025), links the original image on cdc.gov.tw and CDC's page, and
+  says the colours are a country-by-country reading of that image.
+- **WHO layer data**: `data/manual/who_malaria_2024.json`, hand-maintained. It was digitised once from the map
+  image CDC attaches to its 瘧疾預防用藥 page:
+  - world.json was registered onto the image (Kavrayskiy VII plus a quadratic correction fitted to 15 coastline
+    landmarks, ~3.5 px mean error);
+  - each country took the majority legend colour inside its outline;
+  - every doubtful country (tight borders, small or island states) was checked by eye on enlarged crops.
+  Taiwan, Hong Kong and Macao are drawn as China there and are left unclassified (`exclude`). Cabo Verde and Maldives
+  are too small to read and follow WHO's certification list. Syria reads as certified on the image and is listed
+  under `verify`. When CDC replaces the image, re-check the lists against it.
 - Tests: `tests/malaria-smoke.mjs` (regimens, contraindications, resistance, calendar output, phone width).

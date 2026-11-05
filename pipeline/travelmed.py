@@ -470,4 +470,8 @@ def build_malaria(details: dict[str, dict], countries: dict[str, dict]) -> dict:
             if se:
                 subs.append({"zh": sb["zh"], "en": sb["en"], **se})
         out[iso] = {"zh": b["zh"], "en": b["en"], **entry, **({"subs": subs} if subs else {})}
-    return {"generated_at": C.iso_ts(), "source": MALARIA_PAGE, "countries": out}
+    doc = {"generated_at": C.iso_ts(), "source": MALARIA_PAGE, "countries": out}
+    who = C.load_json(C.manual_dir() / "who_malaria_2024.json", None)
+    if isinstance(who, dict) and isinstance(who.get("categories"), dict):
+        doc["who"] = {k: who[k] for k in ("source", "categories", "exclude", "verify", "notes") if k in who}
+    return doc

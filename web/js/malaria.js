@@ -4,6 +4,7 @@
 // Calendar / any calendar app (.ics). Nothing typed here is stored or sent anywhere.
 import { storageGet, storageSet, clean } from './util.js';
 import { bindTextSize } from './textsize.js';
+import { createMalariaMap } from './malaria-map.js';
 import zh from '../i18n/malaria-zh-Hant.js';
 import en from '../i18n/malaria-en.js';
 import {
@@ -168,6 +169,91 @@ function subSelect(leg, c) {
 function renderLegs() {
   const ol = $('.ml-legs');
   ol.replaceChildren(...state.legs.map(legEl));
+  map?.mark(state.legs.map((l) => l.iso));
+}
+
+// ---------------------------------------------------------------- risk map
+let map = null;
+
+/** A country clicked on the map: fill the first empty stop, else add one after the last. */
+function pickCountry(iso) {
+  let leg = state.legs.find((l) => !l.iso);
+  if (!leg) {
+    const prev = state.legs.at(-1);
+    leg = newLeg();
+    if (prev?.depart) leg.arrive = prev.depart;
+    state.legs.push(leg);
+  }
+  leg.iso = iso;
+  leg.sub = -1;
+  leg.visit = 'unsure';
+  renderLegs();
+  renderResult();
+  const n = state.legs.indexOf(leg) + 1;
+  const go = h('button', { type: 'button', class: 'btn btn-ghost', 'data-testid': 'map-fill-dates', text: t('map_fill_dates') });
+  go.addEventListener('click', () => {
+    const el = $(`#a-${leg.id}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el?.focus({ preventScroll: true });
+  });
+  $('.mm-status').replaceChildren(t('map_added', { name: placeName(state.data.countries[iso]), n }), ' ', go);
+}
+
+function renderMapSource() {
+  const who = state.data?.who?.source;
+  const el = $('.mm-src');
+  const link = (href, text) => h('a', { href, target: '_blank', rel: 'noopener noreferrer', text });
+  el.replaceChildren(...[
+    h('b', { text: t('map_src_h') }),
+    t('map_src_who'),
+    who?.image ? link(who.image, t('map_src_orig')) : null,
+    who?.via ? [t('map_src_via'), link(who.via, t('map_src_via_link')), t('map_src_end')] : null,
+    t('map_src_caveat'),
+    t('map_src_cdc'),
+    t('map_src_borders'),
+  ].flat().filter((x) => x != null && x !== ''));
+}
+
+async function initMap() {
+  const box = $('.mm-box');
+  try {
+    if (!state.data) throw new Error('no data');
+    const narrow = window.innerWidth < 760;
+    const r = await fetch(narrow ? 'data/world-110m.json' : 'data/world.json');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const world = await r.json();
+    map = createMalariaMap({
+      box, svgEl: $('.mm-svg'), tipEl: $('.mm-tip'), legendEl: $('.mm-legend'), data: state.data, t, isEn, onPick: pickCountry,
+    });
+    map.render(world);
+    map.mark(state.legs.map((l) => l.iso));
+    $('.mm-loading').hidden = true;
+    $('.mm-zin').addEventListener('click', () => map.zoomBy(1.6));
+    $('.mm-zout').addEventListener('click', () => map.zoomBy(1 / 1.6));
+    $('.mm-zreset').addEventListener('click', () => map.reset());
+    const tabs = [...document.querySelectorAll('.mm-tab')];
+    const setLayer = (l, focus) => {
+      tabs.forEach((b) => {
+        const on = b.dataset.layer === l;
+        b.setAttribute('aria-selected', String(on));
+        b.tabIndex = on ? 0 : -1;
+        if (on && focus) b.focus();
+      });
+      map.setLayer(l);
+    };
+    tabs.forEach((b, i) => {
+      b.addEventListener('click', () => setLayer(b.dataset.layer));
+      b.addEventListener('keydown', (ev) => {
+        if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
+          ev.preventDefault();
+          setLayer(tabs[(i + 1) % tabs.length].dataset.layer, true);
+        }
+      });
+    });
+  } catch (e) {
+    console.warn('malaria: map unavailable', e);
+    $('.mm-loading').textContent = t('map_failed');
+  }
 }
 
 // ---------------------------------------------------------------- step 2: traveller
@@ -399,6 +485,8 @@ $('.lang-toggle').addEventListener('click', () => {
   textSize.refresh();
   renderLegs();
   renderResult();
+  map?.relabel();
+  renderMapSource();
 });
 $('.ml-add').addEventListener('click', () => {
   const prev = state.legs.at(-1);
@@ -430,6 +518,8 @@ async function main() {
   if (pre && state.data?.countries?.[pre.toUpperCase()]) state.legs[0].iso = pre.toUpperCase();
   renderLegs();
   renderResult();
+  renderMapSource();
+  await initMap();
   document.body.dataset.ready = '1';
 }
 main();

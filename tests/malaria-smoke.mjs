@@ -176,6 +176,33 @@ async function main() {
     assert(over <= 0, `overflow ${over}px`);
   });
 
+  await check('risk map: CDC and WHO layers, legend counts, source credit, click adds the country to the itinerary', async () => {
+    const page = await open(context);
+    await page.waitForSelector('.mm-cts path[data-iso="KE"]', { timeout: 15000 });
+    const n = await page.locator('.mm-cts path').count();
+    assert(n > 150, `${n} paths`);
+    const fill = () => page.$eval('.mm-cts path[data-iso="KE"]', (el) => getComputedStyle(el).fill);
+    const cdc = await fill();
+    await page.click('[data-testid="layer-who"]');
+    await page.waitForTimeout(400); // fill transition
+    const who = await fill();
+    assert(cdc !== who, `KE fill unchanged (${cdc})`);
+    const legend = await page.textContent('[data-testid="map-legend"]');
+    assert(/有本土病例|indigenous/.test(legend) && /\d/.test(legend), legend);
+    const src = await page.textContent('[data-testid="map-source"]');
+    const imgHref = await page.getAttribute('[data-testid="map-source"] a', 'href');
+    assert(/World Malaria Report 2025/.test(src) && imgHref.includes('cdc.gov.tw/File/Get/'), src);
+    await page.$eval('.mm-cts path[data-iso="KE"]', (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    await page.$eval('.mm-cts path[data-iso="TZ"]', (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    const picked = await page.$$eval('[data-testid="leg-country"]', (s) => s.map((x) => x.value));
+    const status = await page.textContent('[data-testid="map-status"]');
+    const marked = await page.$$eval('.mm-cts path.is-trip', (ps) => ps.map((p) => p.dataset.iso).sort());
+    await page.close();
+    assert(picked.join() === 'KE,TZ', `legs ${picked}`);
+    assert(marked.join() === 'KE,TZ', `marked ${marked}`);
+    return `${n} countries; ${status.trim()}`;
+  });
+
   await check('no console errors', async () => {
     assert(!consoleErrors.length, consoleErrors[0]);
   });

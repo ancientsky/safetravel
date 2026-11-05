@@ -122,3 +122,67 @@
   .top .toggles, .ml-add, .ml-del, .ml-calb, .ml-go .btn, .ml-actions, .skip-link, #who { display: none !important; }
   .ml-drug, .ml-gns, .ml-general, .ml-leg { break-inside: avoid; }
 }
+
+/* ---------- risk map (malaria-map.js) ---------- */
+.mm { --who-endemic: #aa167e; --who-certified: #1296d3; --who-zero3y: #7fb52a; --who-none: #ffffff; --who-na: #b1b1b1; --cdc-bites: #ecd06a; }
+:root[data-theme="dark"] .mm { --who-endemic: #d6409f; --who-certified: #33aef0; --who-zero3y: #9bd13c; --who-none: #2a3a31; --who-na: #6d756f; --cdc-bites: #b59a2e; }
+.mm-box {
+  position: relative; border-radius: var(--radius); overflow: hidden; background: var(--ocean); border: 1px solid var(--border);
+  aspect-ratio: 2; touch-action: pan-y;
+}
+.mm-box.zoomed { touch-action: none; cursor: grab; }
+.mm-svg { display: block; width: 100%; height: 100%; }
+.mm-loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--fg-mute); }
+.mm-cts path { fill: var(--land); stroke: var(--land-stroke); cursor: pointer; transition: fill .2s; }
+.mm-cts path:hover { filter: brightness(.92); }
+.mm-box[data-layer="cdc"] path[data-r="drug"] { fill: var(--lvl2); }
+.mm-box[data-layer="cdc"] path[data-r="unknown"] { fill: var(--lvl2); opacity: .6; }
+.mm-box[data-layer="cdc"] path[data-r="bites"] { fill: var(--cdc-bites); }
+.mm-box[data-layer="cdc"] path[data-r="nodata"] { fill: var(--land); opacity: .55; cursor: default; }
+.mm-box[data-layer="who"] path[data-w="endemic"] { fill: var(--who-endemic); }
+.mm-box[data-layer="who"] path[data-w="certified"] { fill: var(--who-certified); }
+.mm-box[data-layer="who"] path[data-w="zero3y"] { fill: var(--who-zero3y); }
+.mm-box[data-layer="who"] path[data-w="none"] { fill: var(--who-none); }
+.mm-box[data-layer="who"] path[data-w="na"] { fill: var(--who-na); }
+.mm-box[data-layer="who"] path[data-r="nodata"] { cursor: default; }
+.mm-box path[data-r="tw"] { fill: var(--tw-fill); cursor: default; }
+.mm-box path.is-trip { stroke: var(--fg); stroke-width: 1.8px !important; vector-effect: non-scaling-stroke; }
+.mm-tip {
+  position: absolute; left: 0; top: 0; z-index: 3; max-width: 300px; pointer-events: none; padding: 8px 10px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--border-strong); box-shadow: var(--shadow); display: grid; gap: 3px;
+  font-size: calc(13.5px * var(--ts));
+}
+.mm-tip strong { font-size: calc(15px * var(--ts)); }
+.mm-tip-row { display: flex; gap: 8px; align-items: baseline; }
+.mm-tip-k { flex: none; min-width: 5.5em; color: var(--fg-mute); font-size: .92em; }
+.mm-tv { font-weight: 700; }
+.mm-tv::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; background: var(--land); vertical-align: 0; }
+.mm-tv.r-drug::before, .mm-tv.r-unknown::before { background: var(--lvl2); }
+.mm-tv.r-bites::before { background: var(--cdc-bites); }
+.mm-tv.w-endemic::before { background: var(--who-endemic); }
+.mm-tv.w-certified::before { background: var(--who-certified); }
+.mm-tv.w-zero3y::before { background: var(--who-zero3y); }
+.mm-tv.w-none::before { background: var(--who-none); border: 1px solid var(--border-strong); }
+.mm-tv.w-na::before { background: var(--who-na); }
+.mm-tip-note { color: var(--fg-dim); font-size: .92em; }
+.mm-tip-hint { color: var(--accent); font-weight: 700; font-size: .92em; }
+.mm .zoom { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.mm .zoom .btn { width: 38px; min-height: 38px; box-shadow: var(--shadow); }
+.mm-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 0; padding: 0; list-style: none; font-size: calc(14px * var(--ts)); }
+.mm-legend li { display: inline-flex; align-items: center; gap: 7px; }
+.mm-sw { width: 14px; height: 14px; border-radius: 3px; background: var(--land); border: 1px solid var(--border); }
+.mm-sw.r-drug, .mm-sw.r-unknown { background: var(--lvl2); }
+.mm-sw.r-unknown { opacity: .6; }
+.mm-sw.r-bites { background: var(--cdc-bites); }
+.mm-sw.r-nodata { opacity: .55; }
+.mm-sw.r-tw { background: var(--tw-fill); }
+.mm-sw.w-endemic { background: var(--who-endemic); }
+.mm-sw.w-certified { background: var(--who-certified); }
+.mm-sw.w-zero3y { background: var(--who-zero3y); }
+.mm-sw.w-none { background: var(--who-none); border-color: var(--border-strong); }
+.mm-sw.w-na { background: var(--who-na); }
+.mm-n { font-family: var(--mono); color: var(--fg-mute); font-size: .9em; }
+.mm-status { min-height: 1.6em; margin-top: 8px; font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.mm-status:empty { display: none; }
+.mm-src { margin-top: 8px; font-size: calc(13px * var(--ts)); color: var(--fg-mute); }
+@media print { .mm .zoom, .mm-tip, .mm-status { display: none !important; } }

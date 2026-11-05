@@ -337,6 +337,10 @@ Built with `travelmed.json` (`pipeline/travelmed.py build_malaria`); one entry p
 }
 ```
 
+- Optional `who` (from `data/manual/who_malaria_2024.json`): `{ "source": { "title", "publisher", "via", "image", "year" },
+  "categories": { "endemic": [ISO…], "certified": […], "zero3y": […], "na": […] }, "exclude": ["TW", "HK", "MO"],
+  "verify": […], "notes": { ISO: text } }` — WHO's 2024 malaria status per country (any country not listed: no malaria);
+  `image` must be the cdc.gov.tw copy of the WHO map.
 - `risk` ∈ `drug` (CDC asks a doctor to assess preventive medicine), `bites` (mosquito protection only), `none`
   (no risk / eradicated / no malaria row), `unknown` (the CSV lists a malaria row but the page text is missing).
 - `lines` / `groups`: lines as in `travelmed/<ISO>.json` (`groups` keyed by traveller group, without `g`).

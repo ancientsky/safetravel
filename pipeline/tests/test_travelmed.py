@@ -118,7 +118,8 @@ def test_build_exports_countries_clinics_and_page_details(root):
     th_m = mal["countries"]["TH"]
     assert th_m["risk"] == "drug" and th_m["mef_resistant"] and "pregnancy" in th_m["groups"]
     assert any("曼谷" in ln["t"] for ln in th_m["lines"])
-    assert mal["countries"]["JP"]["risk"] == "none"  # no page in this fixture and no malaria row in the CSV
+    assert mal["countries"]["JP"]["risk"] == "none"
+    assert "KE" in mal["who"]["categories"]["endemic"] and "TW" in mal["who"]["exclude"]  # no page in this fixture and no malaria row in the CSV
     validate.check_malaria(v, mal, doc)
     assert v.errors == []
     # same input → same "updated" date and identical output apart from generated_at

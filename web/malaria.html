@@ -15,6 +15,8 @@
   <script src="js/boot-guard.js"></script>
   <link rel="stylesheet" href="trip.css">
   <link rel="stylesheet" href="malaria.css">
+  <script src="vendor/d3.min.js" defer></script>
+  <script src="vendor/topojson-client.min.js" defer></script>
   <script type="module" src="js/malaria.js"></script>
 </head>
 <body>
@@ -49,6 +51,32 @@
   </header>
 
   <main class="wrap ml">
+    <section id="riskmap" class="sec mm" aria-labelledby="map-h" data-testid="riskmap">
+      <div class="sec-head">
+        <div>
+          <h2 id="map-h" data-i18n="map_h">瘧疾感染風險地圖</h2>
+          <p class="sec-sub" data-i18n="map_sub"></p>
+        </div>
+        <div class="tabs" role="tablist" data-i18n-attr="aria-label:map_tabs">
+          <button type="button" role="tab" class="tab mm-tab" data-layer="cdc" aria-selected="true" data-testid="layer-cdc"><span data-i18n="tab_cdc">疾管署旅遊建議</span></button>
+          <button type="button" role="tab" class="tab mm-tab" data-layer="who" aria-selected="false" tabindex="-1" data-testid="layer-who"><span data-i18n="tab_who">世界衛生組織 2024</span></button>
+        </div>
+      </div>
+      <div class="mm-box" data-layer="cdc">
+        <svg class="mm-svg" role="img" data-i18n-attr="aria-label:map_label"></svg>
+        <p class="mm-loading" data-i18n="map_loading">地圖載入中…</p>
+        <div class="mm-tip" role="tooltip" hidden></div>
+        <div class="zoom" role="group">
+          <button type="button" class="btn btn-icon mm-zin" data-i18n-attr="aria-label:zoom_in;title:zoom_in"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button type="button" class="btn btn-icon mm-zout" data-i18n-attr="aria-label:zoom_out;title:zoom_out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+          <button type="button" class="btn btn-icon mm-zreset" data-i18n-attr="aria-label:zoom_reset;title:zoom_reset"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        </div>
+      </div>
+      <ul class="mm-legend" data-testid="map-legend"></ul>
+      <p class="mm-status" role="status" aria-live="polite" data-testid="map-status"></p>
+      <p class="mm-src" data-testid="map-source"></p>
+    </section>
+
     <section id="trip" class="sec ml-step" aria-labelledby="trip-h">
       <h2 id="trip-h"><span class="ml-n" aria-hidden="true">1</span><span data-i18n="trip_h">行程</span></h2>
       <p class="sec-sub" data-i18n="trip_sub"></p>
