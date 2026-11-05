@@ -46,6 +46,14 @@ the page reloads at a harmless moment: `index.html` via `refresh.js` (spotlight 
 after 60 s without input. Hidden tabs do
 not poll; `?refreshEvery=<s>` shortens the poll for tests.
 
+**Half-updated browser cache.** Pages are build-free ES modules with fixed URLs and GitHub Pages lets browsers keep each
+file 10 minutes, so right after a deploy a browser can combine a new module with an old cached one; a missing export then
+stops the whole module graph (blank page). Two guards: `js/boot-guard.js` (classic script in every page's `<head>`) waits
+for `load` + 1.5 s and, if the entry module never set `<html data-booted>` (its first statement after the imports),
+re-fetches every same-site script / stylesheet the page used with `cache: 'reload'` and reloads — at most twice per tab
+session (`sessionStorage safetravel.recover`). And every code-update reload (`refresh.js`, `autoreload.js`) goes through
+the same re-fetch first (`freshReload`), so kiosks never mix versions. New pages: include the guard and set the mark.
+
 ## Data sources
 
 1. **Travel alert levels** (國際旅遊疫情建議等級, all history)

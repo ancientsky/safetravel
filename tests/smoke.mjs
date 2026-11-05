@@ -719,6 +719,23 @@ async function run(browser) {
     return 'floats, survives a reload, docks back';
   });
 
+  await check('boot guard: a stale cached module (half-updated cache) is re-downloaded and the page starts by itself', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1440, height: 900 } });
+    const pg = await ctx.newPage();
+    let hits = 0;
+    let loads = 0;
+    pg.on('load', () => { loads++; });
+    // first request: a hud.js that lacks an export app.js imports (what an old cached copy looks like after a deploy)
+    await pg.route('**/js/hud.js*', (r) => { hits++; return hits === 1 ? r.fulfill({ contentType: 'text/javascript', body: 'export const nothing = 1;' }) : r.continue(); });
+    await pg.goto(BASE_URL, { waitUntil: 'load' });
+    const first = await pg.evaluate(() => document.documentElement.hasAttribute('data-booted'));
+    await pg.waitForFunction((sel) => document.documentElement.hasAttribute('data-booted') && document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    await ctx.close();
+    assert(!first, 'the stale module did not break the first load (test is not testing anything)');
+    assert(loads === 2 && hits >= 3, `loads ${loads}, hud.js requests ${hits}`);
+    return 'one automatic reload with fresh modules';
+  });
+
   await check('timeline range: 6 months by default, 3/6/12/24 switch the list, choice remembered, ?months= overrides', async () => {
     const pr = await context.newPage();
     const errs = [];

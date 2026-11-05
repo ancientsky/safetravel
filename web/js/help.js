@@ -2,6 +2,9 @@
 // The content itself is static HTML in help.html — keep both languages in step when features change.
 import { storageGet, storageSet } from './util.js';
 
+// js/boot-guard.js: this module and all its imports loaded and linked (no half-updated cache)
+document.documentElement.dataset.booted = '1';
+
 const LANG_KEY = 'safetravel.lang';
 const THEME_KEY = 'safetravel.m.theme';
 const root = document.documentElement;

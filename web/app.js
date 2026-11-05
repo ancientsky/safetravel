@@ -22,6 +22,9 @@ import {
   startClock, renderTiles, renderFreshness, renderLegend, renderFlightHud, setLegendExtra, setLegendWatch, legendDocked,
 } from './js/hud.js';
 
+// js/boot-guard.js: this module and all its imports loaded and linked (no half-updated cache)
+document.documentElement.dataset.booted = '1';
+
 const LANG_KEY = 'safetravel.lang';
 const THEME_KEY = 'safetravel.theme';
 const FLIGHTS_KEY = 'safetravel.flights';

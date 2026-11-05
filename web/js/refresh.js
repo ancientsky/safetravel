@@ -3,7 +3,7 @@
 import { on, emit } from './state.js';
 import { t } from './i18n.js';
 import { toast } from './toast.js';
-import { readCodeVersion } from './autoreload.js';
+import { readCodeVersion, freshReload } from './autoreload.js';
 
 const CHECK_EVERY_S = 300; // poll interval; override with ?refreshEvery=<seconds> for manual testing
 const FALLBACK_MS = 60_000; // reload after this long if no spotlight cycle comes along
@@ -12,7 +12,7 @@ const MAX_DEFER_MS = 120_000; // activity can postpone the reload by at most thi
 const MAX_AGE_MS = 24 * 3600_000; // daily safety net
 const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'];
 
-export function startRefresh({ generatedAt, reload = () => location.reload() } = {}) {
+export function startRefresh({ generatedAt, reload = freshReload } = {}) {
   const override = Number(new URLSearchParams(location.search).get('refreshEvery'));
   const everyMs = (Number.isFinite(override) && override >= 1 ? override : CHECK_EVERY_S) * 1000;
   const bootAt = Date.now();

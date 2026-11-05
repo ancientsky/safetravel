@@ -39,7 +39,11 @@ async function readDataVersion() {
  * @param {boolean} [o.daily]    reload once the page has been open for a day (long-running kiosks)
  * @param {() => void} [o.reload]
  */
-export function autoReload({ data = false, idleMs = 60_000, quiet = () => true, daily = true, reload = () => location.reload() } = {}) {
+/** Reload after re-downloading the page's scripts and stylesheets (js/boot-guard.js), so new site code never runs next
+ *  to a stale cached module; plain reload when the guard script is missing. */
+export const freshReload = () => (typeof window.safetravelFreshReload === 'function' ? window.safetravelFreshReload() : location.reload());
+
+export function autoReload({ data = false, idleMs = 60_000, quiet = () => true, daily = true, reload = freshReload } = {}) {
   const q = Number(new URLSearchParams(location.search).get('refreshEvery')); // seconds; testing aid, as on index.html
   const pollMs = Number.isFinite(q) && q >= 1 ? q * 1000 : POLL_MS;
   const bootAt = Date.now();

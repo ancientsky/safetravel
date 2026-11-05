@@ -16,6 +16,9 @@ import { createWxMap } from './trip-wxmap.js';
 import { autoReload } from './autoreload.js';
 import { bindTextSize } from './textsize.js';
 
+// js/boot-guard.js: this module and all its imports loaded and linked (no half-updated cache)
+document.documentElement.dataset.booted = '1';
+
 const THEME_KEY = 'safetravel.trip.theme';
 const TABS = ['mofa', 'cdc', 'wx'];
 const root = document.documentElement;

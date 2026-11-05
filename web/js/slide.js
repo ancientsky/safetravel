@@ -6,6 +6,9 @@ import enDict from '../i18n/slide-en.js';
 import { renderSlide, TEMPLATES, assetSrc, h } from './slide-templates.js';
 import { autoReload } from './autoreload.js';
 
+// js/boot-guard.js: this module and all its imports loaded and linked (no half-updated cache)
+document.documentElement.dataset.booted = '1';
+
 const MANIFEST = 'slides/slides.json';
 const EXPORT_INDEX = 'slides/export/index.json';
 const AUTO_INDEX = 'slides/auto/index.json'; // posters dropped in web/slides/auto/ (python -m pipeline.slides_auto)

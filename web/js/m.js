@@ -15,6 +15,9 @@ import { bindTextSize } from './textsize.js';
 import { bestTime, flightKey } from './arrivals.js';
 import { autoReload } from './autoreload.js';
 
+// js/boot-guard.js: this module and all its imports loaded and linked (no half-updated cache)
+document.documentElement.dataset.booted = '1';
+
 const ROLE_KEY = 'safetravel.role';
 const THEME_KEY = 'safetravel.m.theme';
 const LANG_KEY = 'safetravel.lang';
