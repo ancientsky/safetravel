@@ -36,7 +36,9 @@ export function createSpotlight({ root, map, panel }) {
   const paScrollBtn = autobar?.querySelector('[data-testid="panel-autoscroll"]');
   const paCompactBtn = autobar?.querySelector('[data-testid="panel-compact"]');
   const scrollWrap = scrollBtn.closest('.spot-auto');
-  state.spotlight.autoOpen = storageGet(AUTO_KEY) === 'on';
+  // ?full=1 / ?full=0 pins "show full details" for a kiosk link without changing what this screen remembers
+  const qFull = new URLSearchParams(location.search).get('full');
+  state.spotlight.autoOpen = qFull === '1' || qFull === '0' ? qFull === '1' : storageGet(AUTO_KEY) === 'on';
   state.spotlight.autoScroll = storageGet(SCROLL_KEY) !== 'off';
   let autoIso = null; // country whose panel the carousel itself opened
   let scrollCancelled = false;

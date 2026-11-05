@@ -457,6 +457,8 @@ export default {
   menu_help_d: '每個頁面與功能怎麼用、等級說明、資料來源、常見問題',
   menu_here: '這個地圖頁',
   menu_arr: '入境航班看板',
+  menu_autoopen: '焦點輪播：查看完整資訊',
+  menu_autoopen_d: '輪播時自動打開國家面板並捲動（看板開著時也能看到國家資訊）',
   menu_watch: '疫區航線',
   menu_ts: '字體大小',
   menu_theme: '深色／淺色',

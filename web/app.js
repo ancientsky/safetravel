@@ -526,7 +526,7 @@ async function main() {
   const pm = $('#phone-menu');
   const pmBtn = $('[data-testid="menu-toggle"]');
   const proxyOf = (b) => $(`[data-testid="${b.dataset.proxy}"]`);
-  const KEEP_OPEN = new Set(['textsize-toggle', 'theme-toggle', 'lang-toggle', 'sound-toggle']);
+  const KEEP_OPEN = new Set(['textsize-toggle', 'theme-toggle', 'lang-toggle', 'sound-toggle', 'spotlight-autoopen']);
   function pmRefresh() {
     pm.querySelectorAll('[data-proxy]').forEach((b) => {
       const src = proxyOf(b);
@@ -537,7 +537,8 @@ async function main() {
       if (b.dataset.proxy === 'textsize-toggle') txt = t(`ts_${document.documentElement.dataset.ts || 'm'}`);
       else if (b.dataset.proxy === 'theme-toggle') txt = t(state.theme === 'dark' ? 'menu_dark' : 'menu_light');
       else if (b.dataset.proxy !== 'lang-toggle') {
-        isOn = b.dataset.proxy === 'watch-toggle' ? src.classList.contains('is-active') : src.getAttribute('aria-pressed') === 'true';
+        isOn = b.dataset.proxy === 'watch-toggle' ? src.classList.contains('is-active')
+          : (src.getAttribute('aria-pressed') ?? src.getAttribute('aria-checked')) === 'true'; // buttons and switches
         txt = t(isOn ? 'menu_on' : 'menu_off');
       }
       st.textContent = txt;
@@ -558,8 +559,8 @@ async function main() {
     if (!b) return;
     const keep = KEEP_OPEN.has(b.dataset.proxy);
     if (!keep) pmOpen(false); // the board and the outbreak-route menu need the screen
-    proxyOf(b)?.click();
-    if (keep) setTimeout(pmRefresh, 0);
+    proxyOf(b)?.click(); // runs the button's own handler right away
+    if (keep) pmRefresh();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pm.hidden) { e.stopPropagation(); pmOpen(false); } }, true);
 

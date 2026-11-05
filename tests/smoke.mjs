@@ -736,7 +736,7 @@ async function run(browser) {
     return 'one automatic reload with fresh modules';
   });
 
-  await check('spotlight card steps aside while the arrivals board or the country panel is open', async () => {
+  await check('spotlight card steps aside while the arrivals board or the country panel is open; its full-details switch is also in the menu', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 1600, height: 900 } });
     const pg = await ctx.newPage();
     await pg.goto(BASE_URL, { waitUntil: 'load' });
@@ -744,6 +744,14 @@ async function run(browser) {
     const hid = () => pg.evaluate(() => document.querySelector('#spotlight').classList.contains('is-hidden'));
     const seq = [await hid()];
     await pg.click('[data-testid="arrivals-toggle"]'); seq.push(await hid());
+    // the card's "show full details" switch is hidden with it: the menu carries the same switch
+    await pg.click('[data-testid="menu-toggle"]');
+    const before = await pg.textContent('[data-testid="menu-autoopen"] .pm-state');
+    await pg.click('[data-testid="menu-autoopen"]');
+    const after = await pg.evaluate(() => [document.querySelector('[data-testid="menu-autoopen"] .pm-state').textContent, window.__safetravel.state.spotlight.autoOpen]);
+    await pg.click('[data-testid="menu-autoopen"]');
+    await pg.keyboard.press('Escape');
+    assert(before !== after[0] && after[1] === true, `menu switch ${before} → ${JSON.stringify(after)}`);
     await pg.evaluate(() => window.__safetravel.openCountry('JP')); seq.push(await hid());
     await pg.evaluate(() => window.__safetravel.closePanel()); seq.push(await hid());
     await pg.click('[data-testid="arrivals-toggle"]'); seq.push(await hid());

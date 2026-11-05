@@ -459,6 +459,8 @@ export default {
   menu_help_d: 'How every page and feature works, levels, sources, FAQ',
   menu_here: 'On this map',
   menu_arr: 'Inbound flights board',
+  menu_autoopen: 'Spotlight: show full details',
+  menu_autoopen_d: 'The tour opens and scrolls the country panel (country info stays visible with the board open)',
   menu_watch: 'Outbreak routes',
   menu_ts: 'Text size',
   menu_theme: 'Dark / light',
