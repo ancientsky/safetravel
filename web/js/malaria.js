@@ -7,7 +7,7 @@ import { bindTextSize } from './textsize.js';
 import zh from '../i18n/malaria-zh-Hant.js';
 import en from '../i18n/malaria-en.js';
 import {
-  DRUGS, SOURCE_URL, SOURCE_DATE, riskWindow, verdict, doseFor, assess, schedule, tabletsToBuy, buildICS,
+  DRUGS, WHO_NOTES, SOURCE_URL, SOURCE_DATE, riskWindow, verdict, doseFor, assess, schedule, tabletsToBuy, buildICS,
   googleCalendarUrl, addDays, daysBetween, dayMs,
 } from './malaria-calc.js';
 
@@ -133,6 +133,11 @@ function legEl(leg, i) {
     const info = h('div', { class: `ml-cdc ml-cdc-${e.risk}` },
       h('p', { class: 'ml-cdc-h' }, riskBadge(e), h('span', { text: t(`risk_${e.risk}_d`) })));
     if (e.lines?.length) info.append(...[zhLabel(), linesEl(e.lines)].filter(Boolean));
+    const who = WHO_NOTES[leg.iso];
+    if (who && leg.sub < 0) {
+      info.append(h('p', { class: 'ml-who-note', 'data-testid': 'who-note' },
+        h('b', { text: t('who_note_h') }), ' ', isEn() ? who.en : who.zh, ' ', t('who_note_tail')));
+    }
     if (e.risk === 'drug' || e.risk === 'unknown') {
       const q = h('div', { class: 'ml-visit', role: 'radiogroup', 'aria-label': t('visit_q') },
         h('span', { class: 'ml-visit-q', text: t('visit_q') }));

@@ -10,6 +10,19 @@
 export const SOURCE_URL = 'https://www.cdc.gov.tw/Category/ListContent/YipvR33b32K-dsMI2eIrIg?uaid=ZSgu_4NoQ7NTp0zZ-HC8rg';
 export const SOURCE_DATE = '2026-02-05';
 
+// Notes on the same CDC page (註 c, and the footnote of its attached WHO World Malaria Report 2025 map) that a
+// country's travel prescription may not reflect yet. Shown next to that country, never used to change its class.
+export const WHO_NOTES = {
+  MY: { zh: '馬來西亞 2024 年報告連續 7 年無人類瘧原蟲引起的本土病例，但有大量諾氏瘧原蟲（P. knowlesi）本土病例。',
+    en: 'Malaysia reported a 7th year without indigenous cases of human Plasmodium species in 2024, but has many indigenous P. knowlesi cases.' },
+  SA: { zh: '沙烏地阿拉伯 2024 年報告連續 4 年零本土病例，結束瘧疾。', en: 'Saudi Arabia reported a 4th consecutive year of zero indigenous cases in 2024, ending malaria.' },
+  BT: { zh: '不丹 2024 年報告連續 3 年零本土病例，結束瘧疾。', en: 'Bhutan reported a 3rd consecutive year of zero indigenous cases in 2024, ending malaria.' },
+  BZ: { zh: '貝里斯於 2023 年被認證為無瘧疾國家。', en: 'Belize was certified malaria-free in 2023.' },
+  AZ: { zh: '亞塞拜然於 2023 年被認證為無瘧疾國家。', en: 'Azerbaijan was certified malaria-free in 2023.' },
+  TL: { zh: '東帝汶於 2025 年被認證為無瘧疾國家。', en: 'Timor-Leste was certified malaria-free in 2025.' },
+  SR: { zh: '蘇利南於 2025 年被認證為無瘧疾國家。', en: 'Suriname was certified malaria-free in 2025.' },
+};
+
 export const DRUGS = [
   {
     id: 'atq',

@@ -41,6 +41,8 @@ export default {
   risk_bites_d: 'Taiwan CDC advises mosquito protection only; no preventive medicine.',
   risk_none: 'No malaria risk',
   risk_none_d: 'Taiwan CDC lists no malaria risk here.',
+  who_note_h: 'Taiwan CDC’s malaria page also notes:',
+  who_note_tail: 'This country’s travel prescription may not be updated yet — the doctor decides whether medicine is needed.',
   zh_only: 'Chinese original (CDC text)',
   visit_q: 'Will you go to the risk areas described above?',
   visit_yes: 'Yes',

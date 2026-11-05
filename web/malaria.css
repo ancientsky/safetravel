@@ -36,6 +36,7 @@
 .ml-ln.d2 { margin-left: 1.1em; color: var(--fg-dim); }
 .ml-ln.d1::before, .ml-ln.d2::before { content: "•"; position: absolute; left: .2em; color: var(--accent); }
 .ml-ln-h { font-weight: 800; }
+.ml-who-note { padding: 8px 10px; border-radius: 8px; border-left: 4px solid var(--cyan); background: var(--surface); font-size: calc(14px * var(--ts)); }
 .ml-visit { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding-top: 4px; font-weight: 600; }
 .ml-visit-q { flex-basis: 100%; font-weight: 800; }
 .ml-radio { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; cursor: pointer; }

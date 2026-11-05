@@ -101,6 +101,14 @@ async function main() {
     assert(jp === 'none' && kr === 'bites', `JP ${jp}, KR ${kr}`);
   });
 
+  await check('Timor-Leste: CDC malaria-page note (certified malaria-free 2025) shown beside the prescription', async () => {
+    const page = await open(context);
+    await trip(page, 'TL', '2026-12-10T08:00', '2026-12-17T08:00');
+    const note = await page.textContent('[data-testid="who-note"]');
+    await page.close();
+    assert(note.includes('2025'), note);
+  });
+
   await check('pregnancy: Malarone and doxycycline not suitable, mefloquine can be considered', async () => {
     const page = await open(context);
     await trip(page, 'KE', '2026-12-10T08:00', '2026-12-20T22:00', 'yes');

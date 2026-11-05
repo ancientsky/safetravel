@@ -41,6 +41,8 @@ export default {
   risk_bites_d: '疾管署只建議採取防蚊措施，不需預防藥物。',
   risk_none: '無瘧疾風險',
   risk_none_d: '疾管署未列此地有瘧疾感染風險。',
+  who_note_h: '疾管署「瘧疾預防用藥」頁另註：',
+  who_note_tail: '此地處方箋說明可能尚未更新，是否需要預防藥物請由醫師判斷。',
   zh_only: '中文原文',
   visit_q: '這次行程會去上面說的風險地區嗎？',
   visit_yes: '會',

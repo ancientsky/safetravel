@@ -96,4 +96,7 @@ A standalone page, not linked from the other pages and `noindex`, until Taiwan C
   and last dose, number of doses, tablets to buy (fractions rounded up), optional price → cost, a timeline, a
   repeating reminder for Google Calendar (event template with an RRULE) and an `.ics` file (floating local time, an
   alarm on each dose, plus a 90-day "malaria watch" after return). Nothing typed is stored or sent.
+- `WHO_NOTES` (in `malaria-calc.js`): the CDC malaria page's own notes (註 c and the footnote of its WHO map) for
+  countries whose travel prescription may lag behind — Malaysia, Saudi Arabia, Bhutan, Belize, Azerbaijan, Timor-Leste,
+  Suriname. Shown beside the country; the class still follows the prescription text, the doctor decides.
 - Tests: `tests/malaria-smoke.mjs` (regimens, contraindications, resistance, calendar output, phone width).
