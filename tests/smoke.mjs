@@ -845,6 +845,42 @@ async function run(browser) {
     return 'board / panel hide it, both closed bring it back';
   });
 
+  await check('panel section bar: one chip per section, a tap scrolls there and marks it; direct flights open the board searched for the country', async () => {
+    const pj = await context.newPage();
+    const errs = [];
+    pj.on('pageerror', (e) => errs.push(e.message));
+    await pj.goto(`${BASE_URL}#/country/JP`, { waitUntil: 'load' });
+    await pj.waitForFunction(() => document.querySelector('.panel-jump .pj-fl') && !document.querySelector('.psec-tl .skeleton'), null, { timeout: 40000 });
+    const chips = await pj.$$eval('.panel-jump .pj', (bs) => bs.map((b) => ({ key: [...b.classList].find((c) => c.startsWith('pj-')), idx: b.dataset.jump, cur: b.getAttribute('aria-current') })));
+    const letters = await pj.$$eval('#panel .psec h3 .psec-idx', (ns) => ns.map((n) => n.textContent));
+    const advN = await pj.$eval('.pj-adv b', (b) => b.textContent);
+    const advHead = await pj.$eval('#panel .psec:first-child h3 .count', (b) => b.textContent);
+    await pj.click('.pj-fl');
+    await pj.waitForFunction(() => document.querySelector('.pj-fl')?.getAttribute('aria-current') === 'true', null, { timeout: 5000 });
+    await pj.waitForTimeout(800); // smooth scroll lands
+    const gap = await pj.evaluate(() => {
+      const body = document.querySelector('#panel .panel-body');
+      return Math.abs(document.querySelector('.psec-fl').getBoundingClientRect().top - body.getBoundingClientRect().top);
+    });
+    const spyKept = await pj.$eval('.pj-fl', (b) => b.getAttribute('aria-current'));
+    const routes = await pj.locator('.psec-fl .fl-row').count();
+    await pj.click('[data-testid="panel-flights-board"]');
+    await pj.waitForFunction(() => !document.querySelector('#arrivals').hidden, null, { timeout: 5000 });
+    const q = await pj.inputValue('#arrivals .arr-q');
+    await pj.waitForFunction(() => window.__safetravel.arrivals.data(), null, { timeout: 15000 });
+    const vis = await pj.evaluate(() => { const v = window.__safetravel.arrivals.visible(); return [...v.up, ...v.past].map(({ f }) => f.country); });
+    await pj.evaluate(() => window.__safetravel.arrivals.setOn(false));
+    await pj.close();
+    assert(chips.map((c) => c.idx).join('') === letters.join(''), `chips ${chips.map((c) => c.idx)} vs sections ${letters}`);
+    assert(chips[0].cur === 'true' && chips.filter((c) => c.cur).length === 1, `first chip not current ${JSON.stringify(chips)}`);
+    assert(advN === advHead, `advisory count ${advN} vs section ${advHead}`);
+    assert(gap < 8 && spyKept === 'true', `flights section ${gap}px from the top, current ${spyKept}`);
+    assert(routes > 0 && ['日本', 'Japan'].includes(q), `routes ${routes}, board query ${q}`);
+    assert(vis.length && vis.every((c) => c === 'JP'), `board rows ${vis.length}: ${[...new Set(vis)]}`);
+    assert(!errs.length, errs[0]);
+    return `${chips.map((c) => c.key.slice(3)).join(' ')}; ${routes} JP airports; board ${vis.length} flights from JP`;
+  });
+
   await check('timeline range: 6 months by default, 3/6/12/24 switch the list, choice remembered, ?months= overrides', async () => {
     const pr = await context.newPage();
     const errs = [];
@@ -853,7 +889,7 @@ async function run(browser) {
     const st = () => pr.evaluate(() => ({
       pressed: +document.querySelector('.tl-range-btn[aria-pressed="true"]').dataset.months,
       count: +(document.querySelector('.psec-tl h3 .count')?.textContent.match(/\d+/)?.[0] ?? -1),
-      stat: +document.querySelectorAll('.panel-stats dd')[1].textContent,
+      stat: +document.querySelector('.panel-jump .pj-tl b').textContent,
       stored: localStorage.getItem('safetravel.timelineMonths'),
     }));
     await pr.goto(`${BASE_URL}#/country/DE`, { waitUntil: 'load' });

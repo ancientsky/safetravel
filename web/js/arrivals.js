@@ -238,7 +238,10 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     const p = placeKey(query);
     if (p.length < 2) return false;
     // the board's own names, then every name the place index knows for the airport ("名古屋", "Nagoya" for NGO 中部)
-    return [f.from, f.from_zh, f.from_en].some((x) => placeKey(x).includes(p)) || airportMatches(f.from, query);
+    if ([f.from, f.from_zh, f.from_en].some((x) => placeKey(x).includes(p)) || airportMatches(f.from, query)) return true;
+    // the origin country in either language ("日本", "Colombia"): the country panel's "show on the board" uses this
+    const c = /^[A-Z]{2}$/.test(f.country || '') ? f.country : '';
+    return !!c && [countryName(c, 'zh-Hant'), countryName(c, 'en')].some((x) => placeKey(x).startsWith(p));
   }
 
   function visible(now = Date.now()) {
@@ -650,6 +653,17 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     resize,
     insets,
     refresh: () => { if (on) render(); },
+    /** Open the board searched for flights from one country (the country panel's direct-flights section). */
+    showCountry(iso) {
+      const name = countryName(iso);
+      if (!name || name === iso) return;
+      if (minimized) btnMin?.click();
+      if (qInput) qInput.value = name;
+      query = name;
+      if (!on) setOn(true); else render();
+      holdGlide();
+      body.scrollTop = 0;
+    },
     isOn: () => on,
     debug: { data: () => data, cfg: () => ({ ...cfg }), visible: () => visible(), setOn },
   };

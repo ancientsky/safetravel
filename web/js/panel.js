@@ -167,9 +167,6 @@ export function createPanel({ root, map }) {
 
   function renderHead() {
     const lvl = levelNum(levelOf(iso));
-    const flights = routesTo(iso);
-    const dep = flights.reduce((s, r) => s + (r.departures || 0), 0);
-    const items = state.byCountry.get(iso);
     const mofa = mofaMode();
     const w = warningOf(iso);
     const mac = w?.source === 'mac';
@@ -192,12 +189,112 @@ export function createPanel({ root, map }) {
       </div>
       ${instr}
       ${renderRates()}
-      <dl class="panel-stats">
-        <div><dt>${esc(t('panel_stat_advisories'))}</dt><dd class="mono">${fmtNum(alertsOf(iso).length)}</dd></div>
-        <div><dt>${esc(t('panel_stat_epidemics'))} <span class="dt-sub">${esc(t('panel_range_short', { m: months }))}</span></dt><dd class="mono">${items ? fmtNum(timelineItems().length) : state.epidemicsStatus === 'loading' ? '…' : state.epidemicsStatus === 'ready' ? '0' : '—'}</dd></div>
-        <div><dt>${esc(t('panel_stat_flights'))}</dt><dd class="mono">${fmtNum(dep)}</dd></div>
-      </dl>`;
+      ${renderJump()}`;
+    spy();
   }
+
+  // ---- section bar: one chip per section below (same order and letters), with its count; a tap scrolls there ----
+  let sections = []; // [{ key, idx }] in render order
+  function jumpChip({ key, idx }) {
+    let label;
+    let n = null;
+    let title = '';
+    if (key === 'adv') { label = t('panel_jump_adv'); n = groupAlerts(iso).length; }
+    else if (key === 'wl') label = t(warningOf(iso)?.source === 'mac' ? 'panel_jump_mac' : 'panel_jump_mofa');
+    else if (key === 'ai') label = t('panel_jump_ai');
+    else if (key === 'wx') label = t('panel_jump_wx');
+    else if (key === 'fl') { label = t('panel_jump_fl'); n = inbound(); title = t('panel_fl_count', { n }); }
+    else {
+      label = t('panel_jump_tl');
+      n = state.epidemicsStatus === 'ready' ? timelineItems().length : state.epidemicsStatus === 'loading' ? '…' : null;
+      title = t('panel_sec_timeline_range', { m: months });
+    }
+    const num = n == null ? '' : `<b class="mono">${esc(typeof n === 'number' ? fmtNum(n) : n)}</b>`;
+    return `<button type="button" class="pj pj-${key}" data-jump="${idx}" aria-controls="psec-${idx.toLowerCase()}"${title ? ` title="${esc(title)}"` : ''}>${key === 'fl' ? '<i aria-hidden="true">✈</i>' : ''}${esc(label)}${num}</button>`;
+  }
+  function renderJump() {
+    return sections.length ? `<nav class="panel-jump" aria-label="${esc(t('panel_jump_label'))}" data-testid="panel-jump">${sections.map(jumpChip).join('')}</nav>` : '';
+  }
+  const secEl = (idx) => body.querySelector(`.psec[aria-labelledby="psec-${idx.toLowerCase()}"]`);
+  function jumpTo(idx) {
+    const sec = secEl(idx);
+    if (!sec) return;
+    const top = sec.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 2;
+    body.scrollTo({ top: Math.max(0, top), behavior: reducedMotion() ? 'auto' : 'smooth' });
+    const h = sec.querySelector('h3');
+    if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+    current = idx; // mark it now; the scroll-spy agrees once the smooth scroll lands
+    markJump();
+  }
+  // scroll-spy: the chip of the section at the top of the panel body is marked as current
+  let current = null;
+  let spyQueued = false;
+  function spy() {
+    if (!iso || !sections.length) return;
+    const top = body.getBoundingClientRect().top + 24;
+    let at = sections[0].idx;
+    for (const { idx } of sections) {
+      const el = secEl(idx);
+      if (el && el.getBoundingClientRect().top <= top) at = idx;
+    }
+    if (body.scrollTop > 0 && body.scrollTop + body.clientHeight >= body.scrollHeight - 2) at = sections.at(-1).idx; // short last section
+    current = at;
+    markJump();
+  }
+  function markJump() {
+    const nav = $('.panel-jump', head);
+    if (!nav) return;
+    nav.querySelectorAll('.pj').forEach((b) => {
+      const on = b.dataset.jump === current;
+      if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+      if (on && nav.scrollWidth > nav.clientWidth) { // keep the marked chip visible in a bar that scrolls sideways
+        const l = b.offsetLeft - nav.offsetLeft;
+        if (l < nav.scrollLeft || l + b.offsetWidth > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = l - 12;
+      }
+    });
+  }
+  body.addEventListener('scroll', () => {
+    if (spyQueued) return;
+    spyQueued = true;
+    requestAnimationFrame(() => { spyQueued = false; spy(); });
+  }, { passive: true });
+  head.addEventListener('click', (ev) => {
+    const b = ev.target.closest('.pj[data-jump]');
+    if (b) jumpTo(b.dataset.jump);
+  });
+
+  // ---- direct flights with Taoyuan today (data/flights.json, TDX FIDS) ----
+  const inbound = () => routesTo(iso).reduce((sum, r) => sum + (r.arrivals || 0), 0);
+  let showOnBoard = null; // (iso) => void, set by the map page when the arrivals board is available
+  function renderFlights(idx) {
+    const routes = routesTo(iso).slice().sort((a, b) => (b.arrivals + b.departures) - (a.arrivals + a.departures));
+    const f = state.data.flights;
+    const stale = f?.date && f.date !== todayTaipei().toISOString().slice(0, 10);
+    const rows = routes.map((r) => {
+      const city = clean(isEn() ? r.city_en || r.city_zh : r.city_zh || r.city_en);
+      const air = (r.airlines || []).slice(0, 8).map((a) => `<span class="fl-air mono">${esc(a)}</span>`).join('');
+      return `
+          <li class="fl-row">
+            <div class="fl-city"><b>${esc(city)}</b><span class="mono">${esc(r.iata)}</span></div>
+            <div class="fl-n mono"><span title="${esc(t('panel_fl_in_title'))}">${esc(t('panel_fl_in', { n: fmtNum(r.arrivals || 0) }))}</span><span title="${esc(t('panel_fl_out_title'))}">${esc(t('panel_fl_out', { n: fmtNum(r.departures || 0) }))}</span></div>
+            ${air ? `<div class="fl-airs">${air}</div>` : ''}
+          </li>`;
+    }).join('');
+    return `
+      <section class="psec psec-fl" aria-labelledby="psec-${idx.toLowerCase()}" data-testid="panel-flights">
+        ${secHead(idx, 'panel_sec_flights', `<span class="count mono">${esc(t('panel_fl_count', { n: inbound() }))}</span>`)}
+        <p class="fl-note">${esc(t('panel_fl_note', { date: f?.date ? fmtDay(f.date, 'short') : '—' }))}${stale ? ` <span class="warn">${esc(t('flights_stale'))}</span>` : ''}</p>
+        <ul class="fl-list">${rows}</ul>
+        ${showOnBoard ? `<button type="button" class="btn fl-board" data-testid="panel-flights-board">${esc(t('panel_fl_board', { name: countryName(iso) }))}</button>` : ''}
+      </section>`;
+  }
+  body.addEventListener('click', (ev) => {
+    if (ev.target.closest('.fl-board') && iso && showOnBoard) {
+      const code = iso;
+      if (window.innerWidth < 760) close(); // phones: the board and the sheet cannot share the screen
+      showOnBoard(code);
+    }
+  });
 
   function areaLabel(r) {
     return clean(isEn() ? r.area_en || r.area_zh : r.area_zh || r.area_en);
@@ -322,7 +419,10 @@ export function createPanel({ root, map }) {
       const ov = state.data.epidemics?.overviews?.[iso];
       if (ov && (ov.zh || ov.en)) {
         chip = aiChip(ov);
-        inner = `<p class="ai-text"><span class="tw" data-full=""></span><span class="caret" aria-hidden="true"></span></p>
+        // the full text sits invisibly under the typed one, so the paragraph has its final height from the start
+        // and the sections below do not move while it types (a jump from the section bar stays put)
+        const full = clean(isEn() ? ov.en || ov.zh : ov.zh || ov.en);
+        inner = `<p class="ai-text"><span class="tw-ghost" aria-hidden="true">${esc(full)}<span class="caret-ghost"></span></span><span class="tw-live"><span class="tw" data-full=""></span><span class="caret" aria-hidden="true"></span></span></p>
           ${ov.updated ? `<p class="ai-meta">${esc(t('panel_ai_meta', { date: fmtDay(ov.updated), n: fmtNum(ov.items ?? 0) }))}</p>` : ''}`;
       } else {
         inner = `<p class="empty">${esc(t('panel_ai_none'))}</p>`;
@@ -457,12 +557,15 @@ export function createPanel({ root, map }) {
       abortOtherDetails(iso);
       loadDetails(iso); // memoised per country; fills the "full text" toggles when it arrives
     }
-    renderHead();
     // the active map layer's section comes first; letters follow the order
-    const secs = [renderAdvisories, renderAI, renderTimeline];
-    if (state.data.warnings) secs.splice(mofaMode() ? 0 : 1, 0, renderWarning);
-    if (weather?.has(iso)) secs.splice(secs.indexOf(renderTimeline), 0, renderWeather); // before the long timeline
-    body.innerHTML = secs.map((fn, i) => fn('ABCDEF'[i])).join('');
+    const secs = [['adv', renderAdvisories], ['ai', renderAI], ['tl', renderTimeline]];
+    if (state.data.warnings) secs.splice(mofaMode() ? 0 : 1, 0, ['wl', renderWarning]);
+    const before = (k) => secs.findIndex(([key]) => key === k);
+    if (weather?.has(iso)) secs.splice(before('tl'), 0, ['wx', renderWeather]); // before the long timeline
+    if (routesTo(iso).length) secs.splice(before('tl'), 0, ['fl', renderFlights]);
+    sections = secs.map(([key], i) => ({ key, idx: 'ABCDEFG'[i] }));
+    body.innerHTML = secs.map(([, fn], i) => fn('ABCDEFG'[i])).join('');
+    renderHead(); // after the body: the section bar reads the sections' positions
     if (wtext.status !== 'idle') fillWarnText();
     startTypewriter();
     bindTimeline();
@@ -536,5 +639,6 @@ export function createPanel({ root, map }) {
     scroller: () => body,
     refresh: () => { if (iso) render(); },
     setWeather: (provider) => { weather = provider; },
+    setBoard: (fn) => { showOnBoard = fn; },
   };
 }

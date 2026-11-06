@@ -720,11 +720,40 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 .lvl-text-1 { color: var(--lvl1); }
 .lvl-text-2 { color: var(--lvl2); }
 .lvl-text-3 { color: var(--lvl3); }
-.panel-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 0; }
-.panel-stats div { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: rgba(var(--accent-rgb), .03); }
-.panel-stats dt { font-size: calc(10.5px * var(--ts)); color: var(--fg-mute); }
-.panel-stats .dt-sub { font-size: calc(9.5px * var(--ts)); opacity: .8; white-space: nowrap; }
-.panel-stats dd { margin: 0; font-size: calc(18px * var(--ts)); font-weight: 600; }
+/* section bar: one chip per section (count where it means something); tap scrolls the body there; scroll-spy marks one */
+.panel-jump {
+  display: flex; gap: 6px; margin: 12px -56px -14px 0; padding: 0 18px 10px 0; overflow-x: auto; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent);
+}
+.panel-jump::-webkit-scrollbar { display: none; }
+.pj {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; height: calc(28px * var(--ts)); padding: 0 11px;
+  border: 1px solid var(--border); border-radius: 999px; background: rgba(var(--accent-rgb), .03); color: var(--fg-dim);
+  font: inherit; font-size: calc(12px * var(--ts)); white-space: nowrap; cursor: pointer;
+  transition: background .2s, border-color .2s, color .2s;
+}
+.pj b { font-weight: 700; color: var(--fg); }
+.pj i { font-style: normal; }
+.pj:hover { border-color: var(--border-strong); color: var(--fg); }
+.pj[aria-current="true"] { border-color: var(--accent); background: rgba(var(--accent-rgb), .14); color: var(--accent); }
+.pj[aria-current="true"] b { color: var(--accent); }
+.psec h3:focus { outline: none; }
+.psec h3:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+/* today's direct flights with Taoyuan */
+.fl-note { margin: -4px 0 8px; font-size: calc(11.5px * var(--ts)); color: var(--fg-mute); }
+.fl-note .warn { color: var(--lvl2); }
+.fl-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.fl-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: baseline;
+  padding: 7px 12px; border: 1px solid var(--border); border-radius: 8px; background: rgba(var(--accent-rgb), .025);
+}
+.fl-city { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: calc(14px * var(--ts)); }
+.fl-city .mono { font-size: calc(11px * var(--ts)); color: var(--fg-mute); }
+.fl-n { display: flex; gap: 10px; font-size: calc(12px * var(--ts)); color: var(--fg-dim); }
+.fl-n span:first-child { color: var(--accent); font-weight: 600; }
+.fl-airs { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+.fl-air { padding: 0 5px; border: 1px solid var(--border); border-radius: 4px; font-size: calc(10.5px * var(--ts)); color: var(--fg-mute); }
+.fl-board { margin-top: 10px; width: 100%; justify-content: center; }
 
 .panel-body { flex: 1; overflow-y: auto; padding: 6px 18px 18px; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 .psec { padding: 14px 0 6px; }
@@ -774,6 +803,10 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
   background: linear-gradient(135deg, rgba(var(--cyan-rgb), .07), rgba(var(--accent-rgb), .04));
   min-height: 3.5em;
 }
+.psec-ai .ai-text { display: grid; }
+.ai-text > .tw-ghost, .ai-text > .tw-live { grid-area: 1 / 1; }
+.tw-ghost { visibility: hidden; }
+.caret-ghost { display: inline-block; width: 10px; }
 .caret { display: inline-block; width: 8px; height: 1.05em; margin-left: 2px; vertical-align: -2px; background: var(--cyan); animation: blink 1s steps(2) infinite; }
 .caret.done { animation: blink 1s steps(2) 3 forwards; opacity: 0; }
 .ai-meta { margin: 6px 0 0; font-size: calc(11px * var(--ts)); color: var(--fg-mute); text-align: right; }
@@ -1909,3 +1942,4 @@ body.panel-open.panel-floating .zoom-ctrl, body.panel-open.panel-floating .wx-ba
 @media (max-width: 1399px) and (min-width: 761px) { body.panel-open.panel-floating .wx-bar { visibility: visible; } }
 .panel.is-floating .panel-autobar { padding-right: 104px; } /* room for the dock button next to close */
 .panel.is-floating .panel-head { padding-right: 100px; }
+.panel.is-floating .panel-jump { margin-right: -100px; }

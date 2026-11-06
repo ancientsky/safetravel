@@ -406,6 +406,7 @@ async function main() {
     root: $('#arrivals'), button: $('[data-testid="arrivals-toggle"]'), map, openCountry, onLayout: relayout,
   });
   arrivals.init();
+  panel.setBoard((iso) => { emit('user:interact'); arrivals.showCountry(iso); }); // "today's direct flights" → board
   syncSpotCard(); // a board restored on load
   $('#legend').classList.remove('is-held');
   $('#flight-hud').classList.remove('is-held');
