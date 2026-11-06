@@ -485,6 +485,33 @@ async function run(browser) {
     return `armed: “${armed}”; back at the start page, settings restored`;
   });
 
+  await check('?reset=N: idle auto-reset only after use, with a cancellable notice; untouched screens never reload', async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const pr = await ctx.newPage();
+    let loads = 0;
+    pr.on('load', () => { loads += 1; });
+    const home = new URL(BASE_URL);
+    home.search = '?reset=0.15&lang=en'; // 9 s idle, notice 4.5 s before
+    await pr.goto(home.href, { waitUntil: 'load' });
+    await pr.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    await pr.waitForTimeout(12000); // untouched: no notice, no reload
+    if (loads !== 1) throw new Error(`untouched screen reloaded (${loads} loads)`);
+    // a visitor uses it and changes a setting
+    await pr.evaluate(() => localStorage.setItem('safetravel.textSize', 'xl'));
+    await pr.mouse.click(640, 700);
+    await pr.waitForSelector('[data-testid="kiosk-idle"]:not([hidden])', { timeout: 12000 });
+    const note = await pr.textContent('[data-testid="kiosk-idle"]');
+    await pr.mouse.click(640, 700); // cancels
+    await pr.waitForSelector('[data-testid="kiosk-idle"][hidden]', { state: 'attached', timeout: 2000 });
+    await pr.waitForEvent('load', { timeout: 20000 }); // next idle period ends in a reset
+    const size = await pr.evaluate(() => localStorage.getItem('safetravel.textSize'));
+    const url = pr.url();
+    await ctx.close();
+    if (size === 'xl') throw new Error('setting not restored');
+    if (url !== home.href) throw new Error(`reset to ${url}`);
+    return `notice “${note.trim()}”; cancelled by a touch; reset after the next idle period`;
+  });
+
   await check('search finds airports and cities (NRT, 成田, 曼谷 → BKK) and opens their country', async () => {
     const pr = await context.newPage();
     const errs = [];

@@ -111,3 +111,11 @@ html[data-theme="light"] .osk {
 body:has(.m-tabs) .osk-reset { bottom: 84px; }
 .osk-open .osk-reset { display: none; }
 @media print { .osk-reset { display: none !important; } }
+
+/* idle auto-reset notice (?reset=N), next to the reset button */
+.osk-idle {
+  position: fixed; left: 56px; bottom: 6px; z-index: 2147483000; max-width: min(520px, calc(100vw - 70px));
+  padding: 10px 14px; border-radius: 12px; background: #c4161c; color: #fff; box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
+  font: 700 16px/1.35 system-ui, -apple-system, "Segoe UI", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+body:has(.m-tabs) .osk-idle { bottom: 84px; }

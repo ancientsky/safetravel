@@ -12,11 +12,15 @@
 // stored SafeTravel setting (localStorage safetravel.*) are kept in sessionStorage. A small ↻ button bottom left
 // (tap, then tap again within 4 s) puts the stored settings back exactly as they were and opens the home address,
 // so whatever visitors dragged, collapsed, switched or opened is undone.
+// ?reset=5 (minutes, for the browser session; ?reset=0 off; works with or without ?osk=1) does the same by itself
+// after that long without a touch, key or wheel — but only when the screen is no longer as it started (someone
+// touched this page, or it is not the start address). A notice 10 s before lets a visitor cancel it with any touch.
 
 const STORE = 'safetravel.osk';
 const HOME = 'safetravel.kiosk.home'; // sessionStorage: { url, ls: { key: value } }
 const PREFIX = 'safetravel.';
 const KEEP = new Set([STORE, 'safetravel.recover']); // session flags, never part of the snapshot
+const RESET_STORE = 'safetravel.kiosk.reset'; // sessionStorage: idle minutes for the automatic reset
 const DICT_URL = 'vendor/zhuyin.json';
 
 const INITIALS = 'ㄅㄆㄇㄈㄉㄊㄋㄌㄍㄎㄏㄐㄑㄒㄓㄔㄕㄖㄗㄘㄙ';
@@ -49,12 +53,14 @@ const TEXT = {
     words: '常用', loading: '載入字典中…', none: '沒有這個音，請修改注音', hint: '輸入注音，再按聲調或空白（一聲）',
     failed: '字典載入失敗', bksp: '刪除', label: '螢幕鍵盤',
     reset: '重設畫面', resetAgain: '再按一次：重設畫面', resetLabel: '重設畫面：回到開機時的頁面與設定',
+    idle: ({ s }) => `沒有人操作，${s} 秒後回到初始畫面（碰一下即取消）`,
   },
   en: {
     abc: 'ABC', zhuyin: '注音', space: 'space', tone1: 'tone 1', clear: 'Clear', enter: 'Enter', hide: 'Hide',
     words: 'Popular', loading: 'Loading dictionary…', none: 'No such syllable', hint: 'Type Zhuyin, then a tone key or space',
     failed: 'Dictionary failed to load', bksp: 'Delete', label: 'On-screen keyboard',
     reset: 'Reset', resetAgain: 'Tap again to reset', resetLabel: 'Reset the screen to its start page and settings',
+    idle: ({ s }) => `No one is using the screen: back to the start page in ${s} s (touch to cancel)`,
   },
 };
 
@@ -100,6 +106,84 @@ export function resetKiosk() {
   location.replace(url);
 }
 
+/** ?reset=N → minutes of inactivity before the automatic reset (0.1–240), remembered for the session; 0 = off. */
+function resetMinutes() {
+  let q = null;
+  try { q = new URLSearchParams(location.search).get('reset'); } catch (e) { /* ignore */ }
+  if (q !== null) {
+    const n = Number(q);
+    try {
+      if (n > 0) sessionStorage.setItem(RESET_STORE, String(Math.min(240, Math.max(0.1, n))));
+      else sessionStorage.removeItem(RESET_STORE);
+    } catch (e) { /* ignore */ }
+  }
+  let v = 0;
+  try { v = Number(sessionStorage.getItem(RESET_STORE)) || 0; } catch (e) { v = 0; }
+  return v > 0 ? v : 0;
+}
+
+/** Still on the start address? (Pages write some settings by themselves from their URL — ?wx=1, ?role= — so stored
+ * settings are not compared: a visitor can only change one by touching the screen, which marks it as used.) */
+function atHome() {
+  try {
+    const home = JSON.parse(sessionStorage.getItem(HOME) || 'null');
+    if (!home) return false;
+    // the spotlight tour writes #/country/… by itself: compare without the hash
+    const u = new URL(home.url);
+    return u.origin + u.pathname + u.search === location.origin + location.pathname + location.search;
+  } catch (e) { return false; }
+}
+
+function loadCss() {
+  if (document.querySelector('link[data-osk-css]')) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'osk.css';
+  link.dataset.oskCss = '1';
+  document.head.appendChild(link);
+}
+
+function startIdleReset(minutes) {
+  loadCss();
+  const lang = () => (document.documentElement.lang === 'en' ? 'en' : 'zh');
+  const total = minutes * 60_000;
+  const warnMs = total > 20_000 ? 10_000 : Math.round(total / 2);
+  let touched = false;
+  let timer = 0;
+  let tick = 0;
+  const note = document.createElement('div');
+  note.className = 'osk-idle';
+  note.setAttribute('role', 'status');
+  note.dataset.testid = 'kiosk-idle';
+  note.hidden = true;
+  document.body.appendChild(note);
+  const stopWarn = () => { clearInterval(tick); tick = 0; note.hidden = true; };
+  const warn = () => {
+    let left = Math.round(warnMs / 1000);
+    const show = () => { note.textContent = TEXT[lang()].idle({ s: left }); };
+    show();
+    note.hidden = false;
+    tick = setInterval(() => {
+      left -= 1;
+      if (left <= 0) { stopWarn(); resetKiosk(); return; }
+      show();
+    }, 1000);
+  };
+  const arm = () => {
+    clearTimeout(timer);
+    stopWarn();
+    timer = setTimeout(() => {
+      if (!touched && atHome()) { arm(); return; } // nothing to undo: no reload
+      warn();
+    }, total - warnMs);
+  };
+  const activity = () => { touched = true; arm(); };
+  for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart']) {
+    document.addEventListener(ev, activity, { capture: true, passive: true });
+  }
+  arm();
+}
+
 const EDITABLE = new Set(['text', 'search', 'url', 'email', 'tel', '']);
 function editable(el) {
   if (!el || el.disabled || el.readOnly) return false;
@@ -108,10 +192,7 @@ function editable(el) {
 }
 
 function init() {
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = 'osk.css';
-  document.head.appendChild(link);
+  loadCss();
 
   const lang = () => (document.documentElement.lang === 'en' ? 'en' : 'zh');
   const tx = (k) => TEXT[lang()][k];
@@ -374,8 +455,14 @@ function init() {
     .observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 }
 
-if (enabled()) {
+const oskOn = enabled();
+const idleMin = resetMinutes();
+if (oskOn || idleMin) {
   rememberHome();
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
-  else init();
+  const start = () => {
+    if (oskOn) init();
+    if (idleMin) startIdleReset(idleMin);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
 }
