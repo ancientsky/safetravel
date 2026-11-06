@@ -310,7 +310,6 @@ export default {
   med_places: '疾管署分區說明',
   med_vax_h: '疫苗與預防用藥',
   med_vax_note: '疾管署為此地列出的項目；是否需要接種，請由旅遊醫學門診醫師依行程評估。點開看疾管署的說明與入境規定。',
-  med_vax_local: '當地有此疾病',
   med_vax_nopage: '疾管署的詳細說明尚未取得，請參考疾管署原始頁面。',
   med_dis_h: '當地疾病與預防',
   med_dis_vector: '蚊蟲叮咬傳染',

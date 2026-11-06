@@ -570,8 +570,6 @@ async function run(page, context) {
     await pr.waitForSelector('[data-testid="med"] [data-testid="med-vax"]', { timeout: 15000 });
     const names = await pr.$$eval('[data-testid="med-vax"] .med-vax-name', (els) => els.map((e) => e.textContent));
     assert(names.length >= 5 && names.some((n) => n.includes('黃熱病疫苗')), `vaccines: ${names.join('、')}`);
-    const hit = await pr.$$eval('[data-testid="med-vax"]', (els) => els.filter((e) => e.querySelector('.med-tag-hit')).map((e) => e.querySelector('.med-vax-name').textContent));
-    assert(hit.some((n) => n.includes('日本腦炎')), `「當地有此疾病」 on ${hit.join('、')}`);
     const yf = pr.locator('[data-testid="med-vax"]', { hasText: '黃熱病疫苗' });
     await yf.locator('summary').click();
     const hiddenNote = await yf.locator('.med-ln[data-g="pregnancy"]').first().isVisible();
@@ -585,7 +583,7 @@ async function run(page, context) {
     const chips = await pr.$$eval('.med-dis-vector .med-chips li', (els) => els.map((e) => e.textContent));
     assert(chips.some((c) => c.includes('登革熱')), `vector-borne: ${chips.join('、')}`);
     await pr.close();
-    return `${names.length} vaccines; local: ${hit.length}; tel ${tel.length}`;
+    return `${names.length} vaccines; tel ${tel.length}`;
   });
 
   await check('travel prescription: a country split by CDC (Portugal) offers its island areas', async () => {

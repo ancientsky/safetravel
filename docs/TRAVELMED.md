@@ -66,8 +66,7 @@ The CMS rich text is flattened into lines `{t, d?, h?, k?, g?}`:
   `travelmed/<ISO>.json` (only when `countries[iso].page` says it exists). Blocks: timing note (2–4 weeks, from CDC's
   vaccination intro) with a button to the clinic finder; traveller-group toggles (stored in `localStorage`
   `safetravel.trip.groups`; CSS classes `show-<group>` reveal the tagged lines, counts per group on each toggle);
-  vaccines (one `<details>` per item; "當地有此疾病" when a disease it prevents is in this place's list or in CDC's
-  current alerts); local diseases by route (insect/tick, food/water, contact, other, fresh water) with the short advice;
+  vaccines (one `<details>` per item, CDC's text only — no computed "disease present" tag); local diseases by route (insect/tick, food/water, contact, other, fresh water) with the short advice;
   emergency numbers as `tel:` links; CDC's full prevention, during-trip, after-return and checklist text. Areas CDC lists
   separately (Portugal → Azores, Madeira) switch with buttons. Printing opens every section.
 - `web/js/trip-clinics.js` — `#clinics` section: city select, "現在有門診" (sessions taken as 08:00–12:00, 13:30–17:30,

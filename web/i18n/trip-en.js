@@ -310,7 +310,6 @@ export default {
   med_places: 'Areas Taiwan CDC lists separately',
   med_vax_h: 'Vaccines and preventive medicine',
   med_vax_note: 'Items Taiwan CDC lists for this destination; whether you need them depends on your itinerary — a travel medicine doctor decides. Open an item for CDC’s explanation and entry rules.',
-  med_vax_local: 'Disease present locally',
   med_vax_nopage: 'Taiwan CDC’s detailed text is not available yet; see the CDC page.',
   med_dis_h: 'Local diseases and prevention',
   med_dis_vector: 'Insect and tick bites',

@@ -121,20 +121,18 @@ function applyGroups(sec) {
   });
 }
 
-function vaxBlock(tm, entry, page, localBases) {
+function vaxBlock(tm, entry, page) {
   const rows = page?.vaccines?.length ? page.vaccines : (entry.vax || []).map((name) => ({ name, lines: [] }));
   if (!rows.length) return null;
   const list = h('div', { class: 'med-vaxes' });
   for (const v of rows) {
     const name = clean(v.name);
     const meta = tm.vaccines?.[name];
-    const hits = (meta?.for || []).filter((b) => localBases.has(b));
     const lines = Array.isArray(v.lines) ? v.lines : [];
     const first = lines.find((ln) => !ln.g && !ln.h);
     const gtags = GROUPS.filter((g) => groupCount(lines, g)).map((g) => h('span', { class: 'med-gtag', 'data-g': g, text: t(`med_g_${g}_s`) }));
     const summary = [
       h('span', { class: 'med-vax-name', lang: isEn() && !meta?.en ? ZH : null, text: vaxName(tm, name) }),
-      hits.length ? h('span', { class: 'med-tag med-tag-hit', text: t('med_vax_local') }) : null,
       gtags.length ? h('span', { class: 'med-gtags' }, gtags) : null,
       first && !isEn() ? h('span', { class: 'med-vax-pre', text: `${first.k ? `${clean(first.k)}：` : ''}${clean(first.t)}` }) : null,
     ];
@@ -253,11 +251,9 @@ export function medSection(d, { alive, onClinics }) {
     const content = h('div', { class: 'med-place' });
     const show = (i) => {
       const { b, page } = places[i];
-      const bases = new Set([...Object.values(b.dis || {}).flat().map((x) => term(tm, x)).filter(Boolean)
-        .map((x) => x.base || x.zh), ...(d.diseases || [])]);
       content.replaceChildren(...[
         groupBar(sec, page),
-        vaxBlock(tm, b, page, bases),
+        vaxBlock(tm, b, page),
         diseaseBlock(tm, b, page),
         duringBlock(page),
         beforeBlock(page),

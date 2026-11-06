@@ -108,8 +108,8 @@ function legEl(leg, i) {
   countryOptions(sel);
   sel.value = leg.iso;
   sel.addEventListener('change', () => { leg.iso = sel.value; leg.sub = -1; leg.visit = 'unsure'; renderLegs(); renderResult(); });
-  const arrive = h('input', { type: 'datetime-local', class: 'f-input', id: `a-${leg.id}`, value: leg.arrive, 'data-testid': 'leg-arrive' });
-  const depart = h('input', { type: 'datetime-local', class: 'f-input', id: `d-${leg.id}`, value: leg.depart, 'data-testid': 'leg-depart' });
+  const arrive = h('input', { type: 'date', class: 'f-input', id: `a-${leg.id}`, value: leg.arrive, 'data-testid': 'leg-arrive' });
+  const depart = h('input', { type: 'date', class: 'f-input', id: `d-${leg.id}`, value: leg.depart, 'data-testid': 'leg-depart' });
   arrive.addEventListener('change', () => {
     leg.arrive = arrive.value;
     if (leg.arrive && (!leg.depart || leg.depart < leg.arrive)) { leg.depart = ''; depart.value = ''; }

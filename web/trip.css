@@ -591,7 +591,6 @@ h2 { font-size: clamp(22px, 3vw, 28px); font-weight: 800; }
 }
 .med-det[open] .med-vax-pre { display: none; }
 .med-tag { padding: 1px 8px; border-radius: 999px; font-size: calc(12.5px * var(--ts)); font-weight: 700; border: 1px solid var(--border-strong); color: var(--fg-dim); }
-.med-tag-hit { background: var(--lvl2); border-color: var(--lvl2); color: var(--lvl2-fg); }
 .med-gtags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .med-gtag {
   display: none; margin-right: 6px; padding: 0 7px; border-radius: 999px; font-size: calc(12px * var(--ts)); font-weight: 700;

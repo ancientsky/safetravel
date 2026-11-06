@@ -62,7 +62,7 @@ async function main() {
 
   await check('Kenya 10–20 Dec, adult 70 kg: three drugs, doses and tablets per CDC regimens, cost', async () => {
     const page = await open(context);
-    await trip(page, 'KE', '2026-12-10T08:00', '2026-12-20T22:00', 'yes');
+    await trip(page, 'KE', '2026-12-10', '2026-12-20', 'yes');
     await person(page, 35, 70);
     assert(await verdict(page) === 'need', `verdict ${await verdict(page)}`);
     for (const d of ['atq', 'dox', 'mef']) assert(await status(page, d) === 'ok', `${d} ${await status(page, d)}`);
@@ -83,7 +83,7 @@ async function main() {
 
   await check('Thailand: mefloquine ruled out (resistance); "not going to risk areas" → no medicine', async () => {
     const page = await open(context);
-    await trip(page, 'TH', '2026-12-10T08:00', '2026-12-17T08:00', 'yes');
+    await trip(page, 'TH', '2026-12-10', '2026-12-17', 'yes');
     await person(page, 40, 60);
     assert(await status(page, 'mef') === 'no', `mef ${await status(page, 'mef')}`);
     await page.locator('[data-testid="visit-no"]').check();
@@ -93,9 +93,9 @@ async function main() {
 
   await check('Japan → no risk; South Korea → mosquito protection only', async () => {
     const page = await open(context);
-    await trip(page, 'JP', '2026-12-10T08:00', '2026-12-17T08:00');
+    await trip(page, 'JP', '2026-12-10', '2026-12-17');
     const jp = await verdict(page);
-    await trip(page, 'KR', '2026-12-10T08:00', '2026-12-17T08:00');
+    await trip(page, 'KR', '2026-12-10', '2026-12-17');
     const kr = await verdict(page);
     await page.close();
     assert(jp === 'none' && kr === 'bites', `JP ${jp}, KR ${kr}`);
@@ -103,7 +103,7 @@ async function main() {
 
   await check('Timor-Leste: CDC malaria-page note (certified malaria-free 2025) shown beside the prescription', async () => {
     const page = await open(context);
-    await trip(page, 'TL', '2026-12-10T08:00', '2026-12-17T08:00');
+    await trip(page, 'TL', '2026-12-10', '2026-12-17');
     const note = await page.textContent('[data-testid="who-note"]');
     await page.close();
     assert(note.includes('2025'), note);
@@ -111,7 +111,7 @@ async function main() {
 
   await check('pregnancy: Malarone and doxycycline not suitable, mefloquine can be considered', async () => {
     const page = await open(context);
-    await trip(page, 'KE', '2026-12-10T08:00', '2026-12-20T22:00', 'yes');
+    await trip(page, 'KE', '2026-12-10', '2026-12-20', 'yes');
     await person(page, 30, 60);
     await page.selectOption('[data-testid="pregnant"]', 'yes');
     const s = [await status(page, 'atq'), await status(page, 'dox'), await status(page, 'mef')];
@@ -121,7 +121,7 @@ async function main() {
 
   await check('child 10 y / 25 kg: mefloquine ½ tablet weekly, doxycycline 55 mg (no count), Malarone by the doctor', async () => {
     const page = await open(context);
-    await trip(page, 'KE', '2026-12-10T08:00', '2026-12-20T22:00', 'yes');
+    await trip(page, 'KE', '2026-12-10', '2026-12-20', 'yes');
     await person(page, 10, 25);
     const mef = await text(page, 'dose-mef');
     const buy = await text(page, 'buy-mef');
@@ -136,7 +136,7 @@ async function main() {
 
   await check('calendar: .ics has the repeat rule and an alarm; Google link carries the RRULE', async () => {
     const page = await open(context);
-    await trip(page, 'KE', '2026-12-10T08:00', '2026-12-20T22:00', 'yes');
+    await trip(page, 'KE', '2026-12-10', '2026-12-20', 'yes');
     await person(page, 35, 70);
     await page.fill('[data-testid="time-dox"]', '21:30');
     const href = await page.getAttribute('[data-testid="gcal-dox"]', 'href');
@@ -152,9 +152,9 @@ async function main() {
 
   await check('two stops: risk window spans both; English UI', async () => {
     const page = await open(context, { lang: 'en' });
-    await trip(page, 'KE', '2026-12-10T08:00', '2026-12-15T08:00', 'yes');
+    await trip(page, 'KE', '2026-12-10', '2026-12-15', 'yes');
     await page.click('[data-testid="add-leg"]');
-    await trip(page, 'TZ', '2026-12-15T12:00', '2026-12-24T08:00', 'unsure');
+    await trip(page, 'TZ', '2026-12-15', '2026-12-24', 'unsure');
     await person(page, 35, 70);
     const win = await text(page, 'window');
     const title = await page.textContent('h1');
@@ -169,7 +169,7 @@ async function main() {
     const page = await ctx.newPage();
     await page.goto(PAGE_URL, { waitUntil: 'load' });
     await page.waitForFunction(() => document.body.dataset.ready === '1');
-    await trip(page, 'KE', '2026-12-10T08:00', '2026-12-20T22:00', 'yes');
+    await trip(page, 'KE', '2026-12-10', '2026-12-20', 'yes');
     await person(page, 35, 70);
     const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     await ctx.close();
