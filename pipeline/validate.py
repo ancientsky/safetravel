@@ -807,7 +807,7 @@ def check_malaria(v: V, doc, travelmed) -> None:
         return
     if "who" in doc:
         who = doc["who"]
-        if v.keys(f"{w}.who", who, ["source", "categories"], ["exclude", "verify", "notes"]):
+        if v.keys(f"{w}.who", who, ["source", "categories"], ["exclude", "verify", "notes", "refs"]):
             cats = who["categories"]
             seen: set = set()
             if not isinstance(cats, dict) or set(cats) - {"endemic", "certified", "zero3y", "na"}:
@@ -818,6 +818,9 @@ def check_malaria(v: V, doc, travelmed) -> None:
                         if not ISO2.match(str(iso)) or iso in seen:
                             v.err(f"{w}.who.categories.{k}", f"{iso!r} is not a unique ISO alpha-2 code")
                         seen.add(iso)
+            for iso, urls in (who.get("refs") or {}).items():
+                if not ISO2.match(iso) or not all(re.match(r"^https://([a-z0-9-]+\.)*who\.int/", str(u)) for u in urls):
+                    v.err(f"{w}.who.refs", f"{iso}: references must be https who.int pages")
             if not CDC_URL.match(str(who["source"].get("image", ""))):
                 v.err(f"{w}.who", "source.image must be the cdc.gov.tw copy of the WHO map")
     v.pat(w, doc["generated_at"], TS, "generated_at")

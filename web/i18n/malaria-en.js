@@ -200,7 +200,7 @@ export default {
   map_src_via: ', attached to Taiwan CDC’s ',
   map_src_via_link: 'malaria prophylaxis page',
   map_src_end: ' as 「瘧疾感染風險地圖」); ',
-  map_src_caveat: 'small countries and islands may be misread — the original image prevails. Taiwan, Hong Kong and Macao are drawn as part of China there and are not classified here.',
+  map_src_caveat: '“certified” is checked against WHO’s list of countries certified malaria-free (Syria has the certified colour on the image but is not on that list; WHO gives it malaria-free status, so it is shown with zero indigenous cases); small countries and islands may be misread — the original image prevails. Taiwan, Hong Kong and Macao are drawn as part of China there and are not classified here.',
   map_src_cdc: ' The “Taiwan CDC advice” layer follows the malaria section of each country’s CDC travel prescription.',
   map_src_borders: ' Borders are indicative only.',
   lg_nodata: 'No CDC travel prescription',

@@ -110,7 +110,10 @@ A standalone page, not linked from the other pages and `noindex`, until Taiwan C
     landmarks, ~3.5 px mean error);
   - each country took the majority legend colour inside its outline;
   - every doubtful country (tight borders, small or island states) was checked by eye on enlarged crops.
-  Taiwan, Hong Kong and Macao are drawn as China there and are left unclassified (`exclude`). Cabo Verde and Maldives
-  are too small to read and follow WHO's certification list. Syria reads as certified on the image and is listed
-  under `verify`. When CDC replaces the image, re-check the lists against it.
+  Taiwan, Hong Kong and Macao are drawn as China there and are left unclassified (`exclude`). The result was then
+  cross-checked against WHO's list of countries certified malaria-free (`source.certified_list`): `certified` is
+  exactly the 21 countries certified in 2000 or later (Cabo Verde 2024 and Maldives 2015 included). Bahrain, Kuwait and
+  Qatar are on WHO's list from outside that period and count as no malaria. Syria has the certified colour on the
+  image but is not certified; WHO gives it malaria-free status (no indigenous cases since 2005, `refs.SY`), so it sits
+  with the zero-indigenous-cases group. When CDC replaces the image or WHO certifies another country, update the lists.
 - Tests: `tests/malaria-smoke.mjs` (regimens, contraindications, resistance, calendar output, phone width).
