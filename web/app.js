@@ -4,7 +4,7 @@ import {
   mofaMode,
 } from './js/state.js';
 import { setLang, t, applyStatic, bindData, getLang } from './js/i18n.js';
-import { $, debounce, storageGet, storageSet, parseDay, todayTaipei } from './js/util.js';
+import { $, debounce, storageGet, storageSet, parseDay, todayTaipei, urlLang, syncUrlLang } from './js/util.js';
 import { toast } from './js/toast.js';
 import { bindTextSize } from './js/textsize.js';
 import { startRefresh } from './js/refresh.js';
@@ -141,7 +141,7 @@ function indexEpidemics(ep) {
 let syncHudNow = () => {};
 
 async function main() {
-  state.lang = setLang(storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant');
+  state.lang = setLang(urlLang() || (storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant'));
   applyTheme(initialTheme());
   state.flightsOn = storageGet(FLIGHTS_KEY) !== 'off';
   const qRoutes = new URLSearchParams(location.search).get('routes'); // ?routes=in|both pins it (kiosks)
@@ -480,6 +480,7 @@ async function main() {
     state.lang = setLang(getLang() === 'en' ? 'zh-Hant' : 'en');
     textSize.refresh();
     storageSet(LANG_KEY, state.lang);
+    syncUrlLang(state.lang);
     applyStatic();
     sound.refresh();
     applyTheme(state.theme);

@@ -12,6 +12,7 @@
        MAINTENANCE: when a feature is added or changed, update this page (both languages) together with README / docs. -->
   <script src="js/m-boot.js"></script>
   <script src="js/textsize-boot.js"></script>
+  <script src="js/lang-boot.js"></script>
   <script src="js/boot-guard.js"></script>
   <link rel="stylesheet" href="m.css">
   <link rel="stylesheet" href="help.css">
@@ -174,6 +175,8 @@
           <tr><td><code>?layer=mofa</code></td><td>以外交部旅遊警示圖層開啟</td></tr>
           <tr><td><code>?wx=1</code></td><td>開啟天氣圖層</td></tr>
           <tr><td><code>?text=xl</code></td><td>固定字體大小（<code>s／m／l／xl</code>）</td></tr>
+          <tr><td><code>?lang=en</code></td><td>以英文開啟（<code>?lang=zh</code> 中文）；每個頁面都可用，不改該螢幕記住的設定</td></tr>
+          <tr><td><code>m.html?role=officer</code></td><td>快查頁直接以檢疫同仁身分開啟（<code>public</code> 一般民眾）</td></tr>
           <tr><td><code>?months=6</code></td><td>國家面板疫情時間軸範圍（3／6／12／24 個月）</td></tr>
           <tr><td><code>?full=1</code></td><td>焦點輪播「查看完整資訊」：輪播時自動開啟並捲動國家面板（<code>?full=0</code> 關閉；不改該螢幕記住的設定）</td></tr>
           <tr><td><code>?osk=1</code></td><td>觸控 kiosk 的螢幕小鍵盤（注音、英數、常用目的地）；<code>?osk=0</code> 關閉</td></tr>
@@ -324,6 +327,8 @@
           <tr><td><code>?watch=irkutsk,kinshasa</code></td><td>Outbreak routes on</td></tr>
           <tr><td><code>?layer=mofa</code> · <code>?wx=1</code></td><td>Travel-warning layer · weather layer</td></tr>
           <tr><td><code>?text=xl</code> · <code>?months=6</code></td><td>Fixed text size · panel timeline range</td></tr>
+          <tr><td><code>?lang=en</code></td><td>English on every page (<code>?lang=zh</code> Chinese); the screen’s own choice is not changed</td></tr>
+          <tr><td><code>m.html?role=officer</code></td><td>Quick check opened as quarantine staff (<code>public</code>: traveller)</td></tr>
           <tr><td><code>?full=1</code></td><td>Spotlight “show full details”: the tour opens and scrolls the country panel (<code>?full=0</code> off)</td></tr>
           <tr><td><code>?osk=1</code></td><td>On-screen keyboard for touch kiosks (<code>?osk=0</code> off)</td></tr>
         </tbody>

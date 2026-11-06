@@ -1,6 +1,6 @@
 // help.html: show the Chinese or English block (same key as every other page), theme and language buttons.
 // The content itself is static HTML in help.html — keep both languages in step when features change.
-import { storageGet, storageSet } from './util.js';
+import { storageGet, storageSet, urlLang, syncUrlLang } from './util.js';
 
 // js/boot-guard.js: this module and all its imports loaded and linked (no half-updated cache)
 document.documentElement.dataset.booted = '1';
@@ -34,11 +34,12 @@ document.querySelectorAll('.help table').forEach((table) => {
   });
 });
 
-showLang(storageGet(LANG_KEY) === 'en');
+showLang((urlLang() || (storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant')) === 'en');
 root.classList.remove('i18n-pending');
 document.querySelector('[data-testid="lang-toggle"]').addEventListener('click', () => {
   const en = root.lang !== 'en';
   storageSet(LANG_KEY, en ? 'en' : 'zh-Hant');
+  syncUrlLang(en ? 'en' : 'zh-Hant');
   showLang(en);
 });
 document.querySelector('[data-testid="theme-toggle"]').addEventListener('click', () => {

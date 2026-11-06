@@ -427,6 +427,30 @@ async function run(browser) {
     return `on: ${on} markers; off: no fetch; URL synced`;
   });
 
+  await check('?lang=en pins English over a stored Chinese choice; the language button keeps ?lang in step', async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx.addInitScript(() => { try { localStorage.setItem('safetravel.lang', 'zh-Hant'); } catch {} });
+    const pr = await ctx.newPage();
+    const errs = [];
+    pr.on('pageerror', (e) => errs.push(e.message));
+    const u = new URL(BASE_URL);
+    u.search = '?arr=TPE-ABCD&wx=1&text=m&months=6&full=1&lang=en';
+    await pr.goto(u.href, { waitUntil: 'load' });
+    await pr.waitForFunction(() => document.documentElement.lang === 'en' && !document.documentElement.classList.contains('i18n-pending'), null, { timeout: 15000 });
+    await pr.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    const title = await pr.title();
+    const stored = await pr.evaluate(() => localStorage.getItem('safetravel.lang'));
+    await pr.click('[data-testid="lang-toggle"]');
+    await pr.waitForFunction(() => document.documentElement.lang === 'zh-Hant', null, { timeout: 5000 });
+    const search = await pr.evaluate(() => location.search);
+    await ctx.close();
+    if (!/Radar/.test(title)) throw new Error(`title ${title}`);
+    if (stored !== 'zh-Hant') throw new Error(`?lang must not be stored (${stored})`);
+    if (!/[?&]lang=zh(&|$)/.test(search)) throw new Error(`URL after toggle ${search}`);
+    if (errs.length) throw new Error(errs[0]);
+    return `${title}; after toggle ${search}`;
+  });
+
   await check('search finds airports and cities (NRT, 成田, 曼谷 → BKK) and opens their country', async () => {
     const pr = await context.newPage();
     const errs = [];

@@ -3,7 +3,7 @@
 // levels) and countries.json (names) besides data/arrivals.json. A row opens the destination card on trip.html.
 import { state } from './state.js';
 import { setLang, t, applyStatic, bindData, getLang } from './i18n.js';
-import { $, storageGet, storageSet } from './util.js';
+import { $, storageGet, storageSet, urlLang, syncUrlLang } from './util.js';
 import { bindTextSize } from './textsize.js';
 import { startClock } from './hud.js';
 import { createArrivals } from './arrivals.js';
@@ -30,7 +30,7 @@ function applyTheme(theme) {
 }
 
 async function main() {
-  setLang(storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant');
+  setLang(urlLang() || (storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant'));
   bindData(state.data);
   applyStatic();
   document.title = `${t('board_title')} · SafeTravel TW`;
@@ -62,6 +62,7 @@ async function main() {
   $('[data-testid="lang-toggle"]').addEventListener('click', () => {
     setLang(getLang() === 'en' ? 'zh-Hant' : 'en');
     storageSet(LANG_KEY, getLang() === 'en' ? 'en' : 'zh-Hant');
+    syncUrlLang(getLang());
     applyStatic();
     document.title = `${t('board_title')} · SafeTravel TW`;
     applyTheme(document.documentElement.dataset.theme);

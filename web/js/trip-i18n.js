@@ -1,7 +1,7 @@
 // trip.html i18n: dictionary lookup plus level / name helpers for both rating systems.
 import zh from '../i18n/trip-zh-Hant.js';
 import en from '../i18n/trip-en.js';
-import { storageGet, storageSet, clean } from './util.js';
+import { storageGet, storageSet, clean, urlLang, syncUrlLang } from './util.js';
 
 const DICTS = { 'zh-Hant': zh, en };
 const LANG_KEY = 'safetravel.lang'; // shared with the main radar page
@@ -11,13 +11,13 @@ let cdcLevels = null;  // alerts.json "levels"
 let diseases = null;   // alerts.json "diseases"
 
 export function initLang() {
-  return setLang(storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant', false);
+  return setLang(urlLang() || (storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant'), false);
 }
 export function setLang(l, persist = true) {
   lang = l === 'en' ? 'en' : 'zh-Hant';
   document.documentElement.lang = lang;
   document.title = t('doc_title');
-  if (persist) storageSet(LANG_KEY, lang);
+  if (persist) { storageSet(LANG_KEY, lang); syncUrlLang(lang); }
   return lang;
 }
 export const getLang = () => lang;

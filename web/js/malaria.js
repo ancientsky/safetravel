@@ -2,7 +2,7 @@
 // malaria prophylaxis (Taiwan CDC's own wording per country, data/malaria.json), which of the three drugs CDC lists
 // can be considered, the dosing schedule, number of doses and tablets, an optional cost, and reminders for Google
 // Calendar / any calendar app (.ics). Nothing typed here is stored or sent anywhere.
-import { storageGet, storageSet, clean } from './util.js';
+import { storageGet, storageSet, clean, urlLang, syncUrlLang } from './util.js';
 import { bindTextSize } from './textsize.js';
 import { createMalariaMap } from './malaria-map.js';
 import zh from '../i18n/malaria-zh-Hant.js';
@@ -18,7 +18,7 @@ const LANG_KEY = 'safetravel.lang';
 const THEME_KEY = 'safetravel.trip.theme';
 const root = document.documentElement;
 const $ = (s, el = document) => el.querySelector(s);
-let lang = storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant';
+let lang = urlLang() || (storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant');
 const isEn = () => lang === 'en';
 
 function t(key, p = {}) {
@@ -481,6 +481,7 @@ const textSize = bindTextSize($('[data-testid="textsize-toggle"]'), { t });
 $('.lang-toggle').addEventListener('click', () => {
   lang = isEn() ? 'zh-Hant' : 'en';
   storageSet(LANG_KEY, lang);
+  syncUrlLang(lang);
   applyStatic();
   textSize.refresh();
   renderLegs();

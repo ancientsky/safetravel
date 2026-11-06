@@ -9,7 +9,7 @@ import {
   setLang, getLang, isEn, t, applyStatic, bindData, countryName, countryAltName, diseaseName, levelShort, levelFull,
   levelInstruction, badge, wbadge, wLevelFull, fmtDay, pick,
 } from './i18n.js';
-import { $, esc, storageGet, storageSet, safeUrl, levelNum, truncate } from './util.js';
+import { $, esc, storageGet, storageSet, safeUrl, levelNum, truncate, urlLang, syncUrlLang } from './util.js';
 import { loadPlaces, findPlaces, placeName } from './places.js';
 import { bindTextSize } from './textsize.js';
 import { bestTime, flightKey } from './arrivals.js';
@@ -391,7 +391,7 @@ function applyTheme(theme) {
 }
 
 async function main() {
-  setLang(storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant');
+  setLang(urlLang() || (storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant'));
   bindData(state.data);
   applyStatic();
   document.documentElement.classList.remove('i18n-pending');
@@ -465,6 +465,7 @@ async function main() {
   $('[data-testid="lang-toggle"]').addEventListener('click', () => {
     setLang(getLang() === 'en' ? 'zh-Hant' : 'en');
     storageSet(LANG_KEY, getLang() === 'en' ? 'en' : 'zh-Hant');
+    syncUrlLang(getLang());
     applyStatic();
     applyTheme(document.documentElement.dataset.theme);
     textSize.refresh();

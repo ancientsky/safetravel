@@ -114,3 +114,22 @@ export function levelNum(level) {
 export function finiteNum(v, fallback = 0) {
   return Number.isFinite(+v) ? +v : fallback;
 }
+
+/** ?lang=en | ?lang=zh in the address: 'en' / 'zh-Hant', or null. Pins the language for this visit (not stored). */
+export function urlLang() {
+  let v = '';
+  try { v = (new URLSearchParams(location.search).get('lang') || '').toLowerCase(); } catch { return null; }
+  if (v === 'en') return 'en';
+  if (v === 'zh' || v === 'zh-hant' || v === 'zh-tw') return 'zh-Hant';
+  return null;
+}
+
+/** After the language button: keep a ?lang= in the address in step, so a reload (kiosks) keeps the new choice. */
+export function syncUrlLang(lang) {
+  try {
+    const u = new URL(location.href);
+    if (!u.searchParams.has('lang')) return;
+    u.searchParams.set('lang', lang === 'en' ? 'en' : 'zh');
+    history.replaceState(history.state, '', u);
+  } catch { /* ignore */ }
+}
