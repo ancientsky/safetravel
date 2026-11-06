@@ -7,8 +7,16 @@
 // search box's content in one tap. Keys type into the focused text / search field and fire the same `input` events
 // and Enter keydown as a hardware keyboard, so the page's own search code needs no change.
 // Zhuyin dictionary: vendor/zhuyin.json (scripts/build-zhuyin.py, McBopomofo data, MIT), fetched on first use.
+//
+// Kiosk reset: the first page opened with ?osk=1 in this browser session is the kiosk's home. Its address and every
+// stored SafeTravel setting (localStorage safetravel.*) are kept in sessionStorage. A small ↻ button bottom left
+// (tap, then tap again within 4 s) puts the stored settings back exactly as they were and opens the home address,
+// so whatever visitors dragged, collapsed, switched or opened is undone.
 
 const STORE = 'safetravel.osk';
+const HOME = 'safetravel.kiosk.home'; // sessionStorage: { url, ls: { key: value } }
+const PREFIX = 'safetravel.';
+const KEEP = new Set([STORE, 'safetravel.recover']); // session flags, never part of the snapshot
 const DICT_URL = 'vendor/zhuyin.json';
 
 const INITIALS = 'ㄅㄆㄇㄈㄉㄊㄋㄌㄍㄎㄏㄐㄑㄒㄓㄔㄕㄖㄗㄘㄙ';
@@ -40,11 +48,13 @@ const TEXT = {
     abc: 'ABC', zhuyin: '注音', space: '空白', tone1: '一聲', clear: '清除', enter: '確定', hide: '收起',
     words: '常用', loading: '載入字典中…', none: '沒有這個音，請修改注音', hint: '輸入注音，再按聲調或空白（一聲）',
     failed: '字典載入失敗', bksp: '刪除', label: '螢幕鍵盤',
+    reset: '重設畫面', resetAgain: '再按一次：重設畫面', resetLabel: '重設畫面：回到開機時的頁面與設定',
   },
   en: {
     abc: 'ABC', zhuyin: '注音', space: 'space', tone1: 'tone 1', clear: 'Clear', enter: 'Enter', hide: 'Hide',
     words: 'Popular', loading: 'Loading dictionary…', none: 'No such syllable', hint: 'Type Zhuyin, then a tone key or space',
     failed: 'Dictionary failed to load', bksp: 'Delete', label: 'On-screen keyboard',
+    reset: 'Reset', resetAgain: 'Tap again to reset', resetLabel: 'Reset the screen to its start page and settings',
   },
 };
 
@@ -56,6 +66,38 @@ function enabled() {
     return q === '1';
   }
   try { return sessionStorage.getItem(STORE) === '1'; } catch (e) { return false; }
+}
+
+// ---------------------------------------------------------------- kiosk home snapshot / reset
+function lsKeys() {
+  const out = [];
+  try {
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(PREFIX) && !KEEP.has(k)) out.push(k);
+    }
+  } catch (e) { /* storage blocked */ }
+  return out;
+}
+function rememberHome() {
+  try {
+    if (sessionStorage.getItem(HOME)) return;
+    const ls = {};
+    for (const k of lsKeys()) ls[k] = localStorage.getItem(k);
+    sessionStorage.setItem(HOME, JSON.stringify({ url: location.href, ls }));
+  } catch (e) { /* storage blocked: the button still reloads */ }
+}
+export function resetKiosk() {
+  let home = null;
+  try { home = JSON.parse(sessionStorage.getItem(HOME) || 'null'); } catch (e) { home = null; }
+  try {
+    if (home && home.ls) {
+      for (const k of lsKeys()) if (!(k in home.ls)) localStorage.removeItem(k);
+      for (const [k, v] of Object.entries(home.ls)) localStorage.setItem(k, v);
+    }
+  } catch (e) { /* ignore */ }
+  const url = home && typeof home.url === 'string' && home.url.startsWith(location.origin) ? home.url : location.href;
+  location.replace(url);
 }
 
 const EDITABLE = new Set(['text', 'search', 'url', 'email', 'tel', '']);
@@ -82,6 +124,34 @@ function init() {
   let note = '';              // message in the candidate bar
   let dict = null;
   let dictLoading = null;
+
+  // kiosk reset: tap once to arm (the label appears), again within 4 s to reset
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.className = 'osk-reset';
+  reset.dataset.testid = 'kiosk-reset';
+  const resetIcon = document.createElement('span');
+  resetIcon.className = 'osk-reset-i';
+  resetIcon.setAttribute('aria-hidden', 'true');
+  resetIcon.textContent = '↻';
+  const resetText = document.createElement('span');
+  resetText.className = 'osk-reset-t';
+  reset.append(resetIcon, resetText);
+  let armed = 0;
+  const relabel = () => {
+    resetText.textContent = armed ? tx('resetAgain') : '';
+    reset.setAttribute('aria-label', armed ? tx('resetAgain') : tx('resetLabel'));
+    reset.title = tx('resetLabel');
+    reset.classList.toggle('armed', !!armed);
+  };
+  reset.addEventListener('pointerdown', (e) => e.preventDefault()); // keep focus (and the keyboard) where it is
+  reset.addEventListener('click', () => {
+    if (armed) { clearTimeout(armed); armed = 0; resetKiosk(); return; }
+    armed = setTimeout(() => { armed = 0; relabel(); }, 4000);
+    relabel();
+  });
+  relabel();
+  document.body.appendChild(reset);
 
   const root = document.createElement('div');
   root.className = 'osk';
@@ -300,11 +370,12 @@ function init() {
     setTimeout(() => { if (!editable(document.activeElement)) hide(); }, 0);
   });
   // the language toggle re-labels the keys
-  new MutationObserver(() => { if (!root.hidden) render(); })
+  new MutationObserver(() => { relabel(); if (!root.hidden) render(); })
     .observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 }
 
 if (enabled()) {
+  rememberHome();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
 }

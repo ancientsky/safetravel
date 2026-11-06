@@ -94,3 +94,20 @@ html[data-theme="light"] .osk {
 @media (prefers-reduced-motion: no-preference) {
   .osk button { transition: background-color .08s, color .08s; }
 }
+
+/* kiosk reset (osk.js): small button in the bottom-left corner (over the source line), tap twice to go back to the
+   start page and settings; above the tab bar on m.html, hidden while the keyboard is open */
+.osk-reset {
+  position: fixed; left: 6px; bottom: 6px; z-index: 2147483000;
+  display: inline-flex; align-items: center; gap: 8px; min-width: 44px; height: 44px; padding: 0 11px;
+  border-radius: 22px; border: 1px solid rgba(255, 255, 255, .35); cursor: pointer;
+  background: rgba(20, 28, 24, .62); color: #fff; font: 700 16px/1 system-ui, -apple-system, "Segoe UI", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  opacity: .7; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.osk-reset:hover, .osk-reset:focus-visible { opacity: 1; }
+.osk-reset-i { font-size: 22px; line-height: 1; }
+.osk-reset-t:empty { display: none; }
+.osk-reset.armed { opacity: 1; background: #c4161c; border-color: #c4161c; }
+body:has(.m-tabs) .osk-reset { bottom: 84px; }
+.osk-open .osk-reset { display: none; }
+@media print { .osk-reset { display: none !important; } }

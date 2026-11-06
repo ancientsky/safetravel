@@ -451,6 +451,40 @@ async function run(browser) {
     return `${title}; after toggle ${search}`;
   });
 
+  await check('kiosk reset (?osk=1): two taps restore the start page and the stored settings', async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const pr = await ctx.newPage();
+    const errs = [];
+    pr.on('pageerror', (e) => errs.push(e.message));
+    const home = new URL(BASE_URL);
+    home.search = '?osk=1&lang=en&text=m';
+    await pr.goto(home.href, { waitUntil: 'load' });
+    await pr.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    await pr.waitForSelector('[data-testid="kiosk-reset"]', { timeout: 10000 });
+    const before = await pr.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('safetravel.') && k !== 'safetravel.osk').map((k) => [k, localStorage.getItem(k)])));
+    // a visitor changes things and wanders off to another page
+    await pr.evaluate(() => {
+      localStorage.setItem('safetravel.layer', 'mofa');
+      localStorage.setItem('safetravel.panel.pos', '{"landscape":{"x":40,"y":40,"w":500,"h":500}}');
+      localStorage.setItem('safetravel.textSize', 'xl');
+    });
+    await pr.goto(new URL('trip.html', BASE_URL).href, { waitUntil: 'load' });
+    await pr.waitForSelector('[data-testid="kiosk-reset"]', { timeout: 10000 });
+    await pr.click('[data-testid="kiosk-reset"]');
+    const armed = await pr.$eval('[data-testid="kiosk-reset"]', (b) => b.classList.contains('armed') && b.textContent.trim());
+    if (!armed) throw new Error('first tap did not arm the button');
+    await Promise.all([pr.waitForNavigation({ timeout: 15000 }), pr.click('[data-testid="kiosk-reset"]')]);
+    const after = await pr.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('safetravel.') && k !== 'safetravel.osk').map((k) => [k, localStorage.getItem(k)])));
+    const url = pr.url();
+    await ctx.close();
+    if (url !== home.href) throw new Error(`back at ${url}, expected ${home.href}`);
+    for (const k of ['safetravel.layer', 'safetravel.panel.pos', 'safetravel.textSize']) {
+      if (after[k] !== before[k]) throw new Error(`${k} = ${after[k]} (start: ${before[k]})`);
+    }
+    if (errs.length) throw new Error(errs[0]);
+    return `armed: “${armed}”; back at the start page, settings restored`;
+  });
+
   await check('search finds airports and cities (NRT, 成田, 曼谷 → BKK) and opens their country', async () => {
     const pr = await context.newPage();
     const errs = [];
