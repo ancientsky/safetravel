@@ -12,7 +12,7 @@ import {
 import { $, esc, storageGet, storageSet, safeUrl, levelNum, truncate, urlLang, syncUrlLang } from './util.js';
 import { loadPlaces, findPlaces, placeName } from './places.js';
 import { bindTextSize } from './textsize.js';
-import { bestTime, flightKey } from './arrivals.js';
+import { bestTime, flightKey, inCheckpoints } from './arrivals.js';
 import { autoReload } from './autoreload.js';
 
 // js/boot-guard.js: this module and all its imports loaded and linked (no half-updated cache)
@@ -34,7 +34,7 @@ const ISO2 = /^[A-Z]{2}$/;
 
 const app = {
   role: null, view: 'home', iso: '', hotFlight: '', results: [], active: -1,
-  fcfg: { airport: 'TPE', win: 60, risk: false },
+  fcfg: { airport: 'TPE', win: 60, risk: false, cps: [] }, // cps: chosen quarantine checkpoints (none = all)
 };
 
 // ---------------------------------------------------------------- data (each file fetched at most once)
@@ -112,9 +112,20 @@ function newsItem(it) {
 }
 
 // ---------------------------------------------------------------- flights helpers (officer)
-function airportFlights(code = app.fcfg.airport) {
-  return (arrivals?.flights || []).filter((f) => f.airport === code && Number.isFinite(bestTime(f)));
+const checkpointsOf = (code) => (Array.isArray(arrivals?.airports?.[code]?.checkpoints) ? arrivals.airports[code].checkpoints : []);
+/** The chosen checkpoints that exist at this airport (a choice made at TPE does not apply at KHH). */
+function chosenCps(code = app.fcfg.airport) {
+  const ids = new Set(checkpointsOf(code).map((c) => c.id));
+  return code === app.fcfg.airport ? (app.fcfg.cps || []).filter((id) => ids.has(id)) : [];
 }
+function airportFlights(code = app.fcfg.airport) {
+  const cps = chosenCps(code);
+  const all = checkpointsOf(code);
+  return (arrivals?.flights || []).filter((f) => f.airport === code && Number.isFinite(bestTime(f)) && inCheckpoints(f, cps, all));
+}
+/** "A · B" style label of the chosen checkpoints, or '' for all. */
+const cpText = (code) => chosenCps(code).join('·');
+const saveFcfg = () => storageSet(FCFG_KEY, JSON.stringify(app.fcfg));
 function windowed(list, now, win = app.fcfg.win, risk = app.fcfg.risk) {
   const rows = list.filter((f) => (!win || Math.abs(bestTime(f) - now) <= win * 60000) && (!risk || levelOf(f.country) >= 2));
   const up = rows.filter((f) => f.status !== 'arrived' && bestTime(f) >= now).sort((a, b) => bestTime(a) - bestTime(b));
@@ -140,7 +151,8 @@ function renderHome() {
       body = up.length ? `<ol class="f-list">${up.slice(0, 6).map((f) => flightRow(f, now)).join('')}</ol>`
         : `<p class="m-empty">${esc(arrivals.failed ? t('arr_error') : t('m_no_risky'))}</p>`;
     }
-    parts.push(sec(t('m_sec_risky'), body, { sub: t('m_sec_risky_sub'), more: `<button type="button" class="m-link-btn more" data-go="flights">${esc(t('m_all_flights'))} →</button>` }));
+    const cp = cpText('TPE');
+    parts.push(sec(t('m_sec_risky'), body, { sub: cp ? t('m_sec_risky_sub_cp', { cp }) : t('m_sec_risky_sub'), more: `<button type="button" class="m-link-btn more" data-go="flights">${esc(t('m_all_flights'))} →</button>` }));
   } else {
     parts.push(sec(t('m_sec_popular'), `<div class="m-chips">${POPULAR.filter((iso) => c[iso] || state.data.countries?.[iso]).map((iso) => chip(iso)).join('')}</div>`));
   }
@@ -227,6 +239,9 @@ function renderFlights() {
     const name = a ? (isEn() ? a.name_en : a.name_zh) : code;
     return `<option value="${esc(code)}"${code === app.fcfg.airport ? ' selected' : ''}>${esc(name)} ${esc(code)}</option>`;
   }).join('');
+  const cps = chosenCps();
+  const cpBtns = checkpointsOf(app.fcfg.airport).map((c) => `<button type="button" data-fcp="${esc(c.id)}" aria-pressed="${cps.includes(c.id)}" aria-label="${esc(t('arr_cp_aria', { id: c.id, term: c.terminal }))}">${esc(t('arr_cp_label', { id: c.id, term: c.terminal }))}</button>`).join('');
+  const cpRow = cpBtns ? `<div class="seg f-cps" role="group" aria-label="${esc(t('m_cp_label'))}" data-testid="m-checkpoints"><button type="button" data-fcp="" aria-pressed="${!cps.length}">${esc(t('arr_cp_all'))}</button>${cpBtns}</div>` : '';
   const list = (rows) => (rows.length ? `<ol class="f-list">${rows.map((f) => flightRow(f, now)).join('')}</ol>` : `<p class="m-empty">${esc(app.fcfg.risk ? t('arr_empty_risk') : t('arr_empty'))}</p>`);
   const winText = (dir) => (app.fcfg.win ? t(`arr_window_${dir}`, { n: app.fcfg.win }) : t(`arr_window_${dir}_all`));
   node.innerHTML = `
@@ -235,8 +250,10 @@ function renderFlights() {
       <div class="seg" role="group" aria-label="${esc(t('arr_win_label'))}">${WINDOWS.map((w) => `<button type="button" data-fwin="${w}" aria-pressed="${app.fcfg.win === w}">${
         esc(w ? t('arr_win_btn', { n: w }) : t('arr_win_all'))}</button>`).join('')}</div>
       <button type="button" class="f-risk" data-frisk aria-pressed="${app.fcfg.risk}">${esc(app.fcfg.risk ? t('arr_risk_on', { n: nRisk }) : t('arr_risk', { n: nRisk }))}</button>
+      ${cpRow}
     </div>
-    <p class="f-stamp${ago != null && ago > 25 ? ' is-stale' : ''}">${ago == null ? '' : esc(t('m_updated', { n: ago }))} · <a href="arrivals.html?arr=${esc(app.fcfg.airport)}&amp;win=${app.fcfg.win || 'all'}">${esc(t('m_full_board'))} ↗</a></p>
+    ${cps.length ? `<p class="f-cpnote">${esc(t('m_cp_note'))}</p>` : ''}
+    <p class="f-stamp${ago != null && ago > 25 ? ' is-stale' : ''}">${ago == null ? '' : esc(t('m_updated', { n: ago }))} · <a href="arrivals.html?arr=${esc(app.fcfg.airport)}${cps.length ? `-${esc(cps.join(''))}` : ''}&amp;win=${app.fcfg.win || 'all'}">${esc(t('m_full_board'))} ↗</a></p>
     <h3 class="f-head">${esc(t('arr_upcoming'))} · ${esc(winText('next'))} · ${up.length}</h3>${list(up)}
     <h3 class="f-head">${esc(t('arr_arrived'))} · ${esc(winText('past'))} · ${past.length}</h3>${list(past)}`;
 }
@@ -398,6 +415,8 @@ async function main() {
   applyTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
   const textSize = bindTextSize($('[data-testid="textsize-toggle"]'), { t });
   try { Object.assign(app.fcfg, JSON.parse(storageGet(FCFG_KEY) || '{}')); } catch { /* ignore */ }
+  if (!Array.isArray(app.fcfg.cps)) app.fcfg.cps = [];
+  app.fcfg.cps = app.fcfg.cps.filter((id) => /^[A-D]$/.test(id));
   if (!WINDOWS.includes(app.fcfg.win)) app.fcfg.win = 60;
 
   const [alerts, countriesJson] = await Promise.all([getJSON('alerts.json').catch(() => null), getJSON('countries.json').catch(() => null)]);
@@ -427,8 +446,19 @@ async function main() {
     const more = e.target.closest('[data-go]');
     if (more) { go(`#/${more.dataset.go}`); return; }
     const w = e.target.closest('[data-fwin]');
-    if (w) { app.fcfg.win = Number(w.dataset.fwin); storageSet(FCFG_KEY, JSON.stringify(app.fcfg)); renderFlights(); return; }
-    if (e.target.closest('[data-frisk]')) { app.fcfg.risk = !app.fcfg.risk; storageSet(FCFG_KEY, JSON.stringify(app.fcfg)); renderFlights(); return; }
+    if (w) { app.fcfg.win = Number(w.dataset.fwin); saveFcfg(); renderFlights(); return; }
+    if (e.target.closest('[data-frisk]')) { app.fcfg.risk = !app.fcfg.risk; saveFcfg(); renderFlights(); return; }
+    const cp = e.target.closest('[data-fcp]');
+    if (cp) { // several checkpoints can be on at once; 「全部」 clears the choice
+      const id = cp.dataset.fcp;
+      const cur = new Set(chosenCps());
+      if (!id) cur.clear(); else if (cur.has(id)) cur.delete(id); else cur.add(id);
+      app.fcfg.cps = [...cur].sort();
+      saveFcfg();
+      renderFlights();
+      $('[data-testid="m-checkpoints"] [aria-pressed="true"]')?.focus({ preventScroll: true });
+      return;
+    }
     const nr = e.target.closest('[data-nrisk]');
     if (nr) { app.newsRisk = nr.dataset.nrisk === '1'; renderNews(); return; }
     if (e.target.closest('a')) return;
@@ -439,7 +469,7 @@ async function main() {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.f-row[data-iso]')) { e.preventDefault(); e.target.click(); }
   });
   $('#m-main').addEventListener('change', (e) => {
-    if (e.target.matches('[data-fairport]')) { app.fcfg.airport = e.target.value; storageSet(FCFG_KEY, JSON.stringify(app.fcfg)); renderFlights(); }
+    if (e.target.matches('[data-fairport]')) { app.fcfg.airport = e.target.value; app.fcfg.cps = []; saveFcfg(); renderFlights(); }
   });
 
   const input = $('#m-q');

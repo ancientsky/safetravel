@@ -52,6 +52,16 @@ function fromUrl(standalone) {
 export const flightKey = (s) => String(s || '').normalize('NFKC').toUpperCase().replace(/[^0-9A-Z]/g, '')
   .replace(/^([A-Z][A-Z0-9]|[0-9][A-Z])0+(?=\d)/, '$1');
 
+/**
+ * Does flight f belong to the chosen checkpoints? (no choice = all). A flight without a checkpoint (gate not yet
+ * assigned, remote stand) belongs to every checkpoint of its terminal. Shared by the board and m.html.
+ */
+export function inCheckpoints(f, cps, checkpoints) {
+  if (!cps?.length || !checkpoints?.length) return true;
+  if (f.checkpoint) return cps.includes(f.checkpoint);
+  const terms = checkpoints.filter((c) => cps.includes(c.id)).map((c) => String(c.terminal));
+  return !terms.length || !f.terminal || terms.includes(String(f.terminal));
+}
 export const bestTime = (f) => ts(f.status === 'cancelled' ? f.scheduled : (f.actual || f.estimated || f.scheduled));
 
 /**
@@ -222,12 +232,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
   const airportInfo = () => data?.airports?.[cfg.airport] || null;
   const checkpoints = () => (Array.isArray(airportInfo()?.checkpoints) ? airportInfo().checkpoints : []);
 
-  function matchesCp(f) {
-    if (!cfg.cps.length || !checkpoints().length) return true;
-    if (f.checkpoint) return cfg.cps.includes(f.checkpoint);
-    const terms = checkpoints().filter((c) => cfg.cps.includes(c.id)).map((c) => String(c.terminal));
-    return !terms.length || !f.terminal || terms.includes(String(f.terminal)); // gate TBD: every checkpoint of its terminal
-  }
+  const matchesCp = (f) => inCheckpoints(f, cfg.cps, checkpoints());
 
   // ---------------------------------------------------------------- flight search ("JK202", "jk-202", "JK 0202", "NRT", "東京", "名古屋")
   const placeKey = (s) => String(s || '').normalize('NFKC').toLowerCase().replace(/[\s\-_.]+/g, '');

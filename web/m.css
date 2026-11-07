@@ -161,6 +161,8 @@ button { font: inherit; color: inherit; }
 .seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--card); }
 .seg button { min-height: 34px; padding: 2px 10px; border: 0; border-radius: 999px; background: none; cursor: pointer; font-weight: 600; color: var(--fg-dim); }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.f-cps { flex-wrap: wrap; border-radius: 20px; }
+.f-cpnote { margin: -4px 0 8px; font-size: .82em; color: var(--fg-dim); }
 .f-risk { min-height: 40px; padding: 2px 12px; border: 1px solid var(--lvl2); border-radius: 999px; background: none; color: var(--fg); font-weight: 700; cursor: pointer; }
 .f-risk[aria-pressed="true"] { background: var(--lvl2); color: var(--lvl-fg-2); }
 .f-stamp { font-size: .8em; color: var(--fg-mute); }

@@ -722,6 +722,55 @@ async function run(browser) {
     return 'traveller: 泰國 card; officer: flights tab, BR384 → Vietnam card with the flight highlighted';
   });
 
+  await check('m.html checkpoints: TPE A–D buttons (several at once), gate-TBD flights at every checkpoint of their terminal, choice remembered', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const pm = await ctx.newPage();
+    const errs = [];
+    pm.on('pageerror', (e) => errs.push(e.message));
+    const now = Date.now();
+    const iso = (min) => new Date(now + min * 60000 + 8 * 3600000).toISOString().slice(0, 16) + '+08:00';
+    const fl = (id, terminal, checkpoint, min) => ({ id, airport: 'TPE', flight: `XX ${id}`, airline: 'XX', codeshares: [], from: 'NRT', from_zh: '東京成田', from_en: 'Tokyo Narita',
+      country: 'JP', lat: 35, lon: 140, terminal, gate: checkpoint ? `${checkpoint}1` : '', checkpoint, apron: '', scheduled: iso(min), estimated: iso(min), actual: null,
+      status: 'on_time', status_zh: '準時', status_en: 'ON TIME', aircraft: 'A321' });
+    const doc = {
+      generated_at: iso(0), source: 'tdx', endpoint: 'test', tdx_updated: iso(0), window: { from: iso(-120), to: iso(240) },
+      refresh_minutes: { day: 10, night: 30 }, quota: null,
+      airports: { TPE: { name_zh: '桃園', name_en: 'Taoyuan', lat: 25.08, lon: 121.23, flights: 4, checkpoints: [
+        { id: 'A', terminal: '1' }, { id: 'B', terminal: '1' }, { id: 'C', terminal: '2' }, { id: 'D', terminal: '2' }] } },
+      flights: [fl('1', '1', 'A', 10), fl('2', '2', 'C', 15), fl('3', '2', '', 20), fl('4', '2', 'D', 25)],
+    };
+    await pm.route('**/data/arrivals.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(doc) }));
+    await pm.goto(new URL('m.html?role=officer#/flights', BASE_URL).href, { waitUntil: 'load' });
+    await pm.waitForSelector('[data-testid="m-checkpoints"] [data-fcp="C"]', { timeout: 10000 });
+    const ids = () => pm.$$eval('#view-flights .f-row', (rs) => rs.map((r) => r.dataset.fid).sort().join(''));
+    const all = await ids();
+    const btns = await pm.$$eval('[data-testid="m-checkpoints"] button', (bs) => bs.map((b) => b.textContent.trim()));
+    await pm.tap('[data-fcp="C"]');
+    const c = await ids();
+    await pm.tap('[data-fcp="A"]');
+    const ca = await ids();
+    const href = await pm.getAttribute('#view-flights .f-stamp a', 'href');
+    await pm.reload({ waitUntil: 'load' });
+    await pm.waitForSelector('[data-testid="m-checkpoints"] [data-fcp="C"][aria-pressed="true"]', { timeout: 10000 });
+    const kept = await ids();
+    await pm.goto(new URL('m.html?role=officer#/', BASE_URL).href, { waitUntil: 'load' });
+    await pm.waitForSelector('body[data-ready="1"]', { timeout: 10000 });
+    const sub = await pm.locator('#view-home').textContent();
+    await pm.goto(new URL('m.html?role=officer#/flights', BASE_URL).href, { waitUntil: 'load' });
+    await pm.waitForSelector('[data-testid="m-checkpoints"] [data-fcp=""]', { timeout: 10000 });
+    await pm.tap('[data-fcp=""]');
+    const cleared = await ids();
+    const over = await pm.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    await ctx.close();
+    assert(btns.join('|') === '全部|A · T1|B · T1|C · T2|D · T2', `buttons ${btns}`);
+    assert(all === '1234' && c === '23' && ca === '123' && kept === '123' && cleared === '1234', `all ${all}, C ${c}, C+A ${ca}, after reload ${kept}, all again ${cleared}`);
+    assert(href.includes('arr=TPE-AC'), `board link ${href}`);
+    assert(/檢疫站 A·C/.test(sub), 'home section does not name the checkpoints');
+    assert(over <= 1, `horizontal overflow ${over}px`);
+    assert(!errs.length, errs[0]);
+    return 'C → C + gate-TBD T2; A+C; remembered; home names the checkpoints';
+  });
+
   await check('phone menu: header keeps board + menu, the sheet lists the 5 pages and switches with their state', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const ph = await ctx.newPage();
