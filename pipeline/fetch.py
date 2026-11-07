@@ -210,12 +210,10 @@ def _summarise(recs: list, day: str, name_sources=None) -> tuple[list[dict], str
     return F.aggregate(recs, d, name_sources=name_sources), d
 
 
-HUB_MIN_FLIGHTS = 1  # small airports (Tainan) have a handful of international flights a day
-
-
 def fetch_hubs(s, hdr, names: dict, sv, day: str) -> dict:
     """International routes of the other Taiwan airports (flights.HUBS) from TDX: one all-airports FIDS call, and only
-    if that fails one call per hub. -> {hub: {ok, day, routes, source}}; never raises."""
+    if that fails one call per hub. -> {hub: {ok, day, routes, flights, source}}; never raises. ok = TDX answered for
+    that airport; a day without international flights (Tainan flies some weekdays only) is ok with no routes."""
     out: dict = {}
     payload = None
     try:
@@ -243,8 +241,7 @@ def fetch_hubs(s, hdr, names: dict, sv, day: str) -> dict:
         routes = F.aggregate(recs, d, names=names) if recs else []
         n = sum(x["departures"] + x["arrivals"] for x in routes)
         sv.note(f"hub {hub}: {len(recs)} international flights (all days), {len(routes)} routes / {n} flights on {d}")
-        out[hub] = {"ok": n >= HUB_MIN_FLIGHTS, "day": d, "routes": routes, "source": src.split("?")[0],
-                    "reason": None if n >= HUB_MIN_FLIGHTS else "no international flights in the TDX payload"}
+        out[hub] = {"ok": True, "day": d, "routes": routes, "flights": n, "source": src.split("?")[0], "reason": None}
     return out
 
 

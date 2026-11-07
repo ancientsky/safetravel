@@ -585,11 +585,14 @@ async function main() {
       const isOn = state.hubs.includes(code) && have.has(code);
       const last = isOn && state.hubs.filter((c) => have.has(c)).length === 1;
       const today = todayTaipei()?.toISOString().slice(0, 10);
-      const sub = d ? t('hub_menu_stats', { a: fmtNum(d.totals?.arrivals ?? 0), d: fmtNum(d.totals?.departures ?? 0), date: d.date === today ? '' : fmtDay(d.date, 'short') })
-        : t('hub_menu_none');
+      const dated = d && d.date !== today ? fmtDay(d.date, 'short') : '';
+      const sub = !d ? t('hub_menu_none')
+        : !d.routes.length ? t('hub_menu_zero', { date: dated }) // e.g. Tainan on a day it has no international flights
+          : t('hub_menu_stats', { a: fmtNum(d.totals?.arrivals ?? 0), d: fmtNum(d.totals?.departures ?? 0), date: dated });
+      const can = have.has(code);
       const site = d?.hub?.site && /^https:\/\//.test(d.hub.site) ? d.hub.site : '';
       return `<li class="pm-hub">
-        <button type="button" class="pm-item" role="switch" aria-checked="${isOn}" data-hub="${code}"${d ? '' : ' aria-disabled="true"'}${last ? ` title="${esc(t('hub_menu_last'))}"` : ''}>
+        <button type="button" class="pm-item" role="switch" aria-checked="${isOn}" data-hub="${code}"${can ? '' : ' aria-disabled="true"'}${last ? ` title="${esc(t('hub_menu_last'))}"` : ''}>
           <i class="hub-dot hub-${code.toLowerCase()}" aria-hidden="true"></i>
           <span class="pm-text"><b>${esc(t(`hub_${code}`))} ${code}</b><small>${esc(sub)}</small></span>
           <span class="pm-state${isOn ? ' is-on' : ''}">${esc(t(isOn ? 'menu_on' : 'menu_off'))}</span>
@@ -600,17 +603,18 @@ async function main() {
   }
   /** Switch an airport's routes on or off (and redraw the layer, dots, radar box and legend). */
   function setHub(code, v, { persist = true } = {}) {
-    if (!hubData(code)) return;
+    if (v && !availableHubs().includes(code)) return; // no routes to draw today
     const next = new Set(state.hubs);
     if (v) next.add(code); else next.delete(code);
     const list = HUB_ORDER.filter((c) => next.has(c));
-    if (!list.some((c) => hubData(c))) { toast(t('hub_menu_last')); return; } // keep at least one airport on the map
+    if (!list.some((c) => availableHubs().includes(c))) { toast(t('hub_menu_last')); return; } // keep one airport on the map
     if (list.join() === state.hubs.join()) return;
     state.hubs = list;
     if (persist) storageSet(HUBS_KEY, list.join(','));
     if (v && !state.flightsOn) $('.fh-toggle').click(); // switching an airport on means: show the routes
     flights?.setHubs();
     map.renderDots();
+    map.setHomeLabel();
     renderFlightHud($('#flight-hud'));
     renderLegend(legendNode);
     renderHubMenu();
@@ -629,7 +633,7 @@ async function main() {
   });
   pmBtn.addEventListener('click', renderHubMenu);
   // the arrivals board and the route layer follow each other: picking an airport on the board shows its routes
-  on('arrivals:airport', (code) => { if (hubData(code) && !state.hubs.includes(code)) setHub(code, true); });
+  on('arrivals:airport', (code) => { if (availableHubs().includes(code) && !state.hubs.includes(code)) setHub(code, true); });
   window.__safetravel.hubs = { set: setHub, list: () => [...state.hubs] };
   // a board opened on another airport (?arr=KHH, or restored) shows that airport's routes too, without storing it
   if (arrivals.isOn() && arrivals.airport() !== 'TPE') setHub(arrivals.airport(), true, { persist: false });

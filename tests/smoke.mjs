@@ -786,7 +786,7 @@ async function run(browser) {
       return { hub: { iata: code, name_zh: code, name_en: code, short_zh: code, short_en: code, lat: ap[code].lat, lon: ap[code].lon, site: 'https://example.org/' },
         date: real.date, routes, totals: { departures: n, arrivals: n, destinations: routes.length, unmatched: 0 } };
     };
-    const flights = { ...real, hubs: { TSA: hub('TSA', [['HND', 6], ['GMP', 4]]), KHH: hub('KHH', [['NRT', 4], ['MNL', 2]]) } };
+    const flights = { ...real, hubs: { TSA: hub('TSA', [['HND', 6], ['GMP', 4]]), TNN: hub('TNN', []), KHH: hub('KHH', [['NRT', 4], ['MNL', 2]]) } };
     const now = Date.now();
     const iso = (min) => new Date(now + min * 60000 + 8 * 3600000).toISOString().slice(0, 16) + '+08:00';
     const fl = (id, airport, from, country) => ({ id, airport, flight: `XX ${id}`, airline: 'XX', codeshares: [], from, from_zh: from, from_en: from, country,
@@ -803,12 +803,15 @@ async function run(browser) {
     const ready = () => ph.waitForFunction(() => window.__safetravel?.hubs && document.querySelectorAll('g.dest').length > 0, null, { timeout: 30000 });
     const st = () => ph.evaluate(() => ({ hubs: window.__safetravel.hubs.list().join(), stored: localStorage.getItem('safetravel.hubs'),
       title: document.querySelector('.fh-title').textContent, legend: document.querySelector('#legend').textContent,
+      home: document.querySelector('.home-label').textContent,
       khhDots: [...document.querySelectorAll('g.dest')].filter((g) => g.dataset.hubs.includes('KHH')).map((g) => g.dataset.iata).sort().join() }));
     await ph.goto(BASE_URL, { waitUntil: 'load' });
     await ready();
     const d0 = await st();
     await ph.click('[data-testid="menu-toggle"]');
     const items = await ph.$$eval('[data-testid="menu-hubs"] [data-hub]', (bs) => bs.map((b) => `${b.dataset.hub}:${b.getAttribute('aria-checked')}${b.getAttribute('aria-disabled') ? '-' : ''}`));
+    const tnnText = await ph.textContent('[data-hub="TNN"]');
+    await ph.click('[data-hub="TNN"]', { force: true }); // no flights today: stays off
     await ph.click('[data-hub="KHH"]');
     const d1 = await st();
     await ph.click('[data-hub="TPE"]');
@@ -827,8 +830,10 @@ async function run(browser) {
     await ctx.close();
     assert(d0.hubs === 'TPE' && d0.title === 'TPE 航線雷達' && !d0.khhDots, `default ${JSON.stringify(d0)}`);
     assert(items.join() === 'TPE:true,TSA:false,RMQ:false-,TNN:false-,KHH:false', `menu ${items}`);
+    assert(/今日沒有國際航班/.test(tnnText), `TNN ${tnnText}`);
     assert(d1.hubs === 'TPE,KHH' && d1.stored === 'TPE,KHH' && d1.khhDots === 'MNL,NRT' && /高雄 KHH/.test(d1.legend) && d1.title.includes('KHH'), `KHH on ${JSON.stringify(d1)}`);
-    assert(d2.hubs === 'KHH' && d2.stored === 'KHH', `last one stays ${JSON.stringify(d2)}`);
+    assert(d2.hubs === 'KHH' && d2.stored === 'KHH' && d2.home === '基地 · KHH', `last one stays ${JSON.stringify(d2)}`);
+    assert(d0.home === '基地 · TPE' && d1.home === '基地 · TPE · KHH', `home label ${d0.home} / ${d1.home}`);
     assert(boardAirport === 'TSA' && d3.hubs === 'TSA,KHH', `board TSA ${boardAirport} ${JSON.stringify(d3)}`);
     assert(d4.hubs === 'TPE,TSA,KHH', `board TPE ${JSON.stringify(d4)}`);
     assert(q.hubs === 'KHH' && q.stored === 'TPE,TSA,KHH' && q.title === 'KHH 航線雷達', `?hubs=KHH ${JSON.stringify(q)}`);

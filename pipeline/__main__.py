@@ -31,7 +31,12 @@ def apply_static_fallback(conn) -> bool:
 def _store_flights(conn, res: dict) -> None:
     for hub, h in (res.get("hubs") or {}).items():  # the other Taiwan airports, each on its own
         if h.get("ok"):
-            db.replace_hub_flights_day(conn, hub, h["day"], h["routes"], h["source"], res["fetched_at"])
+            if h["routes"]:
+                db.replace_hub_flights_day(conn, hub, h["day"], h["routes"], h["source"], res["fetched_at"])
+            # the day TDX last answered for this airport, flights or not: a day without international flights must
+            # not show the previous day's routes as if they were today's
+            db.set_source_state(conn, f"flights_{hub}", url=h["source"], fetched_at=res["fetched_at"], date=h["day"],
+                                rows=h.get("flights", 0), ok=1, reason=None)
     if res.get("ok"):
         db.put_airport_names(conn, res.get("airport_names") or {})
         stored = db.replace_flights_day(conn, res["day"], res["routes"], res["source"], res["fetched_at"])

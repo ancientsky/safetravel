@@ -90,7 +90,10 @@ export function createMap({ svgEl, onOpen, getInsets }) {
   const spotCase = spotSvg.querySelector('.spot-case');
   const homePin = fxLayer.querySelector('.fx-homemark');
   const homeLabel = homePin.querySelector('.home-label');
-  homeLabel.textContent = t('home_label');
+  // 「基地 · TPE」: the airports whose routes are on the map (menu → airport routes), Taoyuan by default
+  const homeCodes = () => (activeHubs().length ? activeHubs() : ['TPE']);
+  const setHomeLabel = () => { homeLabel.textContent = t('home_label_hubs', { codes: homeCodes().join(' · ') }); };
+  setHomeLabel();
   const reticle = fxLayer.querySelector('.fx-reticle');
   let reticleSize = 0;
   let homeXY = null;
@@ -335,7 +338,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
       <div class="tip-head">${head}<span class="tip-iso">${esc(d.id.length === 2 ? d.id : '')}</span></div>
       <div class="tip-name">${esc(countryName(d.id))}</div>
       <div class="tip-alt">${esc(countryAltName(d.id))}</div>
-      ${home ? `<div class="tip-row">${esc(t('tooltip_home'))}</div>` : ratingRows(d.id, n, rows)}
+      ${home ? `<div class="tip-row">${esc(t('tooltip_home_hubs', { names: homeCodes().map((c) => `${t(`hub_${c}`)} ${c}`).join(t('list_sep')) }))}</div>` : ratingRows(d.id, n, rows)}
       ${flights.length ? `<div class="tip-row tip-flights">✈ ${esc(t('tooltip_flights', { d: dep, a: arr }))}</div>` : ''}
       ${!home ? `<div class="tip-hint">${esc(t('tooltip_click'))}</div>` : ''}`, ev.clientX, ev.clientY);
     emit('map:hover', d.id);
@@ -605,7 +608,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
 
   function relabel() {
     svg.attr('aria-label', t(mofaMode() ? 'map_label_mofa' : 'map_label'));
-    homeLabel.textContent = t('home_label');
+    setHomeLabel();
     if (countrySel) countrySel.attr('aria-label', labelFor);
   }
 
@@ -636,6 +639,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     applyLayer,
     relabel,
     renderDots,
+    setHomeLabel,
     centroid,
     has: (iso) => byIso.has(iso),
     projection,

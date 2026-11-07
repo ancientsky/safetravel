@@ -46,10 +46,11 @@ export function hubData(code) {
   const h = f.hubs?.[code];
   return h && h.hub && Array.isArray(h.routes) ? { code, hub: h.hub, routes: h.routes, totals: h.totals, date: h.date } : null;
 }
-/** The airports that have data, in map order. */
-export const availableHubs = () => HUB_ORDER.filter((c) => hubData(c));
-/** The switched-on airports that have data, in map order. */
-export const activeHubs = () => HUB_ORDER.filter((c) => state.hubs.includes(c) && hubData(c));
+/** The airports that have routes to draw (a day without international flights has none), in map order. */
+const drawable = (c) => hubData(c)?.routes.length > 0;
+export const availableHubs = () => HUB_ORDER.filter(drawable);
+/** The switched-on airports that have routes, in map order. */
+export const activeHubs = () => HUB_ORDER.filter((c) => state.hubs.includes(c) && drawable(c));
 
 export function levelOf(iso) {
   return levelNum(state.data.alerts?.countries?.[iso]?.max_level); // always 0..3

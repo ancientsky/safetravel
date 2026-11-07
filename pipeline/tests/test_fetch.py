@@ -277,3 +277,23 @@ def test_hub_failures_never_block_taoyuan(loaded):
     export.export_all(loaded)
     f = json.loads((C.web_data() / "flights.json").read_text(encoding="utf-8"))
     assert "hubs" not in f and f["totals"]["destinations"] == 4
+
+
+def test_a_day_without_international_flights_is_shown_as_such_not_as_yesterday(loaded):
+    """Tainan flies some weekdays only: a later day on which TDX answers with no international flights must be exported
+    as that day with no routes, not as the previous day's routes."""
+    route = {"iata": "OKA", "departures": 1, "arrivals": 1, "airlines": ["IT"], "city_en": "Okinawa", "city_zh": "沖繩"}
+    src = "https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport"
+    airports = json.loads((C.web_data() / "airports.json").read_text(encoding="utf-8"))
+    fri = {"ok": False, "hubs": {"TNN": {"ok": True, "day": "2026-10-07", "routes": [route], "flights": 2, "source": src}},
+           "fetched_at": "2026-10-07T11:17:00+08:00"}
+    _store_flights(loaded, fri)
+    assert export.build_hubs(loaded, airports, "2026-10-07")["TNN"]["totals"]["destinations"] == 1
+    sat = {"ok": False, "hubs": {"TNN": {"ok": True, "day": "2026-10-08", "routes": [], "flights": 0, "source": src}},
+           "fetched_at": "2026-10-08T11:17:00+08:00"}
+    _store_flights(loaded, sat)
+    h = export.build_hubs(loaded, airports, "2026-10-08")["TNN"]
+    assert h["date"] == "2026-10-08" and h["routes"] == [] and h["totals"]["arrivals"] == 0
+    failed = {"ok": False, "hubs": {"TNN": {"ok": False, "reason": "HTTP 500"}}, "fetched_at": "2026-10-09T11:17:00+08:00"}
+    _store_flights(loaded, failed)  # a failed fetch changes nothing
+    assert export.build_hubs(loaded, airports, "2026-10-09")["TNN"]["date"] == "2026-10-08"

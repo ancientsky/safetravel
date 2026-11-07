@@ -160,7 +160,9 @@ Rules:
   Taiwan airports) are left out. Source: TDX FIDS — one all-airports call (`/FIDS/Airport`) per update, and a per-airport call
   only for a hub missing from it; the airports' own schedule pages are given as `hub.site`. Stored per hub in
   `hub_flights_daily` (same 60 % shrink guard as Taoyuan). A hub without data, or whose latest day is more than 2 days older
-  than Taoyuan's, is left out. A hub failure never affects Taoyuan.
+  than Taoyuan's, is left out. A hub failure never affects Taoyuan. When TDX answers with no international flights for a
+  hub that day (Tainan flies some weekdays only; recorded in `source_state` `flights_<HUB>`), the hub is exported for that
+  day with `routes: []` instead of an older day's routes; the menu shows 「今日沒有國際航班」.
 - The map draws Taoyuan by default; the menu's 「機場航線」 switches add or remove airports (`?hubs=TPE,KHH` pins them for a kiosk).
 - If fetch fails, the previous day's `flights.json` is kept and `meta.sources.flights.ok=false`.
 

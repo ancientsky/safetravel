@@ -332,15 +332,21 @@ def build_flights(conn, generated_at: str, previous: dict | None):
 
 def build_hubs(conn, airports: dict, tpe_day: str) -> dict:
     """flights.json `hubs`: the international routes of the other Taiwan airports (latest stored day of each, at most
-    2 days older than Taoyuan's), in flights.HUBS order. A hub without data is left out."""
+    2 days older than Taoyuan's), in flights.HUBS order. When TDX last answered with no international flights for an
+    airport (Tainan flies some weekdays only), that day is exported with no routes rather than an older day's.
+    A hub without data is left out."""
     from . import flights as F
     out = {}
     for code, meta in F.HUBS.items():
         day = db.latest_hub_day(conn, code)
+        st = db.get_source_state(conn, f"flights_{code}")
+        empty = bool(st.get("date")) and st["date"] > (day or "") and not st.get("rows")
+        if empty:
+            day = st["date"]
         ap = airports.get(code) or {}
         if not day or ap.get("lat") is None or (date.fromisoformat(tpe_day) - date.fromisoformat(day)).days > 2:
             continue
-        routes, unmatched, src, fetched = [], 0, None, None
+        routes, unmatched, src, fetched = [], 0, (st.get("url") if empty else None), (st.get("fetched_at") if empty else None)
         for r in conn.execute("SELECT * FROM hub_flights_daily WHERE hub=? AND date=? ORDER BY (departures+arrivals) DESC, iata",
                               (code, day)):
             src, fetched = r["source"], r["fetched_at"]
