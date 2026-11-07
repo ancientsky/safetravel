@@ -144,6 +144,9 @@ def build_airports(by_name):
             except ValueError:
                 continue
             out[iata] = {"name": name, "city": city, "country": a2, "lat": lat_f, "lon": lon_f}
+    # airports newer than airports.dat (e.g. TFU Chengdu Tianfu, served from Taichung)
+    extra = json.loads((ROOT / "data/manual/airports_extra.json").read_text(encoding="utf-8"))
+    out.update({k: v for k, v in extra.items() if len(k) == 3 and k.isupper()})
     (OUT / "airports.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"airports.json: {len(out)} airports; unknown countries: {sorted(unknown_countries)}")
 

@@ -1,0 +1,4 @@
+{
+  "_comment": "Airports missing from OpenFlights airports.dat (opened after its last update). Merged by pipeline/build_geo.py into web/data/airports.json; an entry here wins over airports.dat.",
+  "TFU": {"name": "Chengdu Tianfu International Airport", "city": "Chengdu", "country": "CN", "lat": 30.3125, "lon": 104.4447}
+}
