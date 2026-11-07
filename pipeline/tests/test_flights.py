@@ -114,7 +114,7 @@ def test_chinese_names_without_chinese_characters_fall_back_to_the_table():
         {"AirportIATA": "BTH", "AirportName": {"Zh_tw": "Batam", "En": "Hang Nadim Airport"}},
         {"AirportIATA": "NRT", "AirportName": {"Zh_tw": "東京成田國際機場", "En": "Narita International Airport"}},
     ])
-    assert names["FKS"][1] == "" and names["BTH"][1] == "" and names["NRT"][1] == "東京成田"
+    assert names["FKS"] == ("Fukushima", "", "") and names["BTH"][1] == "" and names["NRT"][1] == "東京成田"
     recs = [F.Rec("A", "FKS", "IT753", "IT", "Fukushima / Fukushima", "Fukushima / Fukushima", DAY, "22:27")]
     r = F.aggregate(recs, DAY, names={"FKS": ("Fukushima", "")})
     assert r[0]["city_zh"] == "福島" and r[0]["city_en"] == "Fukushima"

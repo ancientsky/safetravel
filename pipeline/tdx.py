@@ -127,5 +127,8 @@ def parse_airports(obj) -> dict[str, tuple[str, str, str]]:
         nm = r.get("AirportName") if isinstance(r.get("AirportName"), dict) else {}
         zh = F.zh_name(re.sub(r"(國際|國內)?機場$", "", str(nm.get("Zh_tw") or "").strip()).strip())
         en = re.sub(r"\s+(International\s+)?Airport$", "", str(nm.get("En") or "").strip(), flags=re.I)
+        parts = [x.strip() for x in en.split(" / ")]
+        if len(parts) > 1 and len({x.lower() for x in parts}) == 1:
+            en = parts[0]  # "Fukushima / Fukushima" (city / airport with the same name)
         out[iata] = (F.tidy_city(en), F.tidy_city(zh), str(r.get("AirportNationality") or "").upper())
     return out
