@@ -177,7 +177,7 @@ Same structure and id mapping as `world.json` but built from `world-atlas` `coun
 ```json
 { "NRT": { "name": "Narita International Airport", "city": "Tokyo", "country": "JP", "lat": 35.7647, "lon": 140.386 } }
 ```
-From OpenFlights `airports.dat`, IATA-keyed, only airports with a 3-letter IATA code. Country converted to alpha-2 via `world-countries`.
+From OpenFlights `airports.dat`, IATA-keyed, only airports with a 3-letter IATA code. Country converted to alpha-2 via `world-countries`. Airports newer than `airports.dat` (e.g. TFU Chengdu Tianfu) are added from `data/manual/airports_extra.json`, which wins over `airports.dat`; add one there when a route shows up in `totals.unmatched`.
 
 ## `countries.json`
 
