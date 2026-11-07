@@ -105,3 +105,18 @@ def test_static_routes(root):
         pytest.skip("routes.dat not present")
     assert len(routes) > 50 and all(r["departures"] == r["arrivals"] == len(r["airlines"]) or not r["airlines"] for r in routes)
     assert {"NRT", "HKG"} <= {r["iata"] for r in routes}
+
+
+def test_chinese_names_without_chinese_characters_fall_back_to_the_table():
+    """TDX gives no Chinese name for Fukushima and the FIDS row repeats the English one ('Fukushima / Fukushima')."""
+    names = tdx.parse_airports([
+        {"AirportIATA": "FKS", "AirportName": {"En": "Fukushima / Fukushima Airport"}},
+        {"AirportIATA": "BTH", "AirportName": {"Zh_tw": "Batam", "En": "Hang Nadim Airport"}},
+        {"AirportIATA": "NRT", "AirportName": {"Zh_tw": "東京成田國際機場", "En": "Narita International Airport"}},
+    ])
+    assert names["FKS"][1] == "" and names["BTH"][1] == "" and names["NRT"][1] == "東京成田"
+    recs = [F.Rec("A", "FKS", "IT753", "IT", "Fukushima / Fukushima", "Fukushima / Fukushima", DAY, "22:27")]
+    r = F.aggregate(recs, DAY, names={"FKS": ("Fukushima", "")})
+    assert r[0]["city_zh"] == "福島" and r[0]["city_en"] == "Fukushima"
+    assert F.aggregate(recs, DAY, names={"FKS": ("Fukushima", "Fukushima")})[0]["city_zh"] == "福島"  # older cache rows
+    assert F.zh_name("東京(成田)") == "東京(成田)" and F.zh_name("OTBH") == ""

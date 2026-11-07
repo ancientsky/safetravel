@@ -60,7 +60,8 @@ def build_doc(conn, out_dir) -> dict:
         # prefer a name that is not just a country's name (TDX lists OVB Novosibirsk as "俄羅斯"), but keep it when it
         # is the only one: single-airport places really are called that (HKG 香港, MFM 澳門, BAH 巴林)
         extra = [_clean(a) for a in curated.get(code, []) if isinstance(a, str) and _clean(a)]
-        cands = [z for z in (t_zh, _clean(zh_fb.get(code)), route_zh.get(code, "")) if z]
+        # only names with Chinese characters count as Chinese (TDX repeats 'Fukushima / Fukushima', 'Batam', ICAO codes)
+        cands = [z for z in (t_zh, _clean(zh_fb.get(code)), route_zh.get(code, "")) if z and CJK.search(z)]
         zh = next((z for z in cands if z not in country_zh), cands[0] if cands else "")
         zh = zh or next((a for a in extra if CJK.search(a)), "")  # last resort: the curated Chinese name (FKS 福島)
         iso = t_iso or (g.get("country") or "").upper()

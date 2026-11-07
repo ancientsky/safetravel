@@ -125,7 +125,7 @@ def parse_airports(obj) -> dict[str, tuple[str, str, str]]:
         if not re.fullmatch(r"[A-Z]{3}", iata):
             continue
         nm = r.get("AirportName") if isinstance(r.get("AirportName"), dict) else {}
-        zh = re.sub(r"(國際|國內)?機場$", "", str(nm.get("Zh_tw") or "").strip()).strip()
+        zh = F.zh_name(re.sub(r"(國際|國內)?機場$", "", str(nm.get("Zh_tw") or "").strip()).strip())
         en = re.sub(r"\s+(International\s+)?Airport$", "", str(nm.get("En") or "").strip(), flags=re.I)
         out[iata] = (F.tidy_city(en), F.tidy_city(zh), str(r.get("AirportNationality") or "").upper())
     return out

@@ -85,6 +85,15 @@ def tidy_city(s: str) -> str:
     return s
 
 
+_CJK = re.compile(r"[\u3400-\u9fff]")
+
+
+def zh_name(s: str) -> str:
+    """A Chinese place name, or '' when it holds no Chinese characters (TDX sometimes repeats the English name, an
+    ICAO code or 'Fukushima / Fukushima' in its Chinese field); callers then fall back to airport_zh.json."""
+    return s if s and _CJK.search(s) else ""
+
+
 def to_trad(s: str) -> str:
     return _CC.convert(s) if (_CC and s) else s
 
@@ -438,7 +447,7 @@ def aggregate(recs: list[Rec], day: str, zh_fallback: dict | None = None, name_s
         for r in rs:
             if r.city_en:
                 en[r.iata][r.city_en] += 1
-            if r.city_zh:
+            if zh_name(r.city_zh):
                 zh[r.iata][r.city_zh] += 1
     routes = []
     for iata in sorted(set(dep) | set(arr)):
@@ -449,7 +458,7 @@ def aggregate(recs: list[Rec], day: str, zh_fallback: dict | None = None, name_s
             "departures": dep[iata], "arrivals": arr[iata],
             "airlines": [a for a, _ in sorted(al.items(), key=lambda kv: (-kv[1], kv[0]))][:12],
             "city_en": nen or (en[iata].most_common(1)[0][0] if en[iata] else ""),
-            "city_zh": nzh or (to_trad(zh[iata].most_common(1)[0][0]) if zh[iata] else zh_fallback.get(iata, "")),
+            "city_zh": zh_name(nzh) or (to_trad(zh[iata].most_common(1)[0][0]) if zh[iata] else zh_fallback.get(iata, "")),
         })
     routes.sort(key=lambda r: (-(r["departures"] + r["arrivals"]), r["iata"]))
     return routes

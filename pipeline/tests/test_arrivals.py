@@ -506,3 +506,8 @@ def test_validate_rejects_broken_documents(mutate, needle):
 def test_validate_null_coordinates_are_fine():
     doc = parse([row(org="XYZ")])
     assert doc["flights"][0]["lat"] is None and errors_of(doc) == []
+
+
+def test_origin_zh_name_without_chinese_characters_uses_the_table():
+    f = one(row(org="FKS"), names={"FKS": ("Fukushima", "Fukushima")})
+    assert (f["from_zh"], f["from_en"]) == ("福島", "Fukushima")

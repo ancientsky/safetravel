@@ -208,7 +208,7 @@ def parse(obj, airports_country: dict | None, tdx_names: dict | None, now: datet
             "id": f"{dst}|{org}|{sched.strftime('%Y-%m-%dT%H:%M')}",
             "airport": dst,
             "flight": label(main), "airline": airline, "codeshares": codeshares,
-            "from": org, "from_zh": nzh or zh_fallback.get(org) or city or org, "from_en": nen or city or org,
+            "from": org, "from_zh": F.zh_name(nzh) or zh_fallback.get(org) or city or org, "from_en": nen or city or org,
             "country": country_of(org),
             "lat": _coord(geo, org, "lat"), "lon": _coord(geo, org, "lon"),
             "terminal": _str(main.get("Terminal")), "gate": gate, "checkpoint": cp, "apron": _str(main.get("Apron")),
