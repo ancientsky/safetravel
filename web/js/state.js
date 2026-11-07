@@ -16,7 +16,8 @@ export const state = {
   layer: 'cdc', // map colouring: 'cdc' (CDC health advisories) | 'mofa' (MOFA/MAC travel warnings)
   wfilter: new Set(), // travel-warning levels to highlight (MOFA layer); empty = all
   flightsOn: true,
-  flightDir: 'in', // TPE routes: 'in' arrivals only (default) | 'both' directions
+  flightDir: 'in', // routes: 'in' arrivals only (default) | 'both' directions
+  hubs: ['TPE'], // airports whose routes are on the map (menu → airport routes); Taoyuan by default
   legendMin: false, // legend collapsed to its title bar
   legendDockOpen: false, // legend opened by hand while a left-docked arrivals board collapses it
   spotlight: { iso: null, playing: true },
@@ -34,6 +35,21 @@ export function on(type, fn) {
 export function emit(type, detail) {
   bus.dispatchEvent(new CustomEvent(type, { detail }));
 }
+
+// Taiwan airports with a route layer: Taoyuan (flights.json top level) and flights.json `hubs`
+export const HUB_ORDER = ['TPE', 'TSA', 'RMQ', 'TNN', 'KHH'];
+/** { code, hub, routes, totals, date } of one airport, or null when flights.json has nothing for it. */
+export function hubData(code) {
+  const f = state.data.flights;
+  if (!f) return null;
+  if (code === 'TPE') return Array.isArray(f.routes) && f.hub ? { code, hub: f.hub, routes: f.routes, totals: f.totals, date: f.date } : null;
+  const h = f.hubs?.[code];
+  return h && h.hub && Array.isArray(h.routes) ? { code, hub: h.hub, routes: h.routes, totals: h.totals, date: h.date } : null;
+}
+/** The airports that have data, in map order. */
+export const availableHubs = () => HUB_ORDER.filter((c) => hubData(c));
+/** The switched-on airports that have data, in map order. */
+export const activeHubs = () => HUB_ORDER.filter((c) => state.hubs.includes(c) && hubData(c));
 
 export function levelOf(iso) {
   return levelNum(state.data.alerts?.countries?.[iso]?.max_level); // always 0..3

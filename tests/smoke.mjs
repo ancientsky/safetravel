@@ -771,6 +771,71 @@ async function run(browser) {
     return 'C → C + gate-TBD T2; A+C; remembered; home names the checkpoints';
   });
 
+  await check('airport routes: Taoyuan by default; menu switches add 松山/高雄 (stored, at least one stays), ?hubs= pins, the board follows', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1440, height: 900 } });
+    const ph = await ctx.newPage();
+    const errs = [];
+    ph.on('pageerror', (e) => errs.push(e.message));
+    await ph.addInitScript(() => { try { localStorage.setItem('safetravel.spotlight.autoopen', 'off'); } catch (e) { /* ignore */ } });
+    const real = await (await fetch(new URL('data/flights.json', BASE_URL))).json();
+    const ap = await (await fetch(new URL('data/airports.json', BASE_URL))).json();
+    const hub = (code, list) => {
+      const routes = list.map(([iata, n]) => ({ iata, city_en: ap[iata].city, city_zh: ap[iata].city, country: ap[iata].country,
+        lat: ap[iata].lat, lon: ap[iata].lon, departures: n, arrivals: n, airlines: ['XX'] }));
+      const n = routes.reduce((x, r) => x + r.arrivals, 0);
+      return { hub: { iata: code, name_zh: code, name_en: code, short_zh: code, short_en: code, lat: ap[code].lat, lon: ap[code].lon, site: 'https://example.org/' },
+        date: real.date, routes, totals: { departures: n, arrivals: n, destinations: routes.length, unmatched: 0 } };
+    };
+    const flights = { ...real, hubs: { TSA: hub('TSA', [['HND', 6], ['GMP', 4]]), KHH: hub('KHH', [['NRT', 4], ['MNL', 2]]) } };
+    const now = Date.now();
+    const iso = (min) => new Date(now + min * 60000 + 8 * 3600000).toISOString().slice(0, 16) + '+08:00';
+    const fl = (id, airport, from, country) => ({ id, airport, flight: `XX ${id}`, airline: 'XX', codeshares: [], from, from_zh: from, from_en: from, country,
+      lat: ap[from].lat, lon: ap[from].lon, terminal: '1', gate: '', checkpoint: null, apron: '', scheduled: iso(20), estimated: iso(20), actual: null,
+      status: 'on_time', status_zh: '準時', status_en: 'ON TIME', aircraft: 'A321' });
+    const arr = { generated_at: iso(0), source: 'tdx', endpoint: 'test', tdx_updated: iso(0), window: { from: iso(-120), to: iso(240) },
+      refresh_minutes: { day: 10, night: 30 }, quota: null,
+      airports: { TPE: { name_zh: '桃園', name_en: 'Taoyuan', lat: 25.08, lon: 121.23, flights: 1, checkpoints: [] },
+        TSA: { name_zh: '松山', name_en: 'Songshan', lat: 25.07, lon: 121.55, flights: 1, checkpoints: [] },
+        KHH: { name_zh: '高雄', name_en: 'Kaohsiung', lat: 22.58, lon: 120.35, flights: 1, checkpoints: [] } },
+      flights: [fl('1', 'TPE', 'NRT', 'JP'), fl('2', 'TSA', 'HND', 'JP'), fl('3', 'KHH', 'MNL', 'PH')] };
+    await ph.route('**/data/flights.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(flights) }));
+    await ph.route('**/data/arrivals.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(arr) }));
+    const ready = () => ph.waitForFunction(() => window.__safetravel?.hubs && document.querySelectorAll('g.dest').length > 0, null, { timeout: 30000 });
+    const st = () => ph.evaluate(() => ({ hubs: window.__safetravel.hubs.list().join(), stored: localStorage.getItem('safetravel.hubs'),
+      title: document.querySelector('.fh-title').textContent, legend: document.querySelector('#legend').textContent,
+      khhDots: [...document.querySelectorAll('g.dest')].filter((g) => g.dataset.hubs.includes('KHH')).map((g) => g.dataset.iata).sort().join() }));
+    await ph.goto(BASE_URL, { waitUntil: 'load' });
+    await ready();
+    const d0 = await st();
+    await ph.click('[data-testid="menu-toggle"]');
+    const items = await ph.$$eval('[data-testid="menu-hubs"] [data-hub]', (bs) => bs.map((b) => `${b.dataset.hub}:${b.getAttribute('aria-checked')}${b.getAttribute('aria-disabled') ? '-' : ''}`));
+    await ph.click('[data-hub="KHH"]');
+    const d1 = await st();
+    await ph.click('[data-hub="TPE"]');
+    await ph.click('[data-hub="KHH"]'); // the last one: stays on
+    const d2 = await st();
+    await ph.click('[data-hub-board="TSA"]');
+    await ph.waitForFunction(() => !document.querySelector('#arrivals').hidden, null, { timeout: 5000 });
+    const boardAirport = await ph.inputValue('#arrivals .arr-airport');
+    const d3 = await st();
+    await ph.selectOption('#arrivals .arr-airport', 'TPE'); // picking Taoyuan on the board brings its routes back
+    const d4 = await st();
+    await ph.evaluate(() => window.__safetravel.arrivals.setOn(false));
+    await ph.goto(new URL('?hubs=KHH', BASE_URL).href, { waitUntil: 'load' });
+    await ready();
+    const q = await st();
+    await ctx.close();
+    assert(d0.hubs === 'TPE' && d0.title === 'TPE 航線雷達' && !d0.khhDots, `default ${JSON.stringify(d0)}`);
+    assert(items.join() === 'TPE:true,TSA:false,RMQ:false-,TNN:false-,KHH:false', `menu ${items}`);
+    assert(d1.hubs === 'TPE,KHH' && d1.stored === 'TPE,KHH' && d1.khhDots === 'MNL,NRT' && /高雄 KHH/.test(d1.legend) && d1.title.includes('KHH'), `KHH on ${JSON.stringify(d1)}`);
+    assert(d2.hubs === 'KHH' && d2.stored === 'KHH', `last one stays ${JSON.stringify(d2)}`);
+    assert(boardAirport === 'TSA' && d3.hubs === 'TSA,KHH', `board TSA ${boardAirport} ${JSON.stringify(d3)}`);
+    assert(d4.hubs === 'TPE,TSA,KHH', `board TPE ${JSON.stringify(d4)}`);
+    assert(q.hubs === 'KHH' && q.stored === 'TPE,TSA,KHH' && q.title === 'KHH 航線雷達', `?hubs=KHH ${JSON.stringify(q)}`);
+    assert(!errs.length, errs[0]);
+    return 'TPE → +KHH → KHH only → board TSA adds TSA → board TPE adds TPE; ?hubs=KHH not stored';
+  });
+
   await check('phone menu: header keeps board + menu, the sheet lists the 5 pages and switches with their state', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const ph = await ctx.newPage();

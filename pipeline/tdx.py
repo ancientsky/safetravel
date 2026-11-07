@@ -22,6 +22,11 @@ from . import http
 TOKEN_URL = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
 BASE = "https://tdx.transportdata.tw/api/basic/v2/Air"
 FIDS_URL = f"{BASE}/FIDS/Airport/TPE?%24format=JSON"
+FIDS_ALL_URL = f"{BASE}/FIDS/Airport?%24format=JSON"  # every airport in one call: the other hubs (one quota call)
+
+
+def fids_url(iata: str) -> str:
+    return f"{BASE}/FIDS/Airport/{iata}?%24format=JSON"
 AIRPORTS_URL = f"{BASE}/Airport?%24format=JSON"
 CANCEL = re.compile(r"取消|cancel", re.I)
 
@@ -55,8 +60,9 @@ def _val(rec: dict, *names):
     return None
 
 
-def _lists(obj) -> tuple[list[dict], list[dict]]:
-    """(departure rows, arrival rows) from the combined payload, from a bare array, or from a wrapper dict."""
+def _lists(obj, hub: str = "TPE") -> tuple[list[dict], list[dict]]:
+    """(departure rows, arrival rows) from the combined payload, from a bare array, or from a wrapper dict. With the
+    all-airports payload only the `hub` entry is used."""
     dep: list[dict] = []
     arr: list[dict] = []
     items = obj if isinstance(obj, list) else [obj]
@@ -64,10 +70,13 @@ def _lists(obj) -> tuple[list[dict], list[dict]]:
         if not isinstance(it, dict):
             continue
         if "FIDSDeparture" in it or "FIDSArrival" in it:
+            aid = str(it.get("AirportID") or it.get("AirportIATA") or "").upper()
+            if aid and aid != hub:
+                continue
             dep += [r for r in it.get("FIDSDeparture") or [] if isinstance(r, dict)]
             arr += [r for r in it.get("FIDSArrival") or [] if isinstance(r, dict)]
         elif "ScheduleDepartureTime" in it or "ScheduleArrivalTime" in it or "DepartureAirportID" in it:
-            (arr if str(it.get("ArrivalAirportID", "")).upper() == "TPE" and "ScheduleDepartureTime" not in it else dep).append(it)
+            (arr if str(it.get("ArrivalAirportID", "")).upper() == hub and "ScheduleDepartureTime" not in it else dep).append(it)
     return dep, arr
 
 
@@ -76,7 +85,14 @@ def looks_like_fids(obj) -> bool:
     return bool(dep or arr)
 
 
-def _physical(rows: list[dict], d: str) -> list[F.Rec]:
+def airports_in(obj) -> list[str]:
+    """AirportIDs present in a combined (all-airports) FIDS payload."""
+    items = obj if isinstance(obj, list) else [obj]
+    return [str(it.get("AirportID") or "").upper() for it in items
+            if isinstance(it, dict) and ("FIDSDeparture" in it or "FIDSArrival" in it) and it.get("AirportID")]
+
+
+def _physical(rows: list[dict], d: str, hub: str = "TPE") -> list[F.Rec]:
     """Collapse codeshare rows into physical flights. Cargo rows are dropped; a flight whose operating row (the one
     with AcType) is cancelled, or whose rows are all cancelled, is dropped."""
     groups: dict[tuple, list[tuple[dict, bool]]] = {}
@@ -86,8 +102,8 @@ def _physical(rows: list[dict], d: str) -> list[F.Rec]:
         remark = str(_val(r, "DepartureRemark" if d == "D" else "ArrivalRemark", "Remark") or "")
         sched = str(_val(r, "ScheduleDepartureTime" if d == "D" else "ScheduleArrivalTime", "ScheduleTime") or "")
         other = str(_val(r, "ArrivalAirportID" if d == "D" else "DepartureAirportID") or "").upper()
-        own = str(_val(r, "DepartureAirportID" if d == "D" else "ArrivalAirportID") or "TPE").upper()
-        if own != "TPE" or not re.fullmatch(r"[A-Z]{3}", other):
+        own = str(_val(r, "DepartureAirportID" if d == "D" else "ArrivalAirportID") or hub).upper()
+        if own != hub or not re.fullmatch(r"[A-Z]{3}", other):
             continue
         groups.setdefault((sched, other), []).append((r, bool(CANCEL.search(remark))))
     recs = []
@@ -110,9 +126,9 @@ def _physical(rows: list[dict], d: str) -> list[F.Rec]:
     return recs
 
 
-def parse_fids(obj) -> list[F.Rec]:
-    dep, arr = _lists(obj)
-    return _physical(dep, "D") + _physical(arr, "A")
+def parse_fids(obj, hub: str = "TPE") -> list[F.Rec]:
+    dep, arr = _lists(obj, hub)
+    return _physical(dep, "D", hub) + _physical(arr, "A", hub)
 
 
 def parse_airports(obj) -> dict[str, tuple[str, str, str]]:

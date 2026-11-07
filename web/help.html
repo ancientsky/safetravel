@@ -94,7 +94,9 @@
       <h3>焦點輪播</h3>
       <p>右下卡片每 15 秒介紹一個國家。打開「查看完整資訊」會自動開啟國家面板並以閱讀速度自動捲動；面板上方的「精簡資訊」回到卡片。開著國家面板或入境航班看板時，焦點卡片會自動收起讓出畫面（輪播照常進行），兩者都關上後再出現；牆面螢幕想同時看看板與國家資訊，請打開「查看完整資訊」——卡片上的開關，或右上角「選單」→「焦點輪播：查看完整資訊」（卡片收起時也找得到），展示機網址也可加 <code>?full=1</code>。</p>
       <h3>航線雷達</h3>
-      <p>畫出今天桃園機場的航線。預設<b>只看入境</b>（所有線同一顏色），可切到「出入境」，或按「航線 ON／OFF」關閉動畫。入境航班看板停靠在左側時，航線雷達縮成只剩開關、圖例收成標題列（點一下展開），兩者疊在看板旁，讓出地圖空間。</p>
+      <p>畫出今天桃園機場的航線。預設<b>只看入境</b>（所有線同一顏色），可切到「出入境」，或按「航線 ON／OFF」關閉動畫。</p>
+      <p><b>其他機場的航線</b>：右上角「選單」→「機場航線」可打開<b>松山 TSA、臺中 RMQ、臺南 TNN、高雄 KHH</b> 的國際航線（紫、粉紅、藍、金色，可同時開；桃園也可關掉，但至少留一個機場；每台螢幕記住）。每個機場下方有「入境看板 →」（開啟該機場的入境航班看板）與「機場網站 ↗」。在入境航班看板切換機場時，地圖也會打開該機場的航線。圖例與航線雷達框會列出目前畫的機場；滑鼠移到航點上會分機場列出出入境班次。沒有國際航班資料的機場會顯示「目前沒有國際航班資料」。資料來自交通部 TDX 航班動態，每天更新 2 次。</p>
+      <p>入境航班看板停靠在左側時，航線雷達縮成只剩開關、圖例收成標題列（點一下展開），兩者疊在看板旁，讓出地圖空間。</p>
       <h3>疫區航線監測</h3>
       <p>在右上角「選單」按「疫區航線」，打開伊爾庫次克（疑似鼠疫）或金夏沙（本迪布焦病毒伊波拉）開關，地圖顯示該城市的直飛航線網；青色航點為與桃園有直航、旅客可能轉機來臺的城市。開啟時圖例會說明虛線的意思。</p>
       <h3>其他按鈕</h3>
@@ -174,6 +176,7 @@
           <tr><td><code>&amp;win=30</code></td><td>看板時段 <code>30／60／120／all</code></td></tr>
           <tr><td><code>arrivals.html?arr=TPE-C</code></td><td>全螢幕入境航班看板</td></tr>
           <tr><td><code>?routes=both</code></td><td>航線雷達顯示出入境（預設 <code>in</code>）</td></tr>
+          <tr><td><code>?hubs=TPE,KHH</code></td><td>航線雷達畫哪些機場：<code>TPE</code> 桃園、<code>TSA</code> 松山、<code>RMQ</code> 臺中、<code>TNN</code> 臺南、<code>KHH</code> 高雄（預設桃園；不儲存）</td></tr>
           <tr><td><code>?watch=irkutsk,kinshasa</code></td><td>開啟疫區航線</td></tr>
           <tr><td><code>?layer=mofa</code></td><td>以外交部旅遊警示圖層開啟</td></tr>
           <tr><td><code>?wx=1</code></td><td>開啟天氣圖層</td></tr>
@@ -214,7 +217,7 @@
         <thead><tr><th>單位</th><th>提供的資料</th><th>更新</th></tr></thead>
         <tbody>
           <tr><td><a href="https://www.cdc.gov.tw/" target="_blank" rel="noopener">衛福部疾管署</a></td><td>國際旅遊疫情建議等級、國際重要疫情資訊</td><td>每天 11:17、21:17</td></tr>
-          <tr><td><a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener">交通部 TDX</a>・<a href="https://www.taoyuan-airport.com/" target="_blank" rel="noopener">桃園機場</a></td><td>桃園機場當日航線、全台機場入境航班、登機門與行李轉盤</td><td>航線：每天兩次；入境航班：約每 10 分鐘（深夜 30 分鐘）</td></tr>
+          <tr><td><a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener">交通部 TDX</a>・<a href="https://www.taoyuan-airport.com/" target="_blank" rel="noopener">桃園機場</a>・<a href="https://www.tsa.gov.tw/flights/international/regular?id=405402e8-1961-49f3-b2b7-13966e7b65a9&amp;culture=1" target="_blank" rel="noopener">松山</a>・<a href="https://www.tca.gov.tw/?act=fids&amp;code=regular_flight" target="_blank" rel="noopener">臺中</a>・<a href="https://www.tna.gov.tw/FlightSchedule/International" target="_blank" rel="noopener">臺南</a>・<a href="https://www.kia.gov.tw/FLIPLAN.html" target="_blank" rel="noopener">高雄</a>機場</td><td>桃園機場當日航線、松山／臺中／臺南／高雄國際航線、全台機場入境航班、登機門與行李轉盤</td><td>航線：每天兩次；入境航班：約每 10 分鐘（深夜 30 分鐘）</td></tr>
           <tr><td><a href="https://www.boca.gov.tw/sp-trwa-list-1.html" target="_blank" rel="noopener">外交部領事事務局</a></td><td>國外旅遊警示分級與說明</td><td>每天兩次</td></tr>
           <tr><td><a href="https://www.mac.gov.tw/" target="_blank" rel="noopener">陸委會</a></td><td>中國大陸、香港、澳門旅遊警示燈號</td><td>陸委會調整時人工更新</td></tr>
           <tr><td><a href="https://www.cdc.gov.tw/Internationaltravel/Index/ZkNLTkRxQ0NyQmc5Rk50dmZZZlI2Zz09" target="_blank" rel="noopener">衛福部疾管署（旅遊醫學）</a></td><td>國際旅遊處方箋（疫苗、當地疾病、預防與急難資訊）、旅遊醫學合約醫院與門診時段</td><td>開放資料每月；處方箋網頁每次更新檢查數個國家，約 20 天輪一次</td></tr>
@@ -284,7 +287,7 @@
         <li><b>Search</b> countries, cities and airports by Chinese / English name, nickname or IATA code (Bangkok, 名古屋, Nagoya, NRT).</li>
         <li><b>Country panel</b>: both official ratings, every active notice, an AI two-year overview, an outbreak timeline (3 / 6 / 12 / 24 months), the MOFA warning text and local weather. A <b>section bar</b> under the name (Advisories 5, MOFA, AI overview, ✈ Flights, Epidemics 4…) shows each section's count; tap one to scroll there, and the section in view lights up. Countries with direct flights get a <b>Direct flights with Taoyuan</b> section (arrivals / departures and airlines per airport that day) with “Show arrivals from … on the board”, which opens the arrivals board searched for that country. Drag its top (name area or the tour bar) to move it anywhere, resize it from its corner; ▯ docks it back on the right.</li>
         <li><b>Spotlight tour</b>: a country every 15 s; “Show full details” opens and auto-scrolls the panel. The card steps aside while the country panel or the arrivals board is open (the tour keeps running) and returns when both are closed; wall screens that show the board can turn on “Show full details” to keep country info on screen — the switch on the card, or Menu → “Spotlight: show full details” (reachable while the card is hidden), or <code>?full=1</code> in a kiosk link.</li>
-        <li><b>Route radar</b>: today's Taoyuan routes, inbound only by default (“Both ways” adds departures). With the arrivals board docked on the left, the radar shrinks to its switch and the legend to its title bar (tap to open), stacked beside the board.</li>
+        <li><b>Route radar</b>: today's Taoyuan routes, inbound only by default (“Both ways” adds departures). Menu → <b>Airport routes</b> adds the international routes of <b>Songshan TSA, Taichung RMQ, Tainan TNN and Kaohsiung KHH</b> (violet, pink, blue, gold; several at once; Taoyuan can be switched off too, but one airport always stays; remembered per screen), each with “Arrivals board →” and “Airport website ↗”. Picking an airport on the arrivals board switches its routes on as well. Data: MOTC TDX flight boards, updated twice a day. With the arrivals board docked on the left, the radar shrinks to its switch and the legend to its title bar (tap to open), stacked beside the board.</li>
         <li><b>Outbreak routes</b> (in the Menu; a dot on the Menu button while on): the direct-flight networks of Irkutsk (suspected plague) and Kinshasa (Bundibugyo Ebola); cyan stops have direct flights to Taoyuan. The legend explains the dotted lines.</li>
         <li><b>Weather</b>: CWA forecasts for 80 cities with a 7-day selector. <b>Aa</b>: text size 100 / 112 / 125 / 140 % (computers default to 140 %, phones to 112 %). On screens under 900 px tall (laptops, or browser zoom 125 %+) 140 % shows as 125 % and the stat tiles are hidden, so the board and panel fit.</li>
       </ul>
@@ -328,6 +331,7 @@
           <tr><td><code>&amp;big=1</code> · <code>&amp;win=30</code></td><td>Large type · time window <code>30 / 60 / 120 / all</code></td></tr>
           <tr><td><code>arrivals.html?arr=TPE-C</code></td><td>Full-screen arrivals board</td></tr>
           <tr><td><code>?routes=both</code></td><td>Route radar both ways (default <code>in</code>)</td></tr>
+          <tr><td><code>?hubs=TPE,KHH</code></td><td>Which airports' routes the radar draws: <code>TPE</code>, <code>TSA</code>, <code>RMQ</code>, <code>TNN</code>, <code>KHH</code> (default Taoyuan; not stored)</td></tr>
           <tr><td><code>?watch=irkutsk,kinshasa</code></td><td>Outbreak routes on</td></tr>
           <tr><td><code>?layer=mofa</code> · <code>?wx=1</code></td><td>Travel-warning layer · weather layer</td></tr>
           <tr><td><code>?text=xl</code> · <code>?months=6</code></td><td>Fixed text size · panel timeline range</td></tr>
@@ -365,7 +369,7 @@
         <thead><tr><th>Source</th><th>Provides</th><th>Updated</th></tr></thead>
         <tbody>
           <tr><td><a href="https://www.cdc.gov.tw/" target="_blank" rel="noopener">Taiwan CDC</a></td><td>Travel health notice levels, international outbreak digests</td><td>Daily 11:17 and 21:17</td></tr>
-          <tr><td><a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener">MOTC TDX</a> · <a href="https://www.taoyuan-airport.com/" target="_blank" rel="noopener">Taoyuan Airport</a></td><td>Today's Taoyuan routes; inbound flights, gates and carousels at all Taiwan airports</td><td>Routes twice a day; arrivals about every 10 min (30 at night)</td></tr>
+          <tr><td><a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener">MOTC TDX</a> · <a href="https://www.taoyuan-airport.com/" target="_blank" rel="noopener">Taoyuan Airport</a> · <a href="https://www.tsa.gov.tw/flights/international/regular?id=405402e8-1961-49f3-b2b7-13966e7b65a9&amp;culture=1" target="_blank" rel="noopener">Songshan</a> · <a href="https://www.tca.gov.tw/?act=fids&amp;code=regular_flight" target="_blank" rel="noopener">Taichung</a> · <a href="https://www.tna.gov.tw/FlightSchedule/International" target="_blank" rel="noopener">Tainan</a> · <a href="https://www.kia.gov.tw/FLIPLAN.html" target="_blank" rel="noopener">Kaohsiung</a> airports</td><td>Today's routes at Taoyuan, Songshan, Taichung, Tainan and Kaohsiung; inbound flights, gates and carousels at all Taiwan airports</td><td>Routes twice a day; arrivals about every 10 min (30 at night)</td></tr>
           <tr><td><a href="https://www.boca.gov.tw/sp-trwa-list-1.html" target="_blank" rel="noopener">MOFA Bureau of Consular Affairs</a></td><td>Travel warning levels and texts</td><td>Twice a day</td></tr>
           <tr><td><a href="https://www.mac.gov.tw/" target="_blank" rel="noopener">Mainland Affairs Council</a></td><td>Warnings for mainland China, Hong Kong, Macau</td><td>Manually, when MAC changes them</td></tr>
           <tr><td><a href="https://www.cdc.gov.tw/Internationaltravel/Index/ZkNLTkRxQ0NyQmc5Rk50dmZZZlI2Zz09" target="_blank" rel="noopener">Taiwan CDC (travel medicine)</a></td><td>Travel prescription (vaccines, local diseases, prevention, emergency numbers); travel medicine contract hospitals and sessions</td><td>Open data monthly; prescription pages checked a few countries per update, each about every 20 days</td></tr>

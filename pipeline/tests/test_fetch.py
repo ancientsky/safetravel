@@ -219,3 +219,61 @@ def test_do_fetch_survives_cdc_crash(conn, monkeypatch):
     out = do_fetch(conn, "cdc")
     assert not out["cdc"]["alerts"]["ok"] and "kaboom" in out["cdc"]["alerts"]["reason"]
     assert db.get_source_state(conn, "alerts")["ok"] == 0
+
+
+def _fids_row(own, other, d, hhmm, flight, day="2026-10-08"):
+    k = ("Departure", "Arrival") if d == "D" else ("Arrival", "Departure")
+    return {f"{k[0]}AirportID": own, f"{k[1]}AirportID": other, f"Schedule{k[0]}Time": f"{day}T{hhmm}",
+            "AirlineID": flight[:2], "FlightNumber": flight[2:], "AcType": "A321", "FlightDate": day, f"{k[0]}Remark": "準時"}
+
+
+def _hub_payload(hub, rows):
+    return {"AirportID": hub, "FIDSDeparture": [r for d, r in rows if d == "D"], "FIDSArrival": [r for d, r in rows if d == "A"]}
+
+
+@responses.activate
+def test_other_taiwan_airports_from_one_all_airports_call(loaded):
+    """KHH and TSA come from the all-airports payload; RMQ is missing there and is fetched on its own; TNN fails.
+    Domestic routes (KHH-MZG) are left out; the hubs end up in flights.json `hubs` and validate."""
+    _mock_tdx()
+    khh = [("D", _fids_row("KHH", "NRT", "D", "08:00", "CI102")), ("A", _fids_row("KHH", "NRT", "A", "13:00", "CI103")),
+           ("D", _fids_row("KHH", "MZG", "D", "09:00", "AE301")), ("A", _fids_row("KHH", "BKK", "A", "17:00", "TG634"))]
+    tsa = [("D", _fids_row("TSA", "HND", "D", "08:30", "BR192"))]
+    rmq = [("A", _fids_row("RMQ", "HKG", "A", "11:00", "CX564"))]
+    responses.add(responses.GET, tdx.FIDS_ALL_URL, json=[_hub_payload("TPE", []), _hub_payload("KHH", khh), _hub_payload("TSA", tsa)])
+    responses.add(responses.GET, tdx.fids_url("RMQ"), json=[_hub_payload("RMQ", rmq)])
+    responses.add(responses.GET, tdx.fids_url("TNN"), status=404)
+    res = fetch.fetch_flights()
+    assert res["ok"]
+    h = res["hubs"]
+    assert h["KHH"]["ok"] and {r["iata"] for r in h["KHH"]["routes"]} == {"NRT", "BKK"}
+    assert h["TSA"]["ok"] and h["RMQ"]["ok"] and h["RMQ"]["source"].endswith("/FIDS/Airport/RMQ")
+    assert not h["TNN"]["ok"]
+    assert len([c for c in responses.calls if "/FIDS/Airport?" in c.request.url]) == 1
+    _store_flights(loaded, res)
+    export.export_all(loaded)
+    f = json.loads((C.web_data() / "flights.json").read_text(encoding="utf-8"))
+    assert list(f["hubs"]) == ["TSA", "RMQ", "KHH"]  # flights.HUBS order, TNN (no data) left out
+    k = f["hubs"]["KHH"]
+    assert k["hub"]["short_zh"] == "高雄" and k["hub"]["site"].startswith("https://www.kia.gov.tw/")
+    assert k["totals"] == {"departures": 1, "arrivals": 2, "destinations": 2, "unmatched": 0}
+    assert {r["iata"] for r in f["routes"]} == {"HKG", "NRT", "BKK", "SFO"}  # Taoyuan unchanged
+    assert validate.validate_dir(C.web_data()) == []
+    bad = dict(f, hubs={"XXX": k})
+    v = validate.V()
+    validate.check_flights(v, bad)
+    assert any("unknown hub" in e for e in v.errors)
+
+
+@responses.activate
+def test_hub_failures_never_block_taoyuan(loaded):
+    _mock_tdx()
+    responses.add(responses.GET, tdx.FIDS_ALL_URL, body="not json", content_type="application/json")
+    for hub in ("TSA", "RMQ", "TNN", "KHH"):
+        responses.add(responses.GET, tdx.fids_url(hub), status=500)
+    res = fetch.fetch_flights()
+    assert res["ok"] and not any(h["ok"] for h in res["hubs"].values())
+    _store_flights(loaded, res)
+    export.export_all(loaded)
+    f = json.loads((C.web_data() / "flights.json").read_text(encoding="utf-8"))
+    assert "hubs" not in f and f["totals"]["destinations"] == 4

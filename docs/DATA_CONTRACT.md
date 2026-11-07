@@ -140,12 +140,28 @@ Written by `pipeline/export.py` (`recent_epidemics`) next to `epidemics.json`: t
     { "iata": "NRT", "city_en": "Tokyo (Narita)", "city_zh": "東京(成田)", "country": "JP", "lat": 35.7647, "lon": 140.386,
       "departures": 14, "arrivals": 13, "airlines": ["CI", "BR", "JL"] }
   ],
-  "totals": { "departures": 420, "arrivals": 415, "destinations": 98 }
+  "totals": { "departures": 420, "arrivals": 415, "destinations": 98 },
+  "hubs": {
+    "KHH": {
+      "hub": { "iata": "KHH", "name_zh": "高雄國際機場", "name_en": "Kaohsiung International Airport", "short_zh": "高雄",
+               "short_en": "Kaohsiung", "lat": 22.5771, "lon": 120.35, "site": "https://www.kia.gov.tw/FLIPLAN.html" },
+      "date": "2026-10-08", "fetched_at": "...", "source": "https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport",
+      "routes": [ { "iata": "NRT", "...": "same fields as above" } ],
+      "totals": { "departures": 40, "arrivals": 41, "destinations": 18, "unmatched": 0 }
+    }
+  }
 }
 ```
 
 Rules:
 - One entry per airport (IATA). `country` from `airports.json`. Entries lacking coordinates are dropped but counted in `totals.unmatched`.
+- `hubs` (optional): the international routes of the other Taiwan airports with international flights — `TSA` 松山, `RMQ` 臺中,
+  `TNN` 臺南, `KHH` 高雄 (`pipeline/flights.py` `HUBS`), in that order. Same route fields as Taoyuan; domestic routes (to other
+  Taiwan airports) are left out. Source: TDX FIDS — one all-airports call (`/FIDS/Airport`) per update, and a per-airport call
+  only for a hub missing from it; the airports' own schedule pages are given as `hub.site`. Stored per hub in
+  `hub_flights_daily` (same 60 % shrink guard as Taoyuan). A hub without data, or whose latest day is more than 2 days older
+  than Taoyuan's, is left out. A hub failure never affects Taoyuan.
+- The map draws Taoyuan by default; the menu's 「機場航線」 switches add or remove airports (`?hubs=TPE,KHH` pins them for a kiosk).
 - If fetch fails, the previous day's `flights.json` is kept and `meta.sources.flights.ok=false`.
 
 ## `world.json`

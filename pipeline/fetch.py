@@ -210,6 +210,44 @@ def _summarise(recs: list, day: str, name_sources=None) -> tuple[list[dict], str
     return F.aggregate(recs, d, name_sources=name_sources), d
 
 
+HUB_MIN_FLIGHTS = 1  # small airports (Tainan) have a handful of international flights a day
+
+
+def fetch_hubs(s, hdr, names: dict, sv, day: str) -> dict:
+    """International routes of the other Taiwan airports (flights.HUBS) from TDX: one all-airports FIDS call, and only
+    if that fails one call per hub. -> {hub: {ok, day, routes, source}}; never raises."""
+    out: dict = {}
+    payload = None
+    try:
+        r = http.get(tdx.FIDS_ALL_URL, session=s, tries=2, timeout=(10, 120), headers=hdr)
+        sv.save("tdx_fids_all", r.content, "json")
+        payload = r.json()
+        sv.note(f"tdx_fids_all\t{tdx.FIDS_ALL_URL}\t200\t{len(r.content)} bytes\tairports {','.join(tdx.airports_in(payload))}")
+    except (http.HttpError, ValueError) as e:
+        sv.note(f"tdx_fids_all\t{tdx.FIDS_ALL_URL}\tFAILED\t{e}")
+    present = set(tdx.airports_in(payload)) if payload is not None else set()
+    for hub in F.HUBS:
+        src, data = tdx.FIDS_ALL_URL, payload
+        if hub not in present:
+            src = tdx.fids_url(hub)
+            try:
+                r = http.get(src, session=s, tries=2, timeout=(10, 90), headers=hdr)
+                sv.save(f"tdx_fids_{hub.lower()}", r.content, "json")
+                data = r.json()
+            except (http.HttpError, ValueError) as e:
+                sv.note(f"tdx_fids_{hub.lower()}\t{src}\tFAILED\t{e}")
+                out[hub] = {"ok": False, "reason": str(e)}
+                continue
+        recs = [x for x in tdx.parse_fids(data, hub) if x.iata not in F.TW_AIRPORTS]  # international only
+        d = F.choose_day(recs, day) if recs else day
+        routes = F.aggregate(recs, d, names=names) if recs else []
+        n = sum(x["departures"] + x["arrivals"] for x in routes)
+        sv.note(f"hub {hub}: {len(recs)} international flights (all days), {len(routes)} routes / {n} flights on {d}")
+        out[hub] = {"ok": n >= HUB_MIN_FLIGHTS, "day": d, "routes": routes, "source": src.split("?")[0],
+                    "reason": None if n >= HUB_MIN_FLIGHTS else "no international flights in the TDX payload"}
+    return out
+
+
 def fetch_flights(session=None, cached_names: dict | None = None) -> dict:
     """Fetch + save every flight-related response, then parse. Returns
     {ok, reason, warn, day, routes, source, fetched_at, kind, files}. ok=False means nothing usable was found."""
@@ -248,6 +286,10 @@ def fetch_flights(session=None, cached_names: dict | None = None) -> dict:
                 sv.note(f"tdx_airports FAILED {e}")
             d = F.choose_day(recs, day)
             routes = F.aggregate(recs, d, names=names)
+            try:  # the other Taiwan airports: optional, never blocks Taoyuan
+                result["hubs"] = fetch_hubs(s, hdr, names, sv, day)
+            except Exception as e:  # parser bugs must not kill the run
+                sv.note(f"hubs crashed: {type(e).__name__}: {e}")
             if sum(x["departures"] + x["arrivals"] for x in routes) >= MIN_FLIGHTS:
                 missing = [n for k, n in (("D", "departures"), ("A", "arrivals")) if not any(x.direction == k and x.date == d for x in recs)]
                 result.update(ok=True, routes=routes, source=tdx.FIDS_URL.split("?")[0], kind="tdx", day=d,

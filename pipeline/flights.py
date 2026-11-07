@@ -85,6 +85,22 @@ def tidy_city(s: str) -> str:
     return s
 
 
+# Taiwan airports with international flights besides Taoyuan: their routes go to flights.json `hubs`
+# (map menu switches). site = the airport's own schedule page (shown as the source next to TDX).
+HUBS = {
+    "TSA": {"name_zh": "臺北松山機場", "name_en": "Taipei Songshan Airport", "short_zh": "松山", "short_en": "Songshan",
+            "site": "https://www.tsa.gov.tw/flights/international/regular?id=405402e8-1961-49f3-b2b7-13966e7b65a9&culture=1"},
+    "RMQ": {"name_zh": "臺中國際機場", "name_en": "Taichung International Airport", "short_zh": "臺中", "short_en": "Taichung",
+            "site": "https://www.tca.gov.tw/?act=fids&code=regular_flight"},
+    "TNN": {"name_zh": "臺南機場", "name_en": "Tainan Airport", "short_zh": "臺南", "short_en": "Tainan",
+            "site": "https://www.tna.gov.tw/FlightSchedule/International"},
+    "KHH": {"name_zh": "高雄國際機場", "name_en": "Kaohsiung International Airport", "short_zh": "高雄", "short_en": "Kaohsiung",
+            "site": "https://www.kia.gov.tw/FLIPLAN.html"},
+}
+# Taiwan airports (domestic routes from the hubs are left out: the map shows international routes)
+TW_AIRPORTS = frozenset({"TPE", "TSA", "KHH", "RMQ", "TNN", "HUN", "TTT", "MZG", "KNH", "LZN", "MFK", "CYI", "GNI",
+                         "KYD", "WOT", "CMJ"})
+
 _CJK = re.compile(r"[\u3400-\u9fff]")
 
 

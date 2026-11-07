@@ -74,6 +74,11 @@
   --flight-out: #19ff8a;
   --flight-in: #29e7ff;
   --flight-arc: #2bffa0;
+  /* route colours of the other Taiwan airports (menu → airport routes) */
+  --hub-tsa: #b794ff;
+  --hub-rmq: #ff7ac8;
+  --hub-tnn: #6aa8ff;
+  --hub-khh: #ffe27a;
   --scan-opacity: 1;
 }
 
@@ -119,6 +124,10 @@
   --flight-out: #0f7a4c;
   --flight-in: #0b6f8a;
   --flight-arc: #6b5a2a;
+  --hub-tsa: #6d3fd1;
+  --hub-rmq: #c0267d;
+  --hub-tnn: #1f5fc4;
+  --hub-khh: #8a6400;
   --scan-opacity: 0;
 }
 
@@ -309,6 +318,19 @@ a { color: var(--cyan); }
 .dest-dot { fill: var(--flight-out); stroke: var(--bg); stroke-width: .8; }
 .dest-halo { fill: var(--flight-out); fill-opacity: .08; stroke: var(--flight-out); stroke-opacity: .35; stroke-width: .8; transition: fill-opacity .2s; }
 .dest:hover .dest-halo { fill-opacity: .35; stroke-opacity: 1; }
+/* a destination served only by one of the other Taiwan airports takes that airport's colour */
+.dest[data-hubs="TSA"] { --dest-c: var(--hub-tsa); }
+.dest[data-hubs="RMQ"] { --dest-c: var(--hub-rmq); }
+.dest[data-hubs="TNN"] { --dest-c: var(--hub-tnn); }
+.dest[data-hubs="KHH"] { --dest-c: var(--hub-khh); }
+.dest[data-hubs] .dest-dot { fill: var(--dest-c, var(--flight-out)); }
+.dest[data-hubs] .dest-halo { fill: var(--dest-c, var(--flight-out)); stroke: var(--dest-c, var(--flight-out)); }
+.hub-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--home); vertical-align: 0; margin-right: 6px; }
+.hub-dot.hub-tsa { background: var(--hub-tsa); }
+.hub-dot.hub-rmq { background: var(--hub-rmq); }
+.hub-dot.hub-tnn { background: var(--hub-tnn); }
+.hub-dot.hub-khh { background: var(--hub-khh); }
+.tip-hub { margin-top: 8px; font-weight: 700; font-size: calc(12px * var(--ts)); }
 
 /* ---------- overlays ---------- */
 .fx-scanlines, .fx-vignette { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
@@ -545,6 +567,10 @@ a { color: var(--cyan); }
 .swatch-line { height: 2px; width: 16px; border-radius: 2px; }
 .swatch-line.out { background: var(--flight-out); box-shadow: 0 0 6px var(--flight-out); }
 .swatch-line.in { background: var(--flight-in); box-shadow: 0 0 6px var(--flight-in); }
+.swatch-line.hub-tsa { background: var(--hub-tsa); box-shadow: 0 0 6px var(--hub-tsa); }
+.swatch-line.hub-rmq { background: var(--hub-rmq); box-shadow: 0 0 6px var(--hub-rmq); }
+.swatch-line.hub-tnn { background: var(--hub-tnn); box-shadow: 0 0 6px var(--hub-tnn); }
+.swatch-line.hub-khh { background: var(--hub-khh); box-shadow: 0 0 6px var(--hub-khh); }
 /* the legend is the level filter: each level row is a toggle button; the legend collapses to its title bar */
 .legend-head { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; }
 .legend-head .legend-title { margin: 0; flex: 1; }
@@ -1885,6 +1911,11 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
 .pm-state { padding: 2px 10px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: calc(12.5px * var(--ts)); color: var(--fg-dim); white-space: nowrap; }
 .pm-state.is-on { border-color: var(--accent); color: var(--accent); }
 .pm-hot { border-color: var(--accent); background: rgba(var(--accent-rgb), .08); }
+/* airport route switches: colour dot, name + today's counts, on/off; links to the board and the airport's own page */
+.pm-hub .pm-item > .hub-dot { width: 14px; height: 14px; flex: none; margin: 0 5px; box-shadow: 0 0 8px currentColor; }
+.pm-hub .pm-item[aria-disabled="true"] { opacity: .55; cursor: default; }
+.pm-hub-links { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 4px 12px 2px 48px; font-size: calc(12.5px * var(--ts)); }
+.pm-hub-links button, .pm-hub-links a { padding: 0; border: 0; background: none; color: var(--cyan); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .pm-tip { margin: 12px 2px 0; font-size: calc(12px * var(--ts)); color: var(--fg-mute); }
 /* the menu button is on every screen: outbreak routes, sound and the poster page live in it (labelled, with state) */
 .menu-toggle { display: inline-flex; gap: 4px; position: relative; }

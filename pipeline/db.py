@@ -51,6 +51,15 @@ CREATE TABLE IF NOT EXISTS flights_daily (
   PRIMARY KEY (date, iata)
 );
 
+-- international routes of the other Taiwan airports (flights.HUBS): same columns as flights_daily, per hub
+CREATE TABLE IF NOT EXISTS hub_flights_daily (
+  hub TEXT NOT NULL, date TEXT NOT NULL, iata TEXT NOT NULL,
+  departures INTEGER NOT NULL DEFAULT 0, arrivals INTEGER NOT NULL DEFAULT 0,
+  airlines_json TEXT NOT NULL DEFAULT '[]',
+  city_en TEXT, city_zh TEXT, source TEXT, fetched_at TEXT,
+  PRIMARY KEY (hub, date, iata)
+);
+
 CREATE TABLE IF NOT EXISTS disease_names (
   zh TEXT PRIMARY KEY, en TEXT NOT NULL, source TEXT, updated TEXT
 );
@@ -226,6 +235,30 @@ def put_airport_names(conn, names: dict) -> None:
 
 def get_airport_names(conn) -> dict:
     return {r["iata"]: (r["en"] or "", r["zh"] or "") for r in conn.execute("SELECT * FROM airports_tdx")}
+
+
+def replace_hub_flights_day(conn, hub: str, day: str, routes: list[dict], source: str, fetched_at: str) -> bool:
+    """Like replace_flights_day, per hub."""
+    old = conn.execute("SELECT COALESCE(SUM(departures+arrivals),0) FROM hub_flights_daily WHERE hub=? AND date=?",
+                       (hub, day)).fetchone()[0]
+    new = sum(r["departures"] + r["arrivals"] for r in routes)
+    if old and new < 0.6 * old:
+        C.log.warning("flights %s %s: new snapshot (%d flights) much smaller than stored (%d); keeping stored", hub, day, new, old)
+        return False
+    with conn:
+        conn.execute("DELETE FROM hub_flights_daily WHERE hub=? AND date=?", (hub, day))
+        conn.execute("DELETE FROM hub_flights_daily WHERE date < date(?, '-30 days')", (day,))
+        conn.executemany(
+            "INSERT INTO hub_flights_daily(hub,date,iata,departures,arrivals,airlines_json,city_en,city_zh,source,fetched_at)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?)",
+            [(hub, day, r["iata"], r["departures"], r["arrivals"], json.dumps(r.get("airlines", [])),
+              r.get("city_en"), r.get("city_zh"), source, fetched_at) for r in routes])
+    return True
+
+
+def latest_hub_day(conn, hub: str):
+    r = conn.execute("SELECT MAX(date) FROM hub_flights_daily WHERE hub=?", (hub,)).fetchone()
+    return r[0] if r else None
 
 
 def latest_flights_day(conn):

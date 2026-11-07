@@ -287,7 +287,7 @@ def check_epidemic_details(v: V, d: Path, e):
 
 def check_flights(v: V, f):
     w = "flights.json"
-    if not v.keys(w, f, ["date", "fetched_at", "source", "hub", "routes", "totals"]):
+    if not v.keys(w, f, ["date", "fetched_at", "source", "hub", "routes", "totals"], ["hubs"]):
         return
     v.pat(w, f["date"], DATE, "date")
     v.pat(w, f["fetched_at"], TS, "fetched_at")
@@ -298,7 +298,31 @@ def check_flights(v: V, f):
             v.err(w, "hub.iata must be TPE")
         v.typ(w, h["lat"], (int, float), "hub.lat")
         v.typ(w, h["lon"], (int, float), "hub.lon")
-    routes = f["routes"]
+    _check_routes(v, w, f["routes"], f["totals"])
+    hubs = f.get("hubs")
+    if hubs is None:
+        return
+    if not isinstance(hubs, dict):
+        v.err(w, "hubs must be an object")
+        return
+    for code, hb in hubs.items():
+        hw = f"{w}.hubs.{code}"
+        if code not in ("TSA", "RMQ", "TNN", "KHH"):
+            v.err(hw, "unknown hub")
+        if not v.keys(hw, hb, ["hub", "date", "routes", "totals"], ["fetched_at", "source"]):
+            continue
+        v.pat(hw, hb["date"], DATE, "date")
+        if v.keys(hw + ".hub", hb["hub"], ["iata", "name_zh", "name_en", "short_zh", "short_en", "lat", "lon", "site"]):
+            if hb["hub"]["iata"] != code:
+                v.err(hw, "hub.iata must match its key")
+            v.typ(hw, hb["hub"]["lat"], (int, float), "hub.lat")
+            v.typ(hw, hb["hub"]["lon"], (int, float), "hub.lon")
+            if not str(hb["hub"]["site"]).startswith("https://"):
+                v.err(hw, "hub.site must be https")
+        _check_routes(v, hw, hb["routes"], hb["totals"])
+
+
+def _check_routes(v: V, w: str, routes, t):
     if not isinstance(routes, list):
         v.err(w, "routes must be a list")
         return
@@ -329,7 +353,6 @@ def check_flights(v: V, f):
         if isinstance(r["departures"], int) and isinstance(r["arrivals"], int):
             dep += r["departures"]
             arr += r["arrivals"]
-    t = f["totals"]
     if v.keys(w + ".totals", t, ["departures", "arrivals", "destinations"], ["unmatched"]):
         if t["departures"] != dep or t["arrivals"] != arr or t["destinations"] != len(routes):
             v.err(w, f"totals {t} do not match routes ({dep}/{arr}/{len(routes)})")

@@ -316,6 +316,9 @@ def build_flights(conn, generated_at: str, previous: dict | None):
         "totals": {"departures": sum(r["departures"] for r in routes), "arrivals": sum(r["arrivals"] for r in routes),
                    "destinations": len(routes), "unmatched": unmatched},
     }
+    hubs = build_hubs(conn, airports, day)
+    if hubs:
+        out["hubs"] = hubs
     ok = bool(st.get("ok", 1)) if st else True
     reason = st.get("reason")
     if day != C.today().isoformat():
@@ -325,6 +328,39 @@ def build_flights(conn, generated_at: str, previous: dict | None):
     if not ok:
         info["reason"] = reason or "unknown"
     return out, info
+
+
+def build_hubs(conn, airports: dict, tpe_day: str) -> dict:
+    """flights.json `hubs`: the international routes of the other Taiwan airports (latest stored day of each, at most
+    2 days older than Taoyuan's), in flights.HUBS order. A hub without data is left out."""
+    from . import flights as F
+    out = {}
+    for code, meta in F.HUBS.items():
+        day = db.latest_hub_day(conn, code)
+        ap = airports.get(code) or {}
+        if not day or ap.get("lat") is None or (date.fromisoformat(tpe_day) - date.fromisoformat(day)).days > 2:
+            continue
+        routes, unmatched, src, fetched = [], 0, None, None
+        for r in conn.execute("SELECT * FROM hub_flights_daily WHERE hub=? AND date=? ORDER BY (departures+arrivals) DESC, iata",
+                              (code, day)):
+            src, fetched = r["source"], r["fetched_at"]
+            a = airports.get(r["iata"])
+            if not a or a.get("lat") is None or a.get("lon") is None:
+                unmatched += 1
+                continue
+            routes.append({
+                "iata": r["iata"], "city_en": r["city_en"] or a.get("city") or r["iata"],
+                "city_zh": r["city_zh"] or r["city_en"] or a.get("city") or r["iata"],
+                "country": a.get("country", ""), "lat": a["lat"], "lon": a["lon"],
+                "departures": r["departures"], "arrivals": r["arrivals"], "airlines": json.loads(r["airlines_json"] or "[]")})
+        out[code] = {
+            "hub": {"iata": code, "name_zh": meta["name_zh"], "name_en": meta["name_en"], "short_zh": meta["short_zh"],
+                    "short_en": meta["short_en"], "lat": ap["lat"], "lon": ap["lon"], "site": meta["site"]},
+            "date": day, "fetched_at": fetched, "source": src, "routes": routes,
+            "totals": {"departures": sum(r["departures"] for r in routes), "arrivals": sum(r["arrivals"] for r in routes),
+                       "destinations": len(routes), "unmatched": unmatched},
+        }
+    return out
 
 
 # --------------------------------------------------------------------- meta

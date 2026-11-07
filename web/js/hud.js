@@ -1,6 +1,6 @@
 // Header HUD (clock, stat tiles, freshness), legend, and flight HUD.
 import {
-  state, levelOf, warnLevel, warnPartial, mofaMode,
+  state, levelOf, warnLevel, warnPartial, mofaMode, activeHubs, hubData,
 } from './state.js';
 import {
   t, fmtNum, fmtDateTime, fmtRelative, fmtDay, levelShort, getLang, wLevelShort,
@@ -123,11 +123,16 @@ export function setLegendWatch(fn) { legendWatch = fn; }
 function flightLegend() {
   const watch = legendWatch?.() || [];
   const both = state.flightDir === 'both';
-  const flights = state.flightsOn && state.data.flights?.routes?.length;
+  const hubs = state.flightsOn ? activeHubs() : [];
   const rows = [];
-  if (flights) {
+  if (hubs.includes('TPE')) {
     rows.push(`<li><span class="swatch-line in" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_in'))}</span></li>`);
     if (both) rows.push(`<li><span class="swatch-line out" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_out'))}</span></li>`);
+  }
+  if (hubs.some((c) => c !== 'TPE')) { // other airports on: one colour each
+    for (const c of hubs.filter((x) => x !== 'TPE')) {
+      rows.push(`<li><span class="swatch-line hub-${c.toLowerCase()}" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_hub', { name: t(`hub_${c}`), code: c }))}</span></li>`);
+    }
   }
   for (const w of watch) {
     rows.push(`<li class="lg-watch"><span class="swatch-line watch" aria-hidden="true"></span><span class="lg-name">${
@@ -232,21 +237,27 @@ export function renderFlightHud(node) {
       <button type="button" data-dir="in" aria-pressed="${!both}"><i class="dot in" aria-hidden="true"></i>${esc(t('flights_dir_in'))}</button>
       <button type="button" data-dir="both" aria-pressed="${both}">${esc(t('flights_dir_both'))}</button>`;
   }
+  const hubs = activeHubs();
+  const title = $('.fh-title', node);
+  if (title) title.textContent = hubs.length && (hubs.length > 1 || hubs[0] !== 'TPE') ? t('flights_title_hubs', { codes: hubs.join(' · ') }) : t('flights_title');
   if (!f || !f.routes) {
     stats.innerHTML = `<span class="fh-warn">${esc(t('flights_unavailable'))}</span>`;
     btn.disabled = true;
     return;
   }
-  const totals = f.totals || {};
-  const dest = totals.destinations ?? f.routes.length;
-  const dep = totals.departures ?? f.routes.reduce((s, r) => s + (r.departures || 0), 0);
-  const arr = totals.arrivals ?? f.routes.reduce((s, r) => s + (r.arrivals || 0), 0);
+  // totals over the switched-on airports (a destination served by two of them counts once)
+  const all = hubs.map((c) => hubData(c));
+  const dest = new Set(all.flatMap((d) => d.routes.map((r) => r.iata))).size;
+  const sum = (k) => all.reduce((s, d) => s + (d.totals?.[k] ?? d.routes.reduce((x, r) => x + (r[k] || 0), 0)), 0);
+  const dep = sum('departures');
+  const arr = sum('arrivals');
+  const date = all.map((d) => d.date).sort()[0] || f.date; // the oldest one decides "stale"
   const today = todayTaipei();
-  const fd = parseDay(f.date);
-  const stale = state.data.meta?.sources?.flights?.ok === false || (fd && today && +fd !== +today);
+  const fd = parseDay(date);
+  const stale = (hubs.includes('TPE') && state.data.meta?.sources?.flights?.ok === false) || (fd && today && +fd !== +today);
   stats.innerHTML = `
     <div><span>${esc(t('flights_dest'))}</span><b class="mono">${fmtNum(dest)}</b></div>
     <div${state.flightDir === 'both' ? '' : ' class="is-off"'}><span>${esc(t('flights_dep'))}</span><b class="mono out">${fmtNum(dep)}</b></div>
     <div><span>${esc(t('flights_arr'))}</span><b class="mono in">${fmtNum(arr)}</b></div>
-    <div><span>${esc(t('flights_date'))}</span><b class="mono small${stale ? ' warn' : ''}" ${stale ? `title="${esc(t('flights_stale'))}"` : ''}>${esc(fmtDay(f.date, 'short'))}</b></div>`;
+    <div><span>${esc(t('flights_date'))}</span><b class="mono small${stale ? ' warn' : ''}" ${stale ? `title="${esc(t('flights_stale'))}"` : ''}>${esc(fmtDay(date, 'short'))}</b></div>`;
 }

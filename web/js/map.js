@@ -1,6 +1,6 @@
 // SVG world map: advisory-level (or MOFA travel-warning) choropleth, hover/selection effects, zoom & fly-to.
 import {
-  state, emit, levelOf, alertsOf, routesTo, groupAlerts, warningOf, warnLevel, warnPartial, mofaMode,
+  state, emit, levelOf, alertsOf, routesTo, groupAlerts, warningOf, warnLevel, warnPartial, mofaMode, activeHubs, hubData,
 } from './state.js';
 import {
   t, countryName, countryAltName, levelShort, badge, fmtNum, wLevelShort, wbadge,
@@ -357,8 +357,22 @@ export function createMap({ svgEl, onOpen, getInsets }) {
       .attr('d', (r) => r.f._d || path(r.f));
   }
 
+  /** Destinations of every switched-on airport, one dot each: { iata, city_*, country, lat, lon, by: [{ code, route }] }. */
+  function dotData() {
+    const by = new Map();
+    for (const code of activeHubs()) {
+      for (const r of hubData(code).routes) {
+        if (!by.has(r.iata)) by.set(r.iata, { ...r, by: [] });
+        const d = by.get(r.iata);
+        d.by.push({ code, r });
+        d.tot = (d.tot || 0) + (r.departures || 0) + (r.arrivals || 0);
+      }
+    }
+    return [...by.values()];
+  }
+
   function renderDots() {
-    const routes = state.data.flights?.routes || [];
+    const routes = dotData();
     dotSel = gDots.selectAll('g.dest')
       .data(routes, (r) => r.iata)
       .join((enter) => {
@@ -368,20 +382,26 @@ export function createMap({ svgEl, onOpen, getInsets }) {
         return g;
       })
       .attr('data-iata', (r) => r.iata)
+      .attr('data-hubs', (r) => r.by.map((b) => b.code).join(' '))
       .attr('data-x', (r) => projection([r.lon, r.lat])[0])
       .attr('data-y', (r) => projection([r.lon, r.lat])[1])
       .on('pointerenter', (ev, r) => {
-        const al = (r.airlines || []).join(' · ');
         const city = state.lang === 'en' ? r.city_en : r.city_zh;
         const alt = state.lang === 'en' ? r.city_zh : r.city_en;
+        const multi = r.by.length > 1 || r.by[0].code !== 'TPE';
+        const rows = r.by.map(({ code, r: x }) => {
+          const al = (x.airlines || []).join(' · ');
+          return `${multi ? `<div class="tip-hub"><i class="hub-dot hub-${code.toLowerCase()}" aria-hidden="true"></i>${esc(t(`hub_${code}`))} ${esc(code)}</div>` : ''}
+          <div class="tip-grid">
+            <span>${esc(t('flights_dep'))}</span><b class="out">${fmtNum(x.departures)}</b>
+            <span>${esc(t('flights_arr'))}</span><b class="in">${fmtNum(x.arrivals)}</b>
+          </div>
+          ${al ? `<div class="tip-row">${esc(t('tooltip_airlines'))}: <span class="mono">${esc(al)}</span></div>` : ''}`;
+        }).join('');
         showTip(`
           <div class="tip-head"><span class="tip-iata">${esc(r.iata)}</span><span class="tip-iso">${esc(r.country || '')}</span></div>
           <div class="tip-name">${esc(city)}</div><div class="tip-alt">${esc(alt)}</div>
-          <div class="tip-grid">
-            <span>${esc(t('flights_dep'))}</span><b class="out">${fmtNum(r.departures)}</b>
-            <span>${esc(t('flights_arr'))}</span><b class="in">${fmtNum(r.arrivals)}</b>
-          </div>
-          ${al ? `<div class="tip-row">${esc(t('tooltip_airlines'))}: <span class="mono">${esc(al)}</span></div>` : ''}`,
+          ${rows}`,
         ev.clientX, ev.clientY);
       })
       .on('pointermove', (ev) => moveTip(ev.clientX, ev.clientY))
@@ -416,8 +436,8 @@ export function createMap({ svgEl, onOpen, getInsets }) {
       dotSel.attr('transform', function () {
         return `translate(${this.getAttribute('data-x')},${this.getAttribute('data-y')}) scale(${1 / k})`;
       });
-      dotSel.select('.dest-dot').attr('r', (r) => 1.8 + Math.sqrt(r.departures + r.arrivals) * 0.45);
-      dotSel.select('.dest-halo').attr('r', (r) => 5 + Math.sqrt(r.departures + r.arrivals) * 0.9);
+      dotSel.select('.dest-dot').attr('r', (r) => 1.8 + Math.sqrt(r.tot) * 0.45);
+      dotSel.select('.dest-halo').attr('r', (r) => 5 + Math.sqrt(r.tot) * 0.9);
     }
   }
 

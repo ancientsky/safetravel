@@ -1,5 +1,7 @@
-// Canvas overlay: great-circle arcs from TPE with animated comet glyphs and a hub radar.
-import { state, emit } from './state.js';
+// Canvas overlay: great-circle arcs from each switched-on Taiwan airport (Taoyuan by default) with animated comet
+// glyphs and a radar on each airport. Taoyuan keeps the inbound/outbound colours; the other airports draw in their own
+// colour (--hub-tsa, --hub-rmq, --hub-tnn, --hub-khh).
+import { state, emit, activeHubs, hubData } from './state.js';
 import { reducedMotion, clamp } from './util.js';
 
 const d3 = window.d3;
@@ -23,7 +25,7 @@ export function createFlights({ canvas, map }) {
   let W = 0;
   let H = 0;
   let routes = [];
-  let hub = null;
+  let hubs = []; // [{ code, pt: projected [x, y], color, sprite }] of the airports on the map
   let enabled = true;
   let running = false;
   let lastTs = 0;
@@ -43,12 +45,13 @@ export function createFlights({ canvas, map }) {
   // 'in': inbound only (the default: what airport quarantine watches); 'both': departures too
   let dir = state.flightDir === 'both' ? 'both' : 'in';
   const deps = (r) => (dir === 'in' ? 0 : (r.departures || 0));
-  // one colour for every line when only arrivals are shown: the arcs take the inbound colour
-  const arcColor = () => (dir === 'in' ? colors.in : colors.arc);
+  // one colour for every line when only arrivals are shown: the arcs take the inbound colour; other airports: theirs
+  const tpeArc = () => (dir === 'in' ? colors.in : colors.arc);
+  const arcColor = (ro) => (!ro || hubs[ro.h].code === 'TPE' ? tpeArc() : hubs[ro.h].color);
 
   // Fixed object pools: no allocation in the animation loop.
   const glyphs = Array.from({ length: MAX_GLYPHS }, () => ({ on: false, ri: 0, out: true, t: 0, dur: 1 }));
-  const pings = Array.from({ length: 40 }, () => ({ on: false, x: 0, y: 0, t: 0, out: true }));
+  const pings = Array.from({ length: 40 }, () => ({ on: false, x: 0, y: 0, t: 0, out: true, h: 0 }));
   const posA = [0, 0];
   const posB = [0, 0];
 
@@ -61,8 +64,10 @@ export function createFlights({ canvas, map }) {
       arc: v('--flight-arc', 'rgba(25,255,138,0.5)'),
       hub: v('--home', '#29e7ff'),
       light: document.documentElement.dataset.theme === 'light',
+      hubs: { TSA: v('--hub-tsa', '#b794ff'), RMQ: v('--hub-rmq', '#ff7ac8'), TNN: v('--hub-tnn', '#6aa8ff'), KHH: v('--hub-khh', '#ffe27a') },
     };
     sprites = { out: makeSprite(colors.out), in: makeSprite(colors.in), hub: makeSprite(colors.hub) };
+    for (const [code, c] of Object.entries(colors.hubs)) sprites[code] = makeSprite(c);
   }
 
   function makeSprite(color) {
@@ -97,15 +102,28 @@ export function createFlights({ canvas, map }) {
     canvas.height = Math.round(H * dpr);
   }
 
-  /** Project every route once (unzoomed coordinates) with a lifted great-circle arc. */
+  /** Project every route of every switched-on airport once (unzoomed coordinates) with a lifted great-circle arc. */
   function build() {
-    const f = state.data.flights;
-    if (!f || !f.hub || !Array.isArray(f.routes)) { routes = []; hub = null; return; }
     const proj = map.projection;
-    hub = proj([f.hub.lon, f.hub.lat]);
     const [mapW] = map.size();
-    routes = f.routes.filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lon)).map((r, i) => {
-      const interp = d3.geoInterpolate([f.hub.lon, f.hub.lat], [r.lon, r.lat]);
+    hubs = [];
+    routes = [];
+    for (const code of activeHubs()) {
+      const d = hubData(code);
+      const h = hubs.push({ code, pt: proj([d.hub.lon, d.hub.lat]), color: code === 'TPE' ? colors.hub : colors.hubs[code],
+        sprite: code === 'TPE' ? sprites.hub : sprites[code] }) - 1;
+      d.routes.filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lon))
+        .forEach((r) => routes.push(buildRoute(r, d.hub, h, routes.length, proj, mapW)));
+    }
+    const load = routes.reduce((s, ro) => s + (deps(ro.r) + (ro.r.arrivals || 0)) * ro.dur, 0);
+    spawnBase = load > 0 ? TARGET_ALIVE / load : 0;
+    glyphs.forEach((g) => { g.on = false; });
+    prefill();
+  }
+
+  function buildRoute(r, hubAp, h, i, proj, mapW) {
+    {
+      const interp = d3.geoInterpolate([hubAp.lon, hubAp.lat], [r.lon, r.lat]);
       const raw = new Float32Array(SAMPLES * 2);
       for (let s = 0; s < SAMPLES; s++) {
         const p = proj(interp(s / (SAMPLES - 1)));
@@ -139,7 +157,7 @@ export function createFlights({ canvas, map }) {
       }
       const total = deps(r) + (r.arrivals || 0);
       return {
-        r, pts, breaks, len,
+        r, h, pts, breaks, len,
         dur: clamp(1.8 + len / 210, 1.8, 7.5) / SPEED,
         width: 0.5 + Math.sqrt(total) * 0.32,
         phase: i * 1.7,
@@ -147,11 +165,7 @@ export function createFlights({ canvas, map }) {
         accIn: Math.random(),
         dest: [pts[(SAMPLES - 1) * 2], pts[(SAMPLES - 1) * 2 + 1]],
       };
-    });
-    const load = routes.reduce((s, ro) => s + (deps(ro.r) + (ro.r.arrivals || 0)) * ro.dur, 0);
-    spawnBase = load > 0 ? TARGET_ALIVE / load : 0;
-    glyphs.forEach((g) => { g.on = false; });
-    prefill();
+    }
   }
 
   function prefill() {
@@ -181,12 +195,12 @@ export function createFlights({ canvas, map }) {
     return false;
   }
 
-  function ping(x, y, out) {
+  function ping(x, y, out, h) {
     // screen-space x (0..1) of the landing, for the sound panner; listeners rate-limit themselves
     const { k, x: tx } = map.transform();
     emit('flight:landing', (x * k + tx) / (W || 1));
     for (const p of pings) {
-      if (!p.on) { p.on = true; p.x = x; p.y = y; p.t = 0; p.out = out; return; }
+      if (!p.on) { p.on = true; p.x = x; p.y = y; p.t = 0; p.out = out; p.h = h; return; }
     }
   }
 
@@ -216,8 +230,8 @@ export function createFlights({ canvas, map }) {
       if (g.t >= 1) {
         g.on = false;
         const ro = routes[g.ri];
-        if (g.out) ping(ro.dest[0], ro.dest[1], true);
-        else ping(hub[0], hub[1], false);
+        if (g.out) ping(ro.dest[0], ro.dest[1], true, ro.h);
+        else ping(hubs[ro.h].pt[0], hubs[ro.h].pt[1], false, ro.h);
       }
     }
     for (const p of pings) {
@@ -229,21 +243,21 @@ export function createFlights({ canvas, map }) {
     const { k, x, y } = map.transform();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    if (!routes.length || !hub) return;
+    if (!routes.length || !hubs.length) return;
 
     // --- arcs (zoomed coordinates) ---
     if (lowFps && animate) {
       // cheap path: one bitmap blit with a global "breathing" alpha instead of 55 strokes + dashes
-      const key = `${k}|${x}|${y}|${W}|${H}|${dpr}|${arcColor()}|${colors.light}`;
+      const key = `${k}|${x}|${y}|${W}|${H}|${dpr}|${tpeArc()}|${colors.light}|${hubs.map((hb) => hb.code).join()}`;
       if (key !== arcKey) {
         arcKey = key;
         arcCanvas.width = canvas.width;
         arcCanvas.height = canvas.height;
         arcCtx.setTransform(dpr * k, 0, 0, dpr * k, dpr * x, dpr * y);
         arcCtx.lineCap = 'round';
-        arcCtx.strokeStyle = arcColor();
         arcCtx.globalAlpha = colors.light ? 0.4 : 0.3;
         for (const ro of routes) {
+          arcCtx.strokeStyle = arcColor(ro);
           arcCtx.beginPath();
           tracePath(ro, arcCtx);
           arcCtx.lineWidth = ro.width / k;
@@ -263,7 +277,7 @@ export function createFlights({ canvas, map }) {
       const pulse = animate ? 0.5 + 0.5 * Math.sin(time * 1.6 + ro.phase) : 0.6;
       ctx.beginPath();
       tracePath(ro);
-      ctx.strokeStyle = arcColor();
+      ctx.strokeStyle = arcColor(ro);
       ctx.globalAlpha = (colors.light ? 0.28 : 0.16) + pulse * (colors.light ? 0.22 : 0.2);
       ctx.lineWidth = ro.width / k;
       ctx.stroke();
@@ -273,67 +287,33 @@ export function createFlights({ canvas, map }) {
       ctx.setLineDash([2.5 / k, 13 / k]);
       ctx.lineDashOffset = ((dir === 'in' ? 1 : -1) * time * 26 * SPEED) / k;
       ctx.globalAlpha = colors.light ? 0.55 : 0.5;
-      ctx.strokeStyle = dir === 'in' ? colors.in : colors.out;
       ctx.lineWidth = 1.1 / k;
-      ctx.beginPath();
-      for (const ro of routes) tracePath(ro);
-      ctx.stroke();
+      hubs.forEach((hb, h) => { // one stroke per airport, in its colour
+        ctx.strokeStyle = hb.code !== 'TPE' ? hb.color : dir === 'in' ? colors.in : colors.out;
+        ctx.beginPath();
+        for (const ro of routes) if (ro.h === h) tracePath(ro);
+        ctx.stroke();
+      });
       ctx.setLineDash([]);
     }
     ctx.restore();
 
     const sx = (px) => px * k + x;
     const sy = (py) => py * k + y;
-    const hx = sx(hub[0]);
-    const hy = sy(hub[1]);
 
     ctx.save();
     ctx.globalCompositeOperation = colors.light ? 'source-over' : 'lighter';
 
-    // --- hub radar ---
-    const R = 54;
-    if (animate) {
-      const ang = time * 1.4;
-      if (ctx.createConicGradient) {
-        const cg = ctx.createConicGradient(ang - 1.1, hx, hy);
-        cg.addColorStop(0, withAlpha(colors.hub, 0));
-        cg.addColorStop(0.17, withAlpha(colors.hub, colors.light ? 0.28 : 0.35));
-        cg.addColorStop(0.175, withAlpha(colors.hub, 0));
-        cg.addColorStop(1, withAlpha(colors.hub, 0));
-        ctx.fillStyle = cg;
-        ctx.beginPath();
-        ctx.moveTo(hx, hy);
-        ctx.arc(hx, hy, R, ang - 1.1, ang);
-        ctx.closePath();
-        ctx.fill();
-      }
-      for (let i = 0; i < 3; i++) {
-        const ph = (time * 0.45 + i / 3) % 1;
-        ctx.globalAlpha = (1 - ph) * 0.7;
-        ctx.strokeStyle = colors.hub;
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.arc(hx, hy, 5 + ph * R, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-    }
-    ctx.globalAlpha = 0.45;
-    ctx.strokeStyle = colors.hub;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 4]);
-    ctx.beginPath();
-    ctx.arc(hx, hy, R, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.globalAlpha = 1;
-    ctx.drawImage(sprites.hub, hx - 14, hy - 14, 28, 28);
+    // --- a radar on each airport (Taoyuan the largest) ---
+    for (const hb of hubs) radar(sx(hb.pt[0]), sy(hb.pt[1]), hb.code === 'TPE' ? 54 : 34, hb.color, hb.sprite, animate);
 
     if (animate) {
       // --- landing pings ---
       for (const p of pings) {
         if (!p.on) continue;
+        const code = hubs[p.h]?.code;
         ctx.globalAlpha = (1 - p.t) * 0.8;
-        ctx.strokeStyle = p.out ? colors.out : colors.in;
+        ctx.strokeStyle = code && code !== 'TPE' ? hubs[p.h].color : p.out ? colors.out : colors.in;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.arc(sx(p.x), sy(p.y), 2 + p.t * 16, 0, Math.PI * 2);
@@ -344,7 +324,9 @@ export function createFlights({ canvas, map }) {
       for (const g of glyphs) {
         if (!g.on) continue;
         const ro = routes[g.ri];
-        const sprite = g.out ? sprites.out : sprites.in;
+        const hb = hubs[ro.h];
+        const tpe = hb.code === 'TPE';
+        const sprite = tpe ? (g.out ? sprites.out : sprites.in) : hb.sprite;
         const dir = g.out ? 1 : -1;
         const u = g.out ? g.t : 1 - g.t;
         // fade in/out at the ends
@@ -367,7 +349,7 @@ export function createFlights({ canvas, map }) {
         ctx.save();
         ctx.translate(px, py);
         ctx.rotate(ang);
-        ctx.fillStyle = colors.light ? (g.out ? colors.out : colors.in) : '#ffffff';
+        ctx.fillStyle = colors.light ? (tpe ? (g.out ? colors.out : colors.in) : hb.color) : '#ffffff';
         ctx.beginPath();
         ctx.moveTo(4.5, 0);
         ctx.lineTo(-3, -3);
@@ -379,6 +361,45 @@ export function createFlights({ canvas, map }) {
       }
     }
     ctx.restore();
+  }
+
+  function radar(hx, hy, R, color, sprite, animate) {
+    if (animate) {
+      const ang = time * 1.4;
+      if (ctx.createConicGradient) {
+        const cg = ctx.createConicGradient(ang - 1.1, hx, hy);
+        cg.addColorStop(0, withAlpha(color, 0));
+        cg.addColorStop(0.17, withAlpha(color, colors.light ? 0.28 : 0.35));
+        cg.addColorStop(0.175, withAlpha(color, 0));
+        cg.addColorStop(1, withAlpha(color, 0));
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.moveTo(hx, hy);
+        ctx.arc(hx, hy, R, ang - 1.1, ang);
+        ctx.closePath();
+        ctx.fill();
+      }
+      for (let i = 0; i < 3; i++) {
+        const ph = (time * 0.45 + i / 3) % 1;
+        ctx.globalAlpha = (1 - ph) * 0.7;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(hx, hy, 5 + ph * R, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.arc(hx, hy, R, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    const sz = R > 40 ? 28 : 20;
+    ctx.drawImage(sprite, hx - sz / 2, hy - sz / 2, sz, sz);
   }
 
   function tracePath(ro, c = ctx) {
@@ -471,7 +492,21 @@ export function createFlights({ canvas, map }) {
       build();
       if (enabled && !running) draw(false);
     },
-    refreshTheme: () => { arcKey = ''; readColors(); if (enabled && !running) draw(false); },
-    stats: () => ({ active: glyphs.filter((g) => g.on).length, routes: routes.length }),
+    refreshTheme: () => {
+      arcKey = '';
+      readColors();
+      for (const hb of hubs) {
+        hb.color = hb.code === 'TPE' ? colors.hub : colors.hubs[hb.code];
+        hb.sprite = hb.code === 'TPE' ? sprites.hub : sprites[hb.code];
+      }
+      if (enabled && !running) draw(false);
+    },
+    /** Switched-on airports changed (state.hubs): rebuild the routes. */
+    setHubs: () => {
+      arcKey = '';
+      build();
+      if (enabled && !running) { if (routes.length) start(); else draw(false); }
+    },
+    stats: () => ({ active: glyphs.filter((g) => g.on).length, routes: routes.length, hubs: hubs.map((h) => h.code) }),
   };
 }

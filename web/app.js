@@ -1,10 +1,10 @@
 // SafeTravel TW — entry point. Loads data, wires the map, flights, panel, spotlight and HUD.
 import {
   state, on, emit, levelOf,
-  mofaMode,
+  mofaMode, HUB_ORDER, availableHubs, hubData,
 } from './js/state.js';
-import { setLang, t, applyStatic, bindData, getLang } from './js/i18n.js';
-import { $, debounce, storageGet, storageSet, parseDay, todayTaipei, urlLang, syncUrlLang } from './js/util.js';
+import { setLang, t, applyStatic, bindData, getLang, fmtNum, fmtDay } from './js/i18n.js';
+import { $, esc, debounce, storageGet, storageSet, parseDay, todayTaipei, urlLang, syncUrlLang } from './js/util.js';
 import { toast } from './js/toast.js';
 import { bindTextSize } from './js/textsize.js';
 import { startRefresh } from './js/refresh.js';
@@ -29,6 +29,13 @@ const LANG_KEY = 'safetravel.lang';
 const THEME_KEY = 'safetravel.theme';
 const FLIGHTS_KEY = 'safetravel.flights';
 const FLIGHT_DIR_KEY = 'safetravel.flightdir'; // 'in' (default) | 'both'
+const HUBS_KEY = 'safetravel.hubs'; // airports whose routes are on the map, e.g. "TPE,KHH" (default Taoyuan only)
+/** "TPE,KHH" → ['TPE', 'KHH'] (known codes, map order); null when nothing valid. */
+function parseHubs(v) {
+  const want = String(v || '').toUpperCase().split(/[\s,;|]+/);
+  const list = HUB_ORDER.filter((c) => want.includes(c));
+  return list.length ? list : null;
+}
 const LEGEND_KEY = 'safetravel.legend'; // 'min' when collapsed
 const PROMO_KEY = 'safetravel.mpromo'; // 'off' once the phone suggestion of m.html was used or dismissed
 const LAYER_KEY = 'safetravel.layer';
@@ -146,6 +153,8 @@ async function main() {
   state.flightsOn = storageGet(FLIGHTS_KEY) !== 'off';
   const qRoutes = new URLSearchParams(location.search).get('routes'); // ?routes=in|both pins it (kiosks)
   state.flightDir = (qRoutes === 'both' || qRoutes === 'in' ? qRoutes : storageGet(FLIGHT_DIR_KEY)) === 'both' ? 'both' : 'in';
+  // ?hubs=TPE,KHH pins the airports for a kiosk (not stored); otherwise this screen's last choice; Taoyuan by default
+  state.hubs = parseHubs(new URLSearchParams(location.search).get('hubs')) || parseHubs(storageGet(HUBS_KEY)) || ['TPE'];
   state.legendMin = storageGet(LEGEND_KEY) === 'min';
   document.documentElement.dataset.flightdir = state.flightDir;
   state.layer = initialLayer();
@@ -565,6 +574,65 @@ async function main() {
     if (keep) pmRefresh();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pm.hidden) { e.stopPropagation(); pmOpen(false); } }, true);
+
+  // ---- airport routes (menu): Taoyuan by default; 松山 / 臺中 / 臺南 / 高雄 from flights.json `hubs` ----
+  const hubList = $('.pm-hubs', pm);
+  function renderHubMenu() {
+    if (!hubList) return;
+    const have = new Set(availableHubs());
+    hubList.innerHTML = HUB_ORDER.map((code) => {
+      const d = hubData(code);
+      const isOn = state.hubs.includes(code) && have.has(code);
+      const last = isOn && state.hubs.filter((c) => have.has(c)).length === 1;
+      const today = todayTaipei()?.toISOString().slice(0, 10);
+      const sub = d ? t('hub_menu_stats', { a: fmtNum(d.totals?.arrivals ?? 0), d: fmtNum(d.totals?.departures ?? 0), date: d.date === today ? '' : fmtDay(d.date, 'short') })
+        : t('hub_menu_none');
+      const site = d?.hub?.site && /^https:\/\//.test(d.hub.site) ? d.hub.site : '';
+      return `<li class="pm-hub">
+        <button type="button" class="pm-item" role="switch" aria-checked="${isOn}" data-hub="${code}"${d ? '' : ' aria-disabled="true"'}${last ? ` title="${esc(t('hub_menu_last'))}"` : ''}>
+          <i class="hub-dot hub-${code.toLowerCase()}" aria-hidden="true"></i>
+          <span class="pm-text"><b>${esc(t(`hub_${code}`))} ${code}</b><small>${esc(sub)}</small></span>
+          <span class="pm-state${isOn ? ' is-on' : ''}">${esc(t(isOn ? 'menu_on' : 'menu_off'))}</span>
+        </button>
+        ${d ? `<div class="pm-hub-links"><button type="button" data-hub-board="${code}">${esc(t('hub_board'))} →</button>${site ? `<a href="${esc(site)}" target="_blank" rel="noopener noreferrer">${esc(t('hub_site'))} ↗</a>` : ''}</div>` : ''}
+      </li>`;
+    }).join('');
+  }
+  /** Switch an airport's routes on or off (and redraw the layer, dots, radar box and legend). */
+  function setHub(code, v, { persist = true } = {}) {
+    if (!hubData(code)) return;
+    const next = new Set(state.hubs);
+    if (v) next.add(code); else next.delete(code);
+    const list = HUB_ORDER.filter((c) => next.has(c));
+    if (!list.some((c) => hubData(c))) { toast(t('hub_menu_last')); return; } // keep at least one airport on the map
+    if (list.join() === state.hubs.join()) return;
+    state.hubs = list;
+    if (persist) storageSet(HUBS_KEY, list.join(','));
+    if (v && !state.flightsOn) $('.fh-toggle').click(); // switching an airport on means: show the routes
+    flights?.setHubs();
+    map.renderDots();
+    renderFlightHud($('#flight-hud'));
+    renderLegend(legendNode);
+    renderHubMenu();
+    emit('hubs:change', list);
+  }
+  hubList?.addEventListener('click', (e) => {
+    const sw = e.target.closest('[data-hub]');
+    if (sw && sw.getAttribute('aria-disabled') !== 'true') {
+      const code = sw.dataset.hub;
+      setHub(code, !state.hubs.includes(code));
+      hubList.querySelector(`[data-hub="${code}"]`)?.focus();
+      return;
+    }
+    const b = e.target.closest('[data-hub-board]');
+    if (b) { pmOpen(false); arrivals.showAirport(b.dataset.hubBoard); }
+  });
+  pmBtn.addEventListener('click', renderHubMenu);
+  // the arrivals board and the route layer follow each other: picking an airport on the board shows its routes
+  on('arrivals:airport', (code) => { if (hubData(code) && !state.hubs.includes(code)) setHub(code, true); });
+  window.__safetravel.hubs = { set: setHub, list: () => [...state.hubs] };
+  // a board opened on another airport (?arr=KHH, or restored) shows that airport's routes too, without storing it
+  if (arrivals.isOn() && arrivals.airport() !== 'TPE') setHub(arrivals.airport(), true, { persist: false });
 
   $('#zoom-in').addEventListener('click', () => map.zoomBy(1.6));
   $('#zoom-out').addEventListener('click', () => map.zoomBy(1 / 1.6));

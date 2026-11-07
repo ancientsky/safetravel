@@ -548,7 +548,10 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     onLayout?.();
   });
   const toTop = () => { body.scrollTop = 0; glide.pos = 0; glide.phase = 'rest-top'; glide.until = performance.now() + REST_TOP_MS; };
-  selAirport.addEventListener('change', () => { cfg.airport = selAirport.value; cfg.cps = []; saveCfg(); hotId = null; render(); toTop(); });
+  selAirport.addEventListener('change', () => {
+    cfg.airport = selAirport.value; cfg.cps = []; saveCfg(); hotId = null; render(); toTop();
+    emit('arrivals:airport', cfg.airport); // the map switches that airport's routes on
+  });
   // checkpoint filter: the button opens the list; each checkpoint toggles, "all" clears
   const openCp = (v) => {
     if (!cpPop) return;
@@ -658,6 +661,21 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     resize,
     insets,
     refresh: () => { if (on) render(); },
+    /** Open the board on one Taiwan airport (menu → airport routes → arrivals board). */
+    showAirport(code) {
+      if (!/^[A-Z]{3}$/.test(code || '')) return;
+      if (minimized) btnMin?.click();
+      const changed = cfg.airport !== code;
+      cfg.airport = code;
+      if (changed) { cfg.cps = []; hotId = null; }
+      saveCfg();
+      if (qInput) qInput.value = '';
+      query = '';
+      if (!on) setOn(true); else render();
+      toTop();
+      emit('arrivals:airport', code);
+    },
+    airport: () => cfg.airport,
     /** Open the board searched for flights from one country (the country panel's direct-flights section). */
     showCountry(iso) {
       const name = countryName(iso);

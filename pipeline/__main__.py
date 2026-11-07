@@ -29,6 +29,9 @@ def apply_static_fallback(conn) -> bool:
 
 
 def _store_flights(conn, res: dict) -> None:
+    for hub, h in (res.get("hubs") or {}).items():  # the other Taiwan airports, each on its own
+        if h.get("ok"):
+            db.replace_hub_flights_day(conn, hub, h["day"], h["routes"], h["source"], res["fetched_at"])
     if res.get("ok"):
         db.put_airport_names(conn, res.get("airport_names") or {})
         stored = db.replace_flights_day(conn, res["day"], res["routes"], res["source"], res["fetched_at"])
