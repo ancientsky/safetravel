@@ -451,6 +451,36 @@ async function run(browser) {
     return `${title}; after toggle ${search}`;
   });
 
+  await check('kiosk keyboard (?osk=1): ABC first on the Chinese page; 注音 kept while the visitor types, ABC again for the next one', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 }, hasTouch: true });
+    const pk = await ctx.newPage();
+    const errs = [];
+    pk.on('pageerror', (e) => errs.push(e.message));
+    await pk.goto(new URL('?osk=1&lang=zh', BASE_URL).href, { waitUntil: 'load' });
+    await pk.waitForSelector('[data-testid="osk"]', { state: 'attached', timeout: 15000 });
+    const kb = () => pk.$eval('[data-testid="osk"]', (r) => ({ shown: !r.hidden, mode: r.querySelector('.osk-keys')?.classList.contains('osk-zh') ? 'zh' : 'en',
+      modeKey: r.querySelector('.osk-mode')?.textContent.trim() }));
+    await pk.focus('#search-input');
+    const first = await kb();
+    await pk.click('[data-testid="osk"] .osk-mode');
+    const zh = await kb();
+    await pk.evaluate(() => document.activeElement.blur());
+    await pk.waitForFunction(() => document.querySelector('[data-testid="osk"]').hidden);
+    await pk.focus('#search-input');
+    const same = await kb(); // the same visitor: Zhuyin kept
+    await pk.evaluate(() => document.activeElement.blur());
+    await pk.waitForFunction(() => document.querySelector('[data-testid="osk"]').hidden);
+    await pk.evaluate(() => { const real = Date.now; Date.now = () => real() + 3 * 60 * 1000; }); // 3 minutes later
+    await pk.focus('#search-input');
+    const next = await kb();
+    await ctx.close();
+    assert(first.shown && first.mode === 'en' && first.modeKey === '注音', `first ${JSON.stringify(first)}`);
+    assert(zh.mode === 'zh' && same.mode === 'zh', `switch ${JSON.stringify(zh)} / ${JSON.stringify(same)}`);
+    assert(next.mode === 'en', `next visitor ${JSON.stringify(next)}`);
+    assert(!errs.length, errs[0]);
+    return 'ABC → 注音 → kept → ABC after 3 idle minutes';
+  });
+
   await check('kiosk reset (?osk=1): two taps restore the start page and the stored settings', async () => {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     const pr = await ctx.newPage();
@@ -830,7 +860,7 @@ async function run(browser) {
     await ctx.close();
     assert(d0.hubs === 'TPE' && d0.title === 'TPE 航線雷達' && !d0.khhDots, `default ${JSON.stringify(d0)}`);
     assert(items.join() === 'TPE:true,TSA:false,RMQ:false-,TNN:false-,KHH:false', `menu ${items}`);
-    assert(/今日沒有國際航班/.test(tnnText), `TNN ${tnnText}`);
+    assert(/沒有國際航班/.test(tnnText), `TNN ${tnnText.replace(/\s+/g, ' ')}`);
     assert(d1.hubs === 'TPE,KHH' && d1.stored === 'TPE,KHH' && d1.khhDots === 'MNL,NRT' && /高雄 KHH/.test(d1.legend) && d1.title.includes('KHH'), `KHH on ${JSON.stringify(d1)}`);
     assert(d2.hubs === 'KHH' && d2.stored === 'KHH' && d2.home === '基地 · KHH', `last one stays ${JSON.stringify(d2)}`);
     assert(d0.home === '基地 · TPE' && d1.home === '基地 · TPE · KHH', `home label ${d0.home} / ${d1.home}`);

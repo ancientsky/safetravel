@@ -198,7 +198,11 @@ function init() {
   const tx = (k) => TEXT[lang()][k];
 
   let target = null;          // the field being typed into
-  let mode = lang() === 'en' ? 'en' : 'zh';
+  // letters first (ABC) on every page: most kiosk searches are a country, a city or a code; 「注音」 is one tap away.
+  // A visitor's switch to Zhuyin is kept while they use the screen and dropped after NEW_VISITOR_MS without the keyboard.
+  const NEW_VISITOR_MS = 2 * 60 * 1000;
+  let mode = 'en';
+  let hiddenAt = 0;
   let shift = false;
   let syl = { i: '', m: '', f: '' }; // Zhuyin syllable being composed
   let cands = [];             // [{ text, kind: 'char' | 'assoc' }]
@@ -426,6 +430,7 @@ function init() {
     target = el;
     if (el.inputMode !== 'none') el.inputMode = 'none'; // no system keyboard on top of ours
     if (root.hidden) {
+      if (hiddenAt && Date.now() - hiddenAt > NEW_VISITOR_MS) mode = 'en';
       resetSyl(); cands = []; note = '';
       if (mode === 'zh') loadDict();
       render();
@@ -439,6 +444,7 @@ function init() {
     });
   }
   function hide(blur = false) {
+    if (!root.hidden) hiddenAt = Date.now();
     root.hidden = true;
     document.documentElement.classList.remove('osk-open');
     const t = target;
