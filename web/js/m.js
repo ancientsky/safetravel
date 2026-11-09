@@ -249,7 +249,7 @@ function renderFlights() {
       <label><span class="sr-only">${esc(t('arr_airport'))}</span><select data-fairport>${opts}</select></label>
       <div class="seg" role="group" aria-label="${esc(t('arr_win_label'))}">${WINDOWS.map((w) => `<button type="button" data-fwin="${w}" aria-pressed="${app.fcfg.win === w}">${
         esc(w ? t('arr_win_btn', { n: w }) : t('arr_win_all'))}</button>`).join('')}</div>
-      <button type="button" class="f-risk" data-frisk aria-pressed="${app.fcfg.risk}">${esc(app.fcfg.risk ? t('arr_risk_on', { n: nRisk }) : t('arr_risk', { n: nRisk }))}</button>
+      <button type="button" class="f-risk" data-frisk aria-pressed="${app.fcfg.risk === true}">${esc(app.fcfg.risk ? t('arr_risk_on', { n: nRisk }) : t('arr_risk', { n: nRisk }))}</button>
       ${cpRow}
     </div>
     ${cps.length ? `<p class="f-cpnote">${esc(t('m_cp_note'))}</p>` : ''}
@@ -414,10 +414,14 @@ async function main() {
   document.documentElement.classList.remove('i18n-pending');
   applyTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
   const textSize = bindTextSize($('[data-testid="textsize-toggle"]'), { t });
-  try { Object.assign(app.fcfg, JSON.parse(storageGet(FCFG_KEY) || '{}')); } catch { /* ignore */ }
-  if (!Array.isArray(app.fcfg.cps)) app.fcfg.cps = [];
-  app.fcfg.cps = app.fcfg.cps.filter((id) => /^[A-D]$/.test(id));
-  if (!WINDOWS.includes(app.fcfg.win)) app.fcfg.win = 60;
+  // stored settings are untrusted input (anything on this origin can write them): take known keys only, by type
+  try {
+    const s = JSON.parse(storageGet(FCFG_KEY) || '{}') || {};
+    if (typeof s.airport === 'string' && /^[A-Z]{3}$/.test(s.airport)) app.fcfg.airport = s.airport;
+    if (WINDOWS.includes(s.win)) app.fcfg.win = s.win;
+    app.fcfg.risk = s.risk === true;
+    app.fcfg.cps = Array.isArray(s.cps) ? s.cps.filter((id) => typeof id === 'string' && /^[A-D]$/.test(id)) : [];
+  } catch { /* ignore */ }
 
   const [alerts, countriesJson] = await Promise.all([getJSON('alerts.json').catch(() => null), getJSON('countries.json').catch(() => null)]);
   state.data.alerts = alerts;

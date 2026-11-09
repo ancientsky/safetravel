@@ -102,7 +102,10 @@ export function resetKiosk() {
       for (const [k, v] of Object.entries(home.ls)) localStorage.setItem(k, v);
     }
   } catch (e) { /* ignore */ }
-  const url = home && typeof home.url === 'string' && home.url.startsWith(location.origin) ? home.url : location.href;
+  let url = location.href;
+  try { // same origin only (a prefix test would accept "https://this.site@evil.example/")
+    if (home && typeof home.url === 'string' && new URL(home.url).origin === location.origin) url = home.url;
+  } catch (e) { /* not a URL: stay here */ }
   location.replace(url);
 }
 

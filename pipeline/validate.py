@@ -846,6 +846,8 @@ def check_malaria(v: V, doc, travelmed) -> None:
                     v.err(f"{w}.who.refs", f"{iso}: references must be https who.int pages")
             if not CDC_URL.match(str(who["source"].get("image", ""))):
                 v.err(f"{w}.who", "source.image must be the cdc.gov.tw copy of the WHO map")
+            if who["source"].get("via") and not CDC_URL.match(str(who["source"]["via"])):
+                v.err(f"{w}.who", "source.via must be a cdc.gov.tw page")
     v.pat(w, doc["generated_at"], TS, "generated_at")
     if not CDC_URL.match(str(doc["source"])):
         v.err(w, "source must be a cdc.gov.tw page")

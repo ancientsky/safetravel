@@ -7,7 +7,9 @@
 // session, so a real bug can never cause a reload loop.
 (function () {
   var KEY = 'safetravel.recover';
-  function sameSite(u) { return u && u.indexOf(location.origin) === 0 && u.indexOf('/data/') < 0; }
+  function sameSite(u) {
+    try { return !!u && new URL(u).origin === location.origin && u.indexOf('/data/') < 0; } catch (e) { return false; }
+  }
   function urls() {
     var out = [];
     try {

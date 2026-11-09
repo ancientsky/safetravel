@@ -958,6 +958,33 @@ async function run(browser) {
     return 'TPE → +KHH → KHH only → board TSA adds TSA → board TPE adds TPE; ?hubs=KHH not stored';
   });
 
+  await check('m.html: a tampered stored setting cannot inject markup or redirect', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const pm = await ctx.newPage();
+    const errs = [];
+    pm.on('pageerror', (e) => errs.push(e.message));
+    await pm.addInitScript(() => {
+      try {
+        localStorage.setItem('safetravel.m.flights', JSON.stringify({
+          risk: '"><meta http-equiv=refresh content="0;url=https://example.org/x"><i x="', airport: '"><img src=x>', win: '<b>', cps: ['A', '<i>'],
+        }));
+      } catch (e) { /* ignore */ }
+    });
+    await pm.goto(new URL('m.html?role=officer#/flights', BASE_URL).href, { waitUntil: 'load' });
+    await pm.waitForSelector('#view-flights [data-frisk]', { timeout: 15000 });
+    await pm.waitForTimeout(1200); // a meta refresh would have fired by now
+    const r = await pm.evaluate(() => ({
+      here: location.origin + location.pathname, meta: document.querySelectorAll('meta[http-equiv="refresh"], #view-flights img').length,
+      pressed: document.querySelector('[data-frisk]').getAttribute('aria-pressed'), airport: document.querySelector('[data-fairport]').value,
+    }));
+    await pm.evaluate(() => localStorage.removeItem('safetravel.m.flights'));
+    await ctx.close();
+    assert(r.here === new URL('m.html', BASE_URL).href && r.meta === 0, `navigated or injected: ${JSON.stringify(r)}`);
+    assert(r.pressed === 'false' && /^[A-Z]{3}$/.test(r.airport), `state ${JSON.stringify(r)}`);
+    assert(!errs.length, errs[0]);
+    return 'payload ignored: still on m.html, risk filter off, airport TPE';
+  });
+
   await check('phone menu: header keeps board + menu, the sheet lists the 5 pages and switches with their state', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const ph = await ctx.newPage();

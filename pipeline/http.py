@@ -1,6 +1,7 @@
 """HTTP helper: browser-like headers, retries with backoff, TLS chain verification without X509 strict mode."""
 from __future__ import annotations
 
+import re
 import ssl
 import time
 
@@ -70,6 +71,14 @@ def _read_capped(r: requests.Response, max_bytes: int) -> requests.Response:
     return r
 
 
+_SECRET_PARAM = re.compile(r"(?i)\b(authorization|api[_-]?key|apikey|key|token|client_secret)=[^&\s'\")]+")
+
+
+def redact(text) -> str:
+    """Hide credentials that travel in a query string (CWA: ...&Authorization=<key>) in log lines and error texts."""
+    return _SECRET_PARAM.sub(lambda m: f"{m.group(1)}=***", str(text))
+
+
 def get(url: str, *, session: requests.Session | None = None, tries: int = 3, timeout=(10, 60),
         headers: dict | None = None, max_bytes: int = MAX_BYTES) -> requests.Response:
     """GET with retries on network errors / 408 / 429 / 5xx. Raises HttpError otherwise (also for other non-200s).
@@ -82,12 +91,12 @@ def get(url: str, *, session: requests.Session | None = None, tries: int = 3, ti
             if r.status_code == 200:
                 return _read_capped(r, max_bytes)
             r.close()
-            last = HttpError(f"HTTP {r.status_code} for {url}", r.status_code)
+            last = HttpError(f"HTTP {r.status_code} for {redact(url)}", r.status_code)
             if not (r.status_code in (408, 429) or r.status_code >= 500):
                 raise last
         except (requests.Timeout, requests.ConnectionError) as e:
-            last = HttpError(f"{type(e).__name__}: {e}")
+            last = HttpError(redact(f"{type(e).__name__}: {e}"))  # requests puts the full URL in its message
         if attempt < tries:
-            C.log.warning("GET %s failed (%s); retry %d/%d", url, last, attempt, tries - 1)
+            C.log.warning("GET %s failed (%s); retry %d/%d", redact(url), last, attempt, tries - 1)
             _sleep(2 ** attempt)
     raise last  # type: ignore[misc]

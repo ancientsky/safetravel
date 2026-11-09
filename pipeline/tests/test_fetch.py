@@ -297,3 +297,21 @@ def test_a_day_without_international_flights_is_shown_as_such_not_as_yesterday(l
     failed = {"ok": False, "hubs": {"TNN": {"ok": False, "reason": "HTTP 500"}}, "fetched_at": "2026-10-09T11:17:00+08:00"}
     _store_flights(loaded, failed)  # a failed fetch changes nothing
     assert export.build_hubs(loaded, airports, "2026-10-09")["TNN"]["date"] == "2026-10-08"
+
+
+@responses.activate
+def test_credentials_in_a_url_never_reach_the_log_or_the_error(caplog):
+    """CWA's key travels in the query string: a failed download must not print it (log line, HttpError text)."""
+    from pipeline import http
+    url = "https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-005?format=JSON&Authorization=CWA-SECRET-1234"
+    responses.add(responses.GET, url, status=503)
+    with caplog.at_level("WARNING"):
+        try:
+            http.get(url, tries=2)
+            raise AssertionError("expected HttpError")
+        except http.HttpError as e:
+            err = str(e)
+    assert "CWA-SECRET-1234" not in err and "CWA-SECRET-1234" not in caplog.text
+    assert "Authorization=***" in err and "Authorization=***" in caplog.text
+    assert http.redact("Max retries exceeded with url: /x?a=1&Authorization=K-9&b=2 (Caused by …)") == \
+        "Max retries exceeded with url: /x?a=1&Authorization=*** (Caused by …)".replace("***", "***&b=2")

@@ -2,7 +2,7 @@
 // malaria prophylaxis (Taiwan CDC's own wording per country, data/malaria.json), which of the three drugs CDC lists
 // can be considered, the dosing schedule, number of doses and tablets, an optional cost, and reminders for Google
 // Calendar / any calendar app (.ics). Nothing typed here is stored or sent anywhere.
-import { storageGet, storageSet, clean, urlLang, syncUrlLang } from './util.js';
+import { storageGet, storageSet, clean, urlLang, syncUrlLang, safeUrl } from './util.js';
 import { bindTextSize } from './textsize.js';
 import { createMalariaMap } from './malaria-map.js';
 import zh from '../i18n/malaria-zh-Hant.js';
@@ -202,7 +202,8 @@ function pickCountry(iso) {
 function renderMapSource() {
   const who = state.data?.who?.source;
   const el = $('.mm-src');
-  const link = (href, text) => h('a', { href, target: '_blank', rel: 'noopener noreferrer', text });
+  // data-driven links: https cdc.gov.tw only (safeUrl), otherwise plain text
+  const link = (href, text) => (safeUrl(href) ? h('a', { href: safeUrl(href), target: '_blank', rel: 'noopener noreferrer', text }) : text);
   el.replaceChildren(...[
     h('b', { text: t('map_src_h') }),
     t('map_src_who'),
