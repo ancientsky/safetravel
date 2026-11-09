@@ -99,6 +99,8 @@ html[data-theme="light"] .osk {
 
 /* kiosk reset (osk.js): small button in the bottom-left corner (over the source line), tap twice to go back to the
    start page and settings; above the tab bar on m.html, hidden while the keyboard is open */
+/* the reset button sits in the bottom-left corner: footers start right of it instead of under it */
+html.has-kiosk-reset .foot { padding-left: 60px; }
 .osk-reset {
   position: fixed; left: 6px; bottom: 6px; z-index: 2147483000;
   display: inline-flex; align-items: center; gap: 8px; min-width: 44px; height: 44px; padding: 0 11px;

@@ -218,6 +218,7 @@ function init() {
   reset.type = 'button';
   reset.className = 'osk-reset';
   reset.dataset.testid = 'kiosk-reset';
+  document.documentElement.classList.add('has-kiosk-reset'); // page footers leave its corner free (osk.css)
   const resetIcon = document.createElement('span');
   resetIcon.className = 'osk-reset-i';
   resetIcon.setAttribute('aria-hidden', 'true');

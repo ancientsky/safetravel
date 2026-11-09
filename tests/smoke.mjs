@@ -502,6 +502,9 @@ async function run(browser) {
     const board = await box('#arrivals');
     const hud = await box('#flight-hud');
     const routesInRow = await pw.$eval('[data-testid="routes-toggle"]', (el) => !!el.closest('.layer-row'));
+    // beside the open panel the zoom buttons must take taps (the toolbar's transparent box used to cover them)
+    const zoomHit = await pw.evaluate(() => ['zoom-in', 'zoom-out', 'zoom-reset'].map((id) => { const r = document.getElementById(id).getBoundingClientRect();
+      return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('button')?.id === id; }));
     const sameCol = await pw.evaluate(() => { const h = document.querySelector('#flight-hud').getBoundingClientRect(); const l = document.querySelector('#legend').getBoundingClientRect();
       return Math.abs(h.left - l.left) < 1 && Math.abs(h.width - l.width) < 1 ? '' : `${h.left}+${h.width} vs ${l.left}+${l.width}`; });
     const oneLine = await pw.$$eval('#flight-hud .fh-title, #flight-hud .fh-stats b', (els) => els.every((el) => el.getClientRects().length === 1
@@ -525,6 +528,7 @@ async function run(browser) {
     await ctx.close();
     assert(inToolbar && !bar.hidden && bar.vis === 'visible' && bar.r <= panel.x, `bar ${JSON.stringify(bar)} panel x ${panel.x}`);
     assert(routesInRow, 'routes switch not in the layer row');
+    assert(zoomHit.every(Boolean), `zoom buttons covered beside the open panel: ${zoomHit}`);
     assert(!sameCol, `route box and legend widths differ: ${sameCol}`);
     assert(hud.y >= board.b, `route box ${hud.y} over the board (bottom ${board.b})`);
     assert(oneLine, 'route box title or a figure wraps');

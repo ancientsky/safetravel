@@ -651,6 +651,13 @@ a { color: var(--cyan); }
 }
 /* moved with transform (not `right`) so the panel opening never counts as a layout shift */
 body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + var(--gutter)))); }
+/* The toolbar is a wide transparent box over the map: only its children take taps (its empty part used to swallow the
+   zoom buttons on portrait screens), and beside an open panel it ends left of the zoom buttons' column. */
+.toolbar { pointer-events: none; }
+.toolbar > * { pointer-events: auto; }
+@media (min-width: 761px) {
+  body.panel-open:not(.panel-floating) .toolbar { width: min(520px, max(240px, calc(100vw - var(--panel-w) - var(--gutter) * 3 - 58px))); }
+}
 .zoom-ctrl { transition: transform .4s var(--ease); }
 .zoom-ctrl .btn-icon { border-color: transparent; background: transparent; padding: 0; width: 34px; height: 34px; }
 .zoom-ctrl .btn-icon:hover { border-color: var(--border); }
@@ -689,10 +696,11 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 .spot-name { display: block; margin: 0; font-size: calc(19px * var(--ts)); line-height: 1.25; font-weight: 700; }
 .spot-alt { display: block; }
 .spot-alt { margin: 1px 0 0; font-size: calc(12px * var(--ts)); color: var(--fg-dim); }
-.spot-advs { margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; max-height: 58px; overflow: hidden; flex: none; }
+/* at most two whole rows of chips (a fixed 58 px used to cut the second row in half) */
+.spot-advs { margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; max-height: calc(2 * (12px * var(--ts) * 1.5 + 6px) + 6px + 1px); overflow: hidden; flex: none; }
 .spot-adv {
   display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px;
-  border: 1px solid var(--border); border-radius: 4px; font-size: calc(12px * var(--ts)); background: rgba(var(--accent-rgb), .04);
+  border: 1px solid var(--border); border-radius: 4px; font-size: calc(12px * var(--ts)); line-height: 1.5; background: rgba(var(--accent-rgb), .04);
 }
 .spot-advs .spot-lv { font-size: calc(10px * var(--ts)); color: var(--fg-mute); }
 .spot-advs .more { color: var(--fg-mute); }
