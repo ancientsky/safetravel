@@ -148,7 +148,7 @@ function flightLegend() {
 function levelRow(l, sw, name, count, filter) {
   const on = filter.has(l);
   const dim = filter.size > 0 && !on;
-  return `<li class="lg-row"><button type="button" class="lg-filter${dim ? ' is-dim' : ''}" data-level="${l}" aria-pressed="${on}">
+  return `<li class="lg-row"><button type="button" class="lg-filter${dim ? ' is-dim' : ''}" data-level="${l}" aria-pressed="${on}" title="${esc(t('legend_tap_filter'))}">
       <span class="swatch ${sw}" aria-hidden="true"></span><span class="lg-name">${esc(name)}</span><b class="mono">${fmtNum(count)}</b></button></li>`;
 }
 
@@ -162,8 +162,7 @@ function legendHead(title, filter) {
       ${filter.size ? `<button type="button" class="lg-all" data-level="all">${esc(t('filter_all'))}</button>` : ''}
       <button type="button" class="lg-min" data-legend-min aria-expanded="${!legendCollapsed()}" title="${esc(t(legendCollapsed() ? 'legend_expand' : 'legend_collapse'))}"
         aria-label="${esc(t(legendCollapsed() ? 'legend_expand' : 'legend_collapse'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-    </div>
-    <p class="legend-tap">${esc(t('legend_tap_filter'))}</p>`;
+    </div>`; // how to use it (tap a level to filter, wheel / drag / double-click) is in each button's title and help.html
 }
 
 function renderWarnLegend(node) {
@@ -187,9 +186,6 @@ function renderWarnLegend(node) {
       <li class="lg-static"><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>${wx.mini}
     </ul>
     ${flightLegend()}${wx.block}
-    <p class="legend-note">${esc(t('wl_legend_mac'))}</p>
-    <p class="legend-note">${esc(t('wl_legend_note'))}</p>
-    <p class="legend-hint">${esc(t('map_hint'))}</p>
     </div>`;
 }
 
@@ -204,7 +200,6 @@ export function renderLegend(node) {
   for (const v of Object.values(c)) counts[v.max_level || 0]++;
   const geoIds = Array.from(state.data.worldNames.keys()).filter((id) => /^[A-Z]{2}$/.test(id) && id !== 'TW');
   counts[0] = geoIds.filter((id) => !levelOf(id)).length;
-  const unmapped = state.data.alerts?.unmapped?.length || 0;
   const rows = [3, 2, 1].map((l) => levelRow(l, `lvl-${l}`, levelShort(l), counts[l], state.filter)).join('');
   node.innerHTML = `
     ${legendHead(t('legend_title'), state.filter)}
@@ -214,8 +209,6 @@ export function renderLegend(node) {
       <li class="lg-static"><span class="swatch swatch-home" aria-hidden="true"></span><span class="lg-name">${esc(t('legend_home'))}</span></li>${wx.mini}
     </ul>
     ${flightLegend()}${wx.block}
-    ${unmapped ? `<p class="legend-note">${esc(t('legend_unmapped', { n: unmapped }))}</p>` : ''}
-    <p class="legend-hint">${esc(t('map_hint'))}</p>
     </div>`;
 }
 

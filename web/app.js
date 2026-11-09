@@ -276,11 +276,20 @@ async function main() {
     state.legendDockOpen = false;
     renderLegend(legendNode);
   }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  // the legend scrolls without a scrollbar: a bottom fade while there is more below
+  function syncLegendOverflow() {
+    const el = legendNode;
+    const more = el.scrollHeight - el.clientHeight > 2 && el.scrollTop + el.clientHeight < el.scrollHeight - 2;
+    el.classList.toggle('is-overflow', more);
+  }
+  legendNode.addEventListener('scroll', syncLegendOverflow, { passive: true });
+  new MutationObserver(() => requestAnimationFrame(syncLegendOverflow)).observe(legendNode, { childList: true });
   // portrait screens stack the route box on top of the legend: keep --legend-h (its height) current
   if ('ResizeObserver' in window) {
     new ResizeObserver(([e]) => {
       const h = e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height;
       document.documentElement.style.setProperty('--legend-h', `${Math.ceil(h)}px`);
+      syncLegendOverflow();
     }).observe(legendNode);
     new ResizeObserver(([e]) => { // the route box (0 while hidden): a portrait board ends above it
       const h = e.target.hidden ? 0 : (e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height) + 10;

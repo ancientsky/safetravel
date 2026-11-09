@@ -77,7 +77,7 @@ export function legendHtml() {
       <h3 class="legend-title">${esc(t('wx_legend_title'))}</h3>
       <div class="lg-wx-scale">${ramp}</div>
       <ul class="lg-wx-icons">${icons.map((k) => `<li>${iconHtml(k, '', 'wxi lg-wxi')}<span>${esc(t(`wx_icon_${k}`))}</span></li>`).join('')}</ul>
-      <p class="legend-note lg-wx-note">${esc(issuedText(w.data))} · ${esc(t('wx_tz_note'))}</p>
+      <p class="legend-note lg-wx-note" title="${esc(t('wx_tz_note'))}">${esc(issuedText(w.data))}</p>
     </div>`,
     // phones: the legend is one scrolling strip; a compact scale item joins it
     mini: `<li class="lg-wx-mini"><span class="lg-name">${esc(t('wx_legend_mini'))}</span>${ramp}</li>`,

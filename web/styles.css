@@ -553,7 +553,14 @@ a { color: var(--cyan); }
   width: var(--legend-w); padding: 12px 14px;
   /* never taller than the space under the search / layer row: scroll inside instead of covering it */
   /* --toolbar-b = the toolbar's bottom edge (app.js; it grows when the weather day bar sits in it) */
-  max-height: calc(100vh - var(--foot-h) - 22px - var(--toolbar-b, calc(var(--under-hud, 150px) + 100px * var(--ts)))); overflow-y: auto; scrollbar-width: thin;
+  max-height: calc(100vh - var(--foot-h) - 22px - var(--toolbar-b, calc(var(--under-hud, 150px) + 100px * var(--ts))));
+  /* scrolls (wheel, touch) without a permanent scrollbar; a fade at the bottom says there is more (app.js) */
+  overflow-x: hidden; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain;
+}
+.legend::-webkit-scrollbar { display: none; }
+.legend.is-overflow::after {
+  content: ""; position: sticky; bottom: -12px; display: block; height: 30px; margin: -30px -14px -12px; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--glass-strong) 85%);
 }
 .legend-title { margin: 0 0 8px; font: 600 calc(11px * var(--ts)) var(--mono); letter-spacing: .12em; color: var(--fg-dim); text-transform: uppercase; }
 .legend-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
