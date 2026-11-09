@@ -11,7 +11,7 @@ const orient = () => (window.innerHeight > window.innerWidth ? 'portrait' : 'lan
  * root: the overlay; handles: selectors inside it that start a drag; key: localStorage key;
  * dockBtn: shown while floating, docks it again; onChange(floating): re-layout hook.
  */
-export function makeFloatable({ root, handles, key, dockBtn, onChange, minW = 320, minH = 240 }) {
+export function makeFloatable({ root, handles, key, dockBtn, onChange, minW = 320, minH = 240, sized = true }) {
   let pos = {};
   try { pos = JSON.parse(storageGet(key) || '{}') || {}; } catch { pos = {}; }
   const save = () => storageSet(key, JSON.stringify(pos));
@@ -24,6 +24,11 @@ export function makeFloatable({ root, handles, key, dockBtn, onChange, minW = 32
     if (dockBtn) dockBtn.hidden = !fl;
     if (!fl) { root.style.left = root.style.top = root.style.width = root.style.height = ''; return; }
     const p = pos[orient()];
+    if (!sized) { // keeps its natural size (a toolbar-like bar): only the position is set
+      root.style.left = `${clamp(p.x, 8, window.innerWidth - (root.offsetWidth || 200) - 8)}px`;
+      root.style.top = `${clamp(p.y, 8, window.innerHeight - (root.offsetHeight || 40) - 8)}px`;
+      return;
+    }
     const w = clamp(p.w || root.offsetWidth || 460, minW, window.innerWidth - 16);
     const top = clamp(p.y, 8, window.innerHeight - minH - 8);
     const h = clamp(p.h || root.offsetHeight || 600, minH, window.innerHeight - top - 8); // never past the bottom edge
@@ -44,21 +49,23 @@ export function makeFloatable({ root, handles, key, dockBtn, onChange, minW = 32
     const move = (ev) => {
       if (!moved && Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 5) return; // a click, not a drag
       if (!moved) { moved = true; root.setPointerCapture(e.pointerId); document.body.classList.add('is-dragging'); }
-      pos[m] = { ...(pos[m] || {}), x: ev.clientX - dx, y: ev.clientY - dy, w: pos[m]?.w || r.width, h: pos[m]?.h || r.height };
+      pos[m] = sized ? { ...(pos[m] || {}), x: ev.clientX - dx, y: ev.clientY - dy, w: pos[m]?.w || r.width, h: pos[m]?.h || r.height }
+        : { x: ev.clientX - dx, y: ev.clientY - dy };
       apply();
     };
+    // on the window, not the overlay: a small overlay (the weather day bar) loses the pointer on the first move
     const up = () => {
-      root.removeEventListener('pointermove', move);
-      root.removeEventListener('pointerup', up);
-      root.removeEventListener('pointercancel', up);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
       document.body.classList.remove('is-dragging');
       if (!moved) return;
       save();
       if (wasDocked) onChange?.(true);
     };
-    root.addEventListener('pointermove', move);
-    root.addEventListener('pointerup', up);
-    root.addEventListener('pointercancel', up);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   });
 
   dockBtn?.addEventListener('click', () => {
@@ -69,7 +76,7 @@ export function makeFloatable({ root, handles, key, dockBtn, onChange, minW = 32
   });
 
   // the corner handle (CSS resize) changes the size: remember it
-  if ('ResizeObserver' in window) {
+  if (sized && 'ResizeObserver' in window) {
     const remember = debounce(() => {
       const m = orient();
       if (!floating() || root.hidden) return;

@@ -80,6 +80,7 @@ export default {
   map_label: 'World map of travel health advisory levels',
   map_hint: 'Wheel to zoom · drag to pan · double-click to reset',
 
+  flights_toggle: 'Routes',
   flights_toggle_on: 'Routes ON',
   flights_toggle_off: 'Routes OFF',
   flights_toggle_label: 'Show or hide the Taoyuan Airport route animation',
@@ -370,6 +371,8 @@ export default {
   // ---- CWA world-city weather overlay (js/weather.js) ----
   wx_toggle: 'Weather',
   wx_toggle_title: 'Weather overlay: 7-day CWA world city forecasts on the map',
+  wxb_drag: 'Drag to move the weather day bar',
+  wxb_dock: 'Put it back',
   wx_kicker: 'WX // CWA',
   wx_bar_label: 'Forecast day (Taiwan date)',
   wx_play: 'Play',

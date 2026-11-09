@@ -277,7 +277,9 @@ export function createWeatherOverlay({ map, mapRoot, bar, openCountry, onChange 
   function onOver(ev) {
     const m = markerOf(ev);
     if (!m || ev.pointerType === 'touch' || pinned) return;
-    if (m.el !== document.activeElement) layer.append(m.el); // hovered marker on top
+    // hovered marker on top; only when not already last (moving a node under the pointer re-fires pointerover in an
+    // endless loop in current Chromium and swallows the click)
+    if (m.el !== document.activeElement && layer.lastElementChild !== m.el) layer.append(m.el);
     showFor(m, false, ev);
   }
   function onOut(ev) {

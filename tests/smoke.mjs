@@ -451,6 +451,52 @@ async function run(browser) {
     return `${title}; after toggle ${search}`;
   });
 
+  await check('portrait wall 1080x1920: routes switch in the layer row, weather day bar in the toolbar beside an open panel, draggable and docked back; route box clear of the board', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1080, height: 1920 } });
+    const pw = await ctx.newPage();
+    const errs = [];
+    pw.on('pageerror', (e) => errs.push(e.message));
+    await pw.addInitScript(() => { try { localStorage.setItem('safetravel.spotlight.autoopen', 'off'); } catch (e) { /* ignore */ } });
+    await pw.goto(new URL('?lang=en&wx=1&arr=TPE#/country/LK', BASE_URL).href, { waitUntil: 'load' });
+    await pw.waitForSelector('[data-testid="weather-bar"]:not([hidden]) [data-day]', { timeout: 30000 });
+    await pw.waitForTimeout(600);
+    const box = (sel) => pw.$eval(sel, (el) => { const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height, vis: getComputedStyle(el).visibility, hidden: el.hidden }; });
+    const bar = await box('[data-testid="weather-bar"]');
+    const inToolbar = await pw.$eval('[data-testid="weather-bar"]', (el) => !!el.closest('.toolbar'));
+    const panel = await box('#panel');
+    const board = await box('#arrivals');
+    const hud = await box('#flight-hud');
+    const routesInRow = await pw.$eval('[data-testid="routes-toggle"]', (el) => !!el.closest('.layer-row'));
+    const oneLine = await pw.$$eval('#flight-hud .fh-title, #flight-hud .fh-stats b', (els) => els.every((el) => el.getClientRects().length === 1));
+    // drag the bar by its grip, reload: it stays there; the dock button puts it back into the toolbar
+    const grip = await box('.wxb-grip');
+    await pw.mouse.move(grip.x + grip.w / 2, grip.y + grip.h / 2);
+    await pw.mouse.down();
+    await pw.mouse.move(400, 1500, { steps: 8 });
+    await pw.mouse.up();
+    const dragged = await box('[data-testid="weather-bar"]');
+    await pw.reload({ waitUntil: 'load' });
+    await pw.waitForSelector('[data-testid="weather-bar"]:not([hidden]) [data-day]', { timeout: 30000 });
+    const kept = await box('[data-testid="weather-bar"]');
+    await pw.click('[data-testid="weather-bar-dock"]', { timeout: 5000 }).catch((e) => { throw new Error(`dock click: ${e.message.split('\n').slice(0, 6).join(' | ')}`); });
+    const docked = await pw.$eval('[data-testid="weather-bar"]', (el) => !!el.closest('.toolbar') && !el.classList.contains('is-floating'));
+    await pw.click('[data-testid="routes-toggle"]', { timeout: 5000 }).catch((e) => { throw new Error(`routes click: ${e.message.split('\n').slice(0, 6).join(' | ')}`); });
+    const off = await pw.evaluate(() => ({ hud: document.querySelector('#flight-hud').hidden, pressed: document.querySelector('[data-testid="routes-toggle"]').getAttribute('aria-pressed') }));
+    await pw.click('[data-testid="routes-toggle"]');
+    await pw.evaluate(() => localStorage.removeItem('safetravel.wxbar.pos'));
+    await ctx.close();
+    assert(inToolbar && !bar.hidden && bar.vis === 'visible' && bar.r <= panel.x, `bar ${JSON.stringify(bar)} panel x ${panel.x}`);
+    assert(routesInRow, 'routes switch not in the layer row');
+    assert(hud.y >= board.b, `route box ${hud.y} over the board (bottom ${board.b})`);
+    assert(oneLine, 'route box title or a figure wraps');
+    assert(Math.abs(dragged.x - (400 - (grip.x + grip.w / 2 - bar.x))) < 12 && dragged.y > 1400, `dragged ${JSON.stringify(dragged)}`);
+    assert(Math.abs(kept.x - dragged.x) < 2 && Math.abs(kept.y - dragged.y) < 2, `after reload ${JSON.stringify(kept)}`);
+    assert(docked, 'dock button did not put the bar back');
+    assert(off.hud && off.pressed === 'false', `routes off ${JSON.stringify(off)}`);
+    assert(!errs.length, errs[0]);
+    return `bar in toolbar (right edge ${Math.round(bar.r)} < panel ${Math.round(panel.x)}); dragged to ${Math.round(dragged.x)},${Math.round(dragged.y)} and back`;
+  });
+
   await check('kiosk keyboard (?osk=1): ABC first on the Chinese page; 注音 kept while the visitor types, ABC again for the next one', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 }, hasTouch: true });
     const pk = await ctx.newPage();
@@ -459,7 +505,8 @@ async function run(browser) {
     await pk.goto(new URL('?osk=1&lang=zh', BASE_URL).href, { waitUntil: 'load' });
     await pk.waitForSelector('[data-testid="osk"]', { state: 'attached', timeout: 15000 });
     const kb = () => pk.$eval('[data-testid="osk"]', (r) => ({ shown: !r.hidden, mode: r.querySelector('.osk-keys')?.classList.contains('osk-zh') ? 'zh' : 'en',
-      modeKey: r.querySelector('.osk-mode')?.textContent.trim() }));
+      modeKey: r.querySelector('.osk-mode')?.textContent.trim(),
+      fontRatio: (() => { const k = r.querySelector('.osk-keys .osk-key:not(.osk-fn)'); return k ? +(parseFloat(getComputedStyle(k).fontSize) / k.offsetHeight).toFixed(2) : 0; })() }));
     await pk.focus('#search-input');
     const first = await kb();
     await pk.click('[data-testid="osk"] .osk-mode');
@@ -475,6 +522,7 @@ async function run(browser) {
     const next = await kb();
     await ctx.close();
     assert(first.shown && first.mode === 'en' && first.modeKey === '注音', `first ${JSON.stringify(first)}`);
+    assert(first.fontRatio >= 0.5, `key glyphs too small: ${first.fontRatio} of the key height`);
     assert(zh.mode === 'zh' && same.mode === 'zh', `switch ${JSON.stringify(zh)} / ${JSON.stringify(same)}`);
     assert(next.mode === 'en', `next visitor ${JSON.stringify(next)}`);
     assert(!errs.length, errs[0]);

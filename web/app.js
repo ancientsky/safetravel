@@ -282,6 +282,10 @@ async function main() {
       const h = e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height;
       document.documentElement.style.setProperty('--legend-h', `${Math.ceil(h)}px`);
     }).observe(legendNode);
+    new ResizeObserver(([e]) => { // the route box (0 while hidden): a portrait board ends above it
+      const h = e.target.hidden ? 0 : (e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height) + 10;
+      document.documentElement.style.setProperty('--hud-h', `${Math.ceil(h)}px`);
+    }).observe($('#flight-hud'));
   }
   const onFilter = () => {
     map.applyFilter();
@@ -347,6 +351,7 @@ async function main() {
     renderLegend($('#legend'));
     panel.refresh();
     if (window.innerWidth < 760) relayoutSoon(); // phones: the day bar changes the free band above the map
+    else requestAnimationFrame(() => arrivals?.resize()); // the day bar in the toolbar moves a docked board down
   };
   function loadWxOverlay() {
     wxModule ||= import('./js/weather.js').then((m) => {
@@ -416,6 +421,31 @@ async function main() {
   });
   arrivals.init();
   panel.setBoard((iso) => { emit('user:interact'); arrivals.showCountry(iso); }); // "today's direct flights" → board
+
+  // ---- weather day bar: top right on wide screens; on 761–1399 px screens (portrait walls, laptops) the country panel
+  // would cover that spot, so it sits in the toolbar under the switches. Draggable anywhere (not on phones); ▯ docks it.
+  const wxBar = $('#wx-bar');
+  const wxHome = document.createComment('wx-bar home');
+  wxBar.before(wxHome);
+  const midMq = matchMedia('(min-width: 761px) and (max-width: 1399px)');
+  let wxFloat = null;
+  function placeWxBar() {
+    const toolbar = $('.toolbar');
+    const inToolbar = midMq.matches && !wxFloat?.floating();
+    if (inToolbar && wxBar.parentNode !== toolbar) toolbar.append(wxBar);
+    else if (!inToolbar && wxBar.parentNode === toolbar) wxHome.after(wxBar);
+    wxBar.classList.toggle('in-toolbar', inToolbar);
+    arrivals?.resize(); // a docked board starts under the toolbar
+  }
+  // the legend's max height leaves the toolbar free: keep its bottom edge in --toolbar-b
+  const toolbarEl = $('.toolbar');
+  const syncToolbarB = () => document.documentElement.style.setProperty('--toolbar-b', `${Math.ceil(toolbarEl.getBoundingClientRect().bottom + 8)}px`);
+  if ('ResizeObserver' in window) new ResizeObserver(syncToolbarB).observe(toolbarEl);
+  window.addEventListener('resize', debounce(syncToolbarB, 150));
+  wxFloat = makeFloatable({ root: wxBar, handles: '.wx-bar', key: 'safetravel.wxbar.pos', dockBtn: $('.wxb-dock'), onChange: placeWxBar, sized: false });
+  midMq.addEventListener('change', placeWxBar);
+  placeWxBar();
+  window.__safetravel.wxBar = { floating: () => wxFloat.floating() };
   syncSpotCard(); // a board restored on load
   $('#legend').classList.remove('is-held');
   $('#flight-hud').classList.remove('is-held');

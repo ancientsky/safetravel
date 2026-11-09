@@ -78,6 +78,7 @@ export default {
   map_label: '世界地圖：各國旅遊疫情建議等級',
   map_hint: '滾輪縮放 · 拖曳平移 · 雙擊重設',
 
+  flights_toggle: '航線',
   flights_toggle_on: '航線 ON',
   flights_toggle_off: '航線 OFF',
   flights_toggle_label: '顯示或隱藏桃園機場航線動畫',
@@ -368,6 +369,8 @@ export default {
   // ---- CWA world-city weather overlay (js/weather.js) ----
   wx_toggle: '天氣',
   wx_toggle_title: '天氣圖層：在地圖上疊加中央氣象署全球都市 7 日天氣預報',
+  wxb_drag: '拖曳可移動天氣日期列',
+  wxb_dock: '放回原位',
   wx_kicker: 'WX // CWA',
   wx_bar_label: '天氣預報日期（臺灣日期）',
   wx_play: '播放',

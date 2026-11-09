@@ -184,7 +184,10 @@ export function createWxMap({ map, box, svgEl, tipEl, barEl, onOpen }) {
   layer.addEventListener('pointerover', (ev) => {
     const m = markerOf(ev);
     if (!m || ev.pointerType === 'touch' || st.pinned) return;
-    layer.append(m.el); // hovered marker on top (it is not focused, so re-appending is safe)
+    // hovered marker on top. Only move it when it is not already last: moving a node under the pointer fires
+    // pointerover again (an endless loop in current Chromium), and a node moved between pointerdown and pointerup
+    // gets no click
+    if (layer.lastElementChild !== m.el) layer.append(m.el);
     showTip(m);
   });
   layer.addEventListener('pointerout', (ev) => {

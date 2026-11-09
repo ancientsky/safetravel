@@ -223,9 +223,10 @@ export function renderFlightHud(node) {
   node.classList.remove('is-pending');
   const f = state.data.flights;
   const stats = $('.fh-stats', node);
-  const btn = $('.fh-toggle', node);
+  const btn = document.querySelector('.fh-toggle');
   btn.setAttribute('aria-pressed', String(state.flightsOn));
-  btn.querySelector('.fh-toggle-text').textContent = state.flightsOn ? t('flights_toggle_on') : t('flights_toggle_off');
+  btn.querySelector('.fh-toggle-text').textContent = t('flights_toggle'); // the switch knob shows on / off
+  node.hidden = !state.flightsOn; // the route box only while the routes are on the map (the switch is in the layer row)
   btn.querySelector('.fh-toggle-sr').textContent = t('flights_toggle_sr'); // name = visible text + description
   btn.title = t('flights_toggle_label');
   const dirNode = $('.fh-dir', node);
@@ -259,5 +260,5 @@ export function renderFlightHud(node) {
     <div><span>${esc(t('flights_dest'))}</span><b class="mono">${fmtNum(dest)}</b></div>
     <div${state.flightDir === 'both' ? '' : ' class="is-off"'}><span>${esc(t('flights_dep'))}</span><b class="mono out">${fmtNum(dep)}</b></div>
     <div><span>${esc(t('flights_arr'))}</span><b class="mono in">${fmtNum(arr)}</b></div>
-    <div><span>${esc(t('flights_date'))}</span><b class="mono small${stale ? ' warn' : ''}" ${stale ? `title="${esc(t('flights_stale'))}"` : ''}>${esc(fmtDay(date, 'short'))}</b></div>`;
+    <div><span>${esc(t('flights_date'))}</span><b class="mono small${stale ? ' warn' : ''}" title="${esc(stale ? `${fmtDay(date)} · ${t('flights_stale')}` : fmtDay(date))}">${esc(String(date || '').slice(5) || '—')}</b></div>`;
 }

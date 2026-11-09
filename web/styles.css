@@ -552,7 +552,8 @@ a { color: var(--cyan); }
   left: var(--gutter); bottom: calc(var(--foot-h) + 12px);
   width: var(--legend-w); padding: 12px 14px;
   /* never taller than the space under the search / layer row: scroll inside instead of covering it */
-  max-height: calc(100vh - var(--foot-h) - 24px - var(--under-hud, 150px) - 100px * var(--ts)); overflow-y: auto; scrollbar-width: thin;
+  /* --toolbar-b = the toolbar's bottom edge (app.js; it grows when the weather day bar sits in it) */
+  max-height: calc(100vh - var(--foot-h) - 22px - var(--toolbar-b, calc(var(--under-hud, 150px) + 100px * var(--ts)))); overflow-y: auto; scrollbar-width: thin;
 }
 .legend-title { margin: 0 0 8px; font: 600 calc(11px * var(--ts)) var(--mono); letter-spacing: .12em; color: var(--fg-dim); text-transform: uppercase; }
 .legend-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
@@ -609,21 +610,15 @@ a { color: var(--cyan); }
 }
 .fh-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
 .fh-title { font-size: calc(11px * var(--ts)); letter-spacing: .14em; color: var(--cyan); text-transform: uppercase; }
-.fh-toggle {
-  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px;
-  border: 1px solid var(--border); border-radius: 999px; background: transparent; cursor: pointer;
-  font: 600 calc(11px * var(--ts)) var(--mono); letter-spacing: .06em;
-}
-.fh-toggle i { width: 22px; height: 12px; border-radius: 999px; background: var(--fg-mute); position: relative; transition: background .2s; }
-.fh-toggle i::after { content: ""; position: absolute; left: 2px; top: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--bg); transition: transform .2s var(--ease); }
-.fh-toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
-.fh-toggle[aria-pressed="true"] i { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-.fh-toggle[aria-pressed="true"] i::after { transform: translateX(10px); }
-.fh-toggle:disabled { opacity: .5; cursor: not-allowed; }
+.flight-hud[hidden] { display: none; }
+.fh-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the routes switch lives in the layer row next to the weather switch (same look: .wx-toggle) */
+.fh-toggle-i { fill: none; stroke: var(--cyan); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.layer-row { flex-wrap: wrap; }
 .fh-stats { display: grid; grid-template-columns: repeat(4, auto); gap: 4px 16px; }
 .fh-stats div { display: flex; flex-direction: column; }
 .fh-stats span { font-size: calc(10px * var(--ts)); color: var(--fg-mute); letter-spacing: .04em; white-space: nowrap; }
-.fh-stats b { font-size: calc(18px * var(--ts)); font-weight: 600; line-height: 1.2; }
+.fh-stats b { font-size: calc(18px * var(--ts)); font-weight: 600; line-height: 1.2; white-space: nowrap; }
 .fh-stats b.small { font-size: calc(13px * var(--ts)); line-height: 1.75; }
 .fh-stats b.out { color: var(--flight-out); }
 .fh-stats b.in { color: var(--flight-in); }
@@ -999,9 +994,7 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
   .tiles { display: none; }
   .panel { background: var(--bg); }
   .swatch { width: 12px; height: 9px; }
-  .flight-hud { left: var(--gutter); right: auto; bottom: auto; top: calc(var(--legend-top-phone) + 40px * var(--ts)); padding: 6px 8px; }
-  .fh-stats, .fh-dir { display: none; }
-  .fh-head { margin: 0; }
+  .flight-hud { display: none; } /* phones: the routes switch in the layer row is enough */
   .zoom-ctrl { top: auto; bottom: calc(var(--foot-h) + 220px); }
   body.panel-open .zoom-ctrl { transform: none; }
   .spotlight { left: var(--gutter); right: var(--gutter); width: auto; bottom: calc(var(--foot-h) + 8px); padding: 8px 10px 10px; height: 200px; overflow: hidden; }
@@ -1172,7 +1165,9 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
   left: var(--gutter); top: var(--arr-top); bottom: calc(var(--foot-h) + 12px); width: var(--arr-w);
 }
 .arrivals[data-mode="portrait"]:not(.is-floating) {
-  left: var(--gutter); right: calc(var(--gutter) + 58px); top: var(--arr-top); height: min(42vh, calc(100vh - var(--arr-top) - 360px));
+  left: var(--gutter); right: calc(var(--gutter) + 58px); top: var(--arr-top);
+  /* ends above the route box + legend column (both measured in app.js) */
+  height: max(240px, min(42vh, calc(100vh - var(--arr-top) - var(--foot-h) - var(--legend-h, 360px) - var(--hud-h, 0px) - 40px)));
 }
 /* portrait: the country panel opens on the right; the board narrows beside it (and the zoom buttons) */
 body.panel-open:not(.panel-floating) .arrivals[data-mode="portrait"]:not(.is-floating) { right: calc(var(--panel-w) + var(--gutter) * 2 + 58px); }
@@ -1338,12 +1333,7 @@ body.arr-open .flights-canvas { opacity: .35; }
 /* beside a left-docked arrivals board: the legend starts as its title bar and the route box shrinks to its switch,
    stacked above the legend in one narrow column (--legend-h is measured in app.js) */
 body.arr-dock-left .legend.is-min { width: auto; min-width: calc(200px * var(--ts)); }
-body.arr-dock-left .flight-hud {
-  left: calc(var(--gutter) * 2 + var(--arr-w)); bottom: calc(var(--foot-h) + 22px + var(--legend-h, 48px));
-  min-width: 0; width: auto; padding: 6px 10px;
-}
-body.arr-dock-left .flight-hud .fh-stats, body.arr-dock-left .flight-hud .fh-dir { display: none; }
-body.arr-dock-left .flight-hud .fh-head { margin: 0; }
+body.arr-dock-left .flight-hud { display: none; } /* the routes switch is in the layer row; the board needs the room */
 /* portrait wall screens (1080x1920): the spotlight card spans most of the width, so the route box sits on top of the
    legend in the left column instead of beside it */
 @media (orientation: portrait) and (min-width: 761px) {
@@ -1753,14 +1743,15 @@ body.watch-on .flights-canvas { opacity: .4; }
 }
 .wx-bar[hidden] { display: none; }
 .wxb-kicker { font-size: calc(10px * var(--ts)); letter-spacing: .12em; color: var(--cyan); white-space: nowrap; }
-.wxb-play { min-width: 34px; width: 34px; height: 36px; padding: 0; }
+.wxb-play { min-width: 34px; width: calc(34px * var(--ts)); height: calc(36px * var(--ts)); padding: 0; }
 .wxb-play svg { fill: currentColor; }
 .wxb-play .i-pause { fill: none; stroke-width: 2.6; }
 .wxb-play[aria-pressed="true"] .i-play, .wxb-play[aria-pressed="false"] .i-pause { display: none; }
 .wxb-play[aria-pressed="true"] { color: var(--cyan); border-color: var(--cyan); }
 .wxb-days { display: flex; gap: 3px; }
 .wxb-day {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; width: 40px; height: 36px; padding: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: calc(40px * var(--ts)); height: calc(36px * var(--ts)); padding: 0 4px; white-space: nowrap; /* grows with the text size */
   border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--fg-dim); cursor: pointer; line-height: 1.15;
 }
 .wxb-day:hover { border-color: var(--border-strong); color: var(--fg); }
@@ -1772,9 +1763,20 @@ body.watch-on .flights-canvas { opacity: .4; }
 .wxb-day[aria-pressed="true"] .md { color: var(--fg-dim); }
 /* wide screens: follow the zoom buttons beside the open panel; narrower ones: the panel shows the forecast */
 body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(--gutter)))); }
-@media (max-width: 1399px) and (min-width: 761px) { body.panel-open .wx-bar { visibility: hidden; } }
+/* 761–1399 px: in the toolbar under the switches (app.js), so the country panel never covers it */
+.wx-bar.in-toolbar, body.panel-open .wx-bar.in-toolbar { position: static; transform: none; z-index: auto; }
+/* dragged anywhere (floatable.js sets left / top); ▯ puts it back */
+.wx-bar.is-floating, body.panel-open .wx-bar.is-floating { right: auto; transform: none; z-index: 22; } /* over the panel and the board, under menus */
+.wx-bar.in-toolbar.is-floating, body.panel-open .wx-bar.in-toolbar.is-floating { position: fixed; } /* follows the finger while leaving the toolbar */
+.wxb-grip { display: inline-grid; place-items: center; width: 14px; margin-left: -4px; color: var(--fg-mute); cursor: grab; touch-action: none; }
+.wxb-grip svg { width: 14px; height: 20px; fill: currentColor; }
+@media (min-width: 761px) { .wx-bar { touch-action: none; } } /* a drag moves the bar, it does not scroll the page */
+@media (max-width: 760px) { .wxb-grip, .wxb-dock { display: none; } }
+.wxb-dock { min-width: 30px; width: 30px; height: 30px; padding: 0; }
+.wxb-dock[hidden] { display: none; }
+.wxb-dock svg { fill: none; }
 @media (max-width: 1100px) { .wxb-kicker { display: none; } }
-@media (max-width: 900px) and (min-width: 761px) { .wxb-day { width: 34px; } }
+@media (max-width: 900px) and (min-width: 761px) { .wxb-day { min-width: calc(34px * var(--ts)); } }
 
 /* tooltip: mini 7-day row */
 .wxt-days { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(30px, 1fr)); gap: 2px; }
@@ -1970,7 +1972,7 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
 .panel-dock[hidden] { display: none; }
 body.is-dragging, body.is-dragging * { user-select: none; cursor: grabbing !important; }
 body.panel-open.panel-floating .zoom-ctrl, body.panel-open.panel-floating .wx-bar { transform: none; }
-@media (max-width: 1399px) and (min-width: 761px) { body.panel-open.panel-floating .wx-bar { visibility: visible; } }
+
 .panel.is-floating .panel-autobar { padding-right: 104px; } /* room for the dock button next to close */
 .panel.is-floating .panel-head { padding-right: 100px; }
 .panel.is-floating .panel-jump { margin-right: -100px; }
