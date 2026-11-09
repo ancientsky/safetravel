@@ -622,7 +622,7 @@ a { color: var(--cyan); }
 /* the routes switch lives in the layer row next to the weather switch (same look: .wx-toggle) */
 .fh-toggle-i { fill: none; stroke: var(--cyan); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .layer-row { flex-wrap: wrap; }
-.fh-stats { display: grid; grid-template-columns: repeat(4, auto); gap: 4px 16px; }
+.fh-stats { display: grid; grid-template-columns: repeat(4, auto); gap: 4px 14px; }
 .fh-stats div { display: flex; flex-direction: column; }
 .fh-stats span { font-size: calc(10px * var(--ts)); color: var(--fg-mute); letter-spacing: .04em; white-space: nowrap; }
 .fh-stats b { font-size: calc(18px * var(--ts)); font-weight: 600; line-height: 1.2; white-space: nowrap; }
@@ -919,11 +919,14 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 .toast-x { margin-left: auto; background: none; border: 0; cursor: pointer; font-size: calc(18px * var(--ts)); line-height: 1; color: var(--fg-dim); }
 
 .foot {
+  /* no min-height: --foot-h is measured FROM this box (app.js), so a min-height of it only ever grew (a footer that once
+     wrapped to three lines at XL kept that height after switching to small text or rotating the screen) */
   position: fixed; z-index: 9; left: 0; right: 0; bottom: 0;
-  min-height: var(--foot-h);
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 6px var(--gutter);
-  font-size: calc(11px * var(--ts)); color: var(--fg-mute);
+  padding: 3px var(--gutter);
+  /* small print: grows with the text size only up to 115 %, so it stays one or two lines */
+  --foot-ts: min(var(--ts), 1.15);
+  font-size: calc(10.5px * var(--foot-ts)); line-height: 1.35; color: var(--fg-mute);
   border-top: 1px solid var(--border);
   background: linear-gradient(to top, var(--bg), rgba(0, 0, 0, 0));
 }
@@ -931,7 +934,7 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 .foot p { margin: 0; }
 .foot-sep { color: var(--fg-mute); margin: 0 2px 0 4px; }
 /* sources: one short line of names (each link's title says what it provides; details on help.html#sources) */
-.foot-src { font-size: calc(10px * var(--ts)); line-height: 1.5; }
+.foot-src { font-size: calc(10px * var(--foot-ts)); line-height: 1.35; }
 .foot-k { margin-right: 6px; font-family: var(--mono); letter-spacing: .08em; color: var(--fg-mute); }
 .foot-dot { margin: 0 5px; color: var(--fg-mute); opacity: .7; }
 .foot-src a { color: var(--fg-mute); text-decoration: none; border-bottom: 1px dotted var(--border-strong); }
@@ -1340,11 +1343,16 @@ body.arr-open .flights-canvas { opacity: .35; }
 /* beside a left-docked arrivals board: the legend starts as its title bar and the route box shrinks to its switch,
    stacked above the legend in one narrow column (--legend-h is measured in app.js) */
 body.arr-dock-left .legend.is-min { width: auto; min-width: calc(200px * var(--ts)); }
-body.arr-dock-left .flight-hud { display: none; } /* the routes switch is in the layer row; the board needs the room */
+/* beside a left-docked board: the route box sits on the legend's title bar, in the column right of the board */
+body.arr-dock-left .flight-hud {
+  left: calc(var(--gutter) * 2 + var(--arr-w)); bottom: calc(var(--foot-h) + 22px + var(--legend-h, 48px));
+  min-width: 0; width: max-content; padding: 8px 12px;
+}
 /* portrait wall screens (1080x1920): the spotlight card spans most of the width, so the route box sits on top of the
    legend in the left column instead of beside it */
 @media (orientation: portrait) and (min-width: 761px) {
-  .flight-hud { left: var(--gutter); bottom: calc(var(--foot-h) + 22px + var(--legend-h, 360px)); width: var(--legend-w); min-width: 0; }
+  /* at least the legend's width, wider when its figures need it (the date never spills out) */
+  .flight-hud { left: var(--gutter); bottom: calc(var(--foot-h) + 22px + var(--legend-h, 360px)); width: max-content; min-width: var(--legend-w); max-width: calc(100vw - 2 * var(--gutter)); }
   .fh-stats { grid-template-columns: repeat(4, auto); }
 }
 /* in the map page's board the poster / full-screen links are icons (their title says what they are) */
@@ -1962,7 +1970,7 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
 .brand-kicker { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* decorative line: never wraps the header */
 .foot a { white-space: nowrap; } /* never break inside an organisation's or a page's name */
 @media (max-width: 760px) {
-  .foot-src { font-size: calc(9.5px * var(--ts)); }
+  .foot-src { font-size: calc(9.5px * var(--foot-ts)); }
   .foot a.foot-more { display: none; } /* "使用說明" right below leads to the same details */
 }
 /* short desktop screens: the stat tiles go (the legend carries the same counts), the toolbar moves up */

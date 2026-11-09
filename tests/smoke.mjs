@@ -451,6 +451,32 @@ async function run(browser) {
     return `${title}; after toggle ${search}`;
   });
 
+  await check('route box and footer: shown beside a left-docked board in landscape, figures inside the box; the footer shrinks back after XL', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1920, height: 1080 } });
+    const pf = await ctx.newPage();
+    await pf.addInitScript(() => { try { localStorage.setItem('safetravel.spotlight.autoopen', 'off'); localStorage.setItem('safetravel.textSize', 's'); } catch (e) { /* ignore */ } });
+    await pf.goto(new URL('?lang=en&arr=TPE', BASE_URL).href, { waitUntil: 'load' });
+    await pf.waitForFunction(() => !document.querySelector('#flight-hud').hidden && document.querySelector('#flight-hud .fh-stats b'), null, { timeout: 30000 });
+    await pf.waitForTimeout(500);
+    const geo = () => pf.evaluate(() => {
+      const r = (s) => document.querySelector(s).getBoundingClientRect();
+      const hud = r('#flight-hud');
+      const inside = [...document.querySelectorAll('#flight-hud .fh-stats b')].every((b) => b.getBoundingClientRect().right <= hud.right + 0.5);
+      return { hud: { x: hud.left, w: hud.width, display: getComputedStyle(document.querySelector('#flight-hud')).display }, board: r('#arrivals').right, foot: r('.foot').height, inside, ts: document.documentElement.dataset.ts };
+    });
+    const small = await geo();
+    const sizes = [small.ts];
+    for (let i = 0; i < 4; i++) { await pf.click('[data-testid="textsize-toggle"]'); await pf.waitForTimeout(250); sizes.push((await geo()).ts); }
+    const back = await geo(); // back at the first size after a full cycle (it passed XL)
+    await pf.evaluate(() => localStorage.removeItem('safetravel.textSize'));
+    await ctx.close();
+    assert(small.hud.display !== 'none' && small.hud.w > 0 && small.hud.x >= small.board, `route box ${JSON.stringify(small.hud)} board right ${small.board}`);
+    assert(small.inside, 'a route-box figure spills out of the box');
+    assert(small.foot < 40, `footer ${small.foot}px`);
+    assert(back.ts === small.ts && Math.abs(back.foot - small.foot) < 2, `footer after ${sizes.join('→')}: ${back.foot}px (was ${small.foot}px)`);
+    return `route box at x ${Math.round(small.hud.x)} (board ends ${Math.round(small.board)}); footer ${Math.round(small.foot)} px, ${sizes.join('→')} → ${Math.round(back.foot)} px`;
+  });
+
   await check('portrait wall 1080x1920: routes switch in the layer row, weather day bar in the toolbar beside an open panel, draggable and docked back; route box clear of the board', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 1080, height: 1920 } });
     const pw = await ctx.newPage();
@@ -467,7 +493,8 @@ async function run(browser) {
     const board = await box('#arrivals');
     const hud = await box('#flight-hud');
     const routesInRow = await pw.$eval('[data-testid="routes-toggle"]', (el) => !!el.closest('.layer-row'));
-    const oneLine = await pw.$$eval('#flight-hud .fh-title, #flight-hud .fh-stats b', (els) => els.every((el) => el.getClientRects().length === 1));
+    const oneLine = await pw.$$eval('#flight-hud .fh-title, #flight-hud .fh-stats b', (els) => els.every((el) => el.getClientRects().length === 1
+      && el.getBoundingClientRect().right <= document.querySelector('#flight-hud').getBoundingClientRect().right + 0.5));
     // drag the bar by its grip, reload: it stays there; the dock button puts it back into the toolbar
     const grip = await box('.wxb-grip');
     await pw.mouse.move(grip.x + grip.w / 2, grip.y + grip.h / 2);
