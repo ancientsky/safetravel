@@ -1342,17 +1342,20 @@ body.arr-open .flights-canvas { opacity: .35; }
 
 /* beside a left-docked arrivals board: the legend starts as its title bar and the route box shrinks to its switch,
    stacked above the legend in one narrow column (--legend-h is measured in app.js) */
-body.arr-dock-left .legend.is-min { width: auto; min-width: calc(200px * var(--ts)); }
-/* beside a left-docked board: the route box sits on the legend's title bar, in the column right of the board */
+body.arr-dock-left .legend.is-min { width: auto; }
+/* Stacked column (beside a left-docked board; portrait walls): the route box sits on the legend and the two have the
+   same width — the box takes the legend's measured width, the legend is at least as wide as the box's figures need
+   (--legend-real-w, --hud-min-w: app.js) */
+body.arr-dock-left .legend { min-width: max(calc(200px * var(--ts)), var(--hud-min-w, 0px)); }
 body.arr-dock-left .flight-hud {
   left: calc(var(--gutter) * 2 + var(--arr-w)); bottom: calc(var(--foot-h) + 22px + var(--legend-h, 48px));
-  min-width: 0; width: max-content; padding: 8px 12px;
+  min-width: 0; width: var(--legend-real-w, max-content); padding: 8px 12px;
 }
 /* portrait wall screens (1080x1920): the spotlight card spans most of the width, so the route box sits on top of the
    legend in the left column instead of beside it */
 @media (orientation: portrait) and (min-width: 761px) {
-  /* at least the legend's width, wider when its figures need it (the date never spills out) */
-  .flight-hud { left: var(--gutter); bottom: calc(var(--foot-h) + 22px + var(--legend-h, 360px)); width: max-content; min-width: var(--legend-w); max-width: calc(100vw - 2 * var(--gutter)); }
+  .legend { min-width: var(--hud-min-w, 0px); }
+  .flight-hud { left: var(--gutter); bottom: calc(var(--foot-h) + 22px + var(--legend-h, 360px)); width: var(--legend-real-w, var(--legend-w)); min-width: 0; max-width: calc(100vw - 2 * var(--gutter)); }
   .fh-stats { grid-template-columns: repeat(4, auto); }
 }
 /* in the map page's board the poster / full-screen links are icons (their title says what they are) */

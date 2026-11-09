@@ -286,15 +286,37 @@ async function main() {
   new MutationObserver(() => requestAnimationFrame(syncLegendOverflow)).observe(legendNode, { childList: true });
   // portrait screens stack the route box on top of the legend: keep --legend-h (its height) current
   if ('ResizeObserver' in window) {
+    // Where the route box is stacked on the legend (portrait; beside a left-docked board) the two share one width:
+    // the box takes the legend's real width (--legend-real-w) and the legend is never narrower than the box's
+    // figures need (--hud-min-w). The figures' width does not depend on the box's width, so this cannot loop.
+    const hudNode = $('#flight-hud');
+    const rootStyle = document.documentElement.style;
+    function syncHudMinW() {
+      const stats = $('.fh-stats', hudNode);
+      let w = 0;
+      if (stats && !hudNode.hidden && getComputedStyle(hudNode).display !== 'none') {
+        const prev = stats.style.width;
+        stats.style.width = 'max-content'; // intrinsic width of the four figures
+        const cs = getComputedStyle(hudNode);
+        const frame = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+        w = Math.ceil(Math.max(stats.getBoundingClientRect().width, $('.fh-dir', hudNode)?.getBoundingClientRect().width || 0) + frame);
+        stats.style.width = prev;
+      }
+      rootStyle.setProperty('--hud-min-w', `${w}px`);
+    }
     new ResizeObserver(([e]) => {
-      const h = e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height;
-      document.documentElement.style.setProperty('--legend-h', `${Math.ceil(h)}px`);
+      const box = e.borderBoxSize?.[0];
+      rootStyle.setProperty('--legend-h', `${Math.ceil(box?.blockSize ?? e.contentRect.height)}px`);
+      rootStyle.setProperty('--legend-real-w', `${(box?.inlineSize ?? e.target.getBoundingClientRect().width).toFixed(2)}px`);
       syncLegendOverflow();
     }).observe(legendNode);
     new ResizeObserver(([e]) => { // the route box (0 while hidden): a portrait board ends above it
       const h = e.target.hidden ? 0 : (e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height) + 10;
-      document.documentElement.style.setProperty('--hud-h', `${Math.ceil(h)}px`);
-    }).observe($('#flight-hud'));
+      rootStyle.setProperty('--hud-h', `${Math.ceil(h)}px`);
+      syncHudMinW(); // text size / language changed its figures
+    }).observe(hudNode);
+    new MutationObserver(() => requestAnimationFrame(syncHudMinW)).observe(hudNode, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+    document.fonts?.ready.then(syncHudMinW);
   }
   const onFilter = () => {
     map.applyFilter();

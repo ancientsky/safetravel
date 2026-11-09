@@ -462,16 +462,25 @@ async function run(browser) {
       const r = (s) => document.querySelector(s).getBoundingClientRect();
       const hud = r('#flight-hud');
       const inside = [...document.querySelectorAll('#flight-hud .fh-stats b')].every((b) => b.getBoundingClientRect().right <= hud.right + 0.5);
-      return { hud: { x: hud.left, w: hud.width, display: getComputedStyle(document.querySelector('#flight-hud')).display }, board: r('#arrivals').right, foot: r('.foot').height, inside, ts: document.documentElement.dataset.ts };
+      const lg = r('#legend');
+      return { hud: { x: hud.left, w: hud.width, display: getComputedStyle(document.querySelector('#flight-hud')).display }, board: r('#arrivals').right, foot: r('.foot').height, inside, ts: document.documentElement.dataset.ts,
+        aligned: Math.abs(lg.left - hud.left) < 1 && Math.abs(lg.width - hud.width) < 1, lg: `${lg.left.toFixed(1)}+${lg.width.toFixed(1)} vs ${hud.left.toFixed(1)}+${hud.width.toFixed(1)}` };
     });
     const small = await geo();
     const sizes = [small.ts];
-    for (let i = 0; i < 4; i++) { await pf.click('[data-testid="textsize-toggle"]'); await pf.waitForTimeout(250); sizes.push((await geo()).ts); }
+    const misaligned = [];
+    for (let i = 0; i < 4; i++) {
+      await pf.click('[data-testid="textsize-toggle"]'); await pf.waitForTimeout(350);
+      const g = await geo();
+      sizes.push(g.ts);
+      if (!g.aligned || !g.inside) misaligned.push(`${g.ts}: ${g.lg}`);
+    }
     const back = await geo(); // back at the first size after a full cycle (it passed XL)
     await pf.evaluate(() => localStorage.removeItem('safetravel.textSize'));
     await ctx.close();
     assert(small.hud.display !== 'none' && small.hud.w > 0 && small.hud.x >= small.board, `route box ${JSON.stringify(small.hud)} board right ${small.board}`);
     assert(small.inside, 'a route-box figure spills out of the box');
+    assert(small.aligned && !misaligned.length, `route box and legend widths differ: ${small.aligned ? '' : small.lg} ${misaligned.join('; ')}`);
     assert(small.foot < 40, `footer ${small.foot}px`);
     assert(back.ts === small.ts && Math.abs(back.foot - small.foot) < 2, `footer after ${sizes.join('→')}: ${back.foot}px (was ${small.foot}px)`);
     return `route box at x ${Math.round(small.hud.x)} (board ends ${Math.round(small.board)}); footer ${Math.round(small.foot)} px, ${sizes.join('→')} → ${Math.round(back.foot)} px`;
@@ -493,6 +502,8 @@ async function run(browser) {
     const board = await box('#arrivals');
     const hud = await box('#flight-hud');
     const routesInRow = await pw.$eval('[data-testid="routes-toggle"]', (el) => !!el.closest('.layer-row'));
+    const sameCol = await pw.evaluate(() => { const h = document.querySelector('#flight-hud').getBoundingClientRect(); const l = document.querySelector('#legend').getBoundingClientRect();
+      return Math.abs(h.left - l.left) < 1 && Math.abs(h.width - l.width) < 1 ? '' : `${h.left}+${h.width} vs ${l.left}+${l.width}`; });
     const oneLine = await pw.$$eval('#flight-hud .fh-title, #flight-hud .fh-stats b', (els) => els.every((el) => el.getClientRects().length === 1
       && el.getBoundingClientRect().right <= document.querySelector('#flight-hud').getBoundingClientRect().right + 0.5));
     // drag the bar by its grip, reload: it stays there; the dock button puts it back into the toolbar
@@ -514,6 +525,7 @@ async function run(browser) {
     await ctx.close();
     assert(inToolbar && !bar.hidden && bar.vis === 'visible' && bar.r <= panel.x, `bar ${JSON.stringify(bar)} panel x ${panel.x}`);
     assert(routesInRow, 'routes switch not in the layer row');
+    assert(!sameCol, `route box and legend widths differ: ${sameCol}`);
     assert(hud.y >= board.b, `route box ${hud.y} over the board (bottom ${board.b})`);
     assert(oneLine, 'route box title or a figure wraps');
     assert(Math.abs(dragged.x - (400 - (grip.x + grip.w / 2 - bar.x))) < 12 && dragged.y > 1400, `dragged ${JSON.stringify(dragged)}`);
