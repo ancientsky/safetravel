@@ -249,9 +249,8 @@ export default {
   arr_empty_risk: 'No flights from level 2+ areas in this window.',
   // past 90 minutes a count of minutes is hard to read ("1445 min ago"): hours, then days
   arr_in: ({ n }) => (n <= 0 ? 'now' : n < 90 ? `in ${n} min` : n < 2880 ? `in ${Math.round(n / 60)} h` : `in ${Math.round(n / 1440)} days`),
-  arr_l2: ({ n }) => `${n} ${n === 1 ? 'flight' : 'flights'} from Level 2+ areas`,
-  arr_l2_only: 'Show only these',
-  arr_l2_all: 'Show all',
+  arr_l2: 'L2+',
+  arr_l2_title: ({ n, on }) => `${n} ${n === 1 ? 'flight' : 'flights'} from Level 2+ areas: ${on ? 'showing only these, tap to show all' : 'tap to show only these'}`,
   arr_stale_bar: ({ time, ago }) => `Flight data stopped at ${time} (${ago}) and has not updated since. Times may have changed — check the airport's own displays.`,
   arr_ago: ({ n }) => (n <= 0 ? 'just now' : n < 90 ? `${n} min ago` : n < 2880 ? `${Math.round(n / 60)} h ago` : `${Math.round(n / 1440)} days ago`),
   arr_sched: ({ time }) => `sched. ${time}`,

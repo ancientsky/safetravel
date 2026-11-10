@@ -146,7 +146,8 @@ map). Data and refresh: `docs/TRAVELMED.md`.
 
 - **Brief + QR code** (`js/panel.js` `renderBrief`, `js/qr.js`): the country panel opens with three plain lines built from the
   data already loaded (CDC level, diseases and instruction; MOFA / MAC level incl. a higher regional level; a fixed pre-trip
-  line linking to `trip.html#ISO`). The QR code encodes the absolute address of that trip check on the public site, taken
+  line linking to `trip.html#ISO`). The lines type themselves once per country and language (`typeBrief`; hidden full text
+  keeps the layout still; a re-render resumes instead of restarting; static with reduced motion). The QR code encodes the absolute address of that trip check on the public site, taken
   from `<meta name="safetravel-public-url">` in `index.html` (so an intranet mirror still hands out a public link; forks
   change the meta). The code is off by default and only rendered with `?qr=1`; never at 760 px and below. Without it
   the generator is not fetched.
@@ -158,8 +159,8 @@ map). Data and refresh: `docs/TRAVELMED.md`.
   highest levels of the active layer with SVG pattern fills (dots, hatching); `patternTransform` is rescaled on zoom so the
   pattern keeps its size on screen. `state.patterns`, `localStorage` `safetravel.patterns` (`off` to disable), `?pat=0|1`,
   class `pat-on` on `<html>` for the legend swatches.
-- **Board strip** (`js/arrivals.js`): the count of listed flights from level 2+ areas is a toggle under the title (also on a
-  collapsed board); `.arr-stale-bar` appears when the feed is older than twice the refresh interval plus 5 minutes.
+- **Board filter button** (`js/arrivals.js`): the count of listed flights from level 2+ areas is a compact toggle beside the
+  checkpoint control (also on a collapsed board); `.arr-stale-bar` appears when the feed is older than twice the refresh interval plus 5 minutes.
 
 ## `trip.html` on phones
 

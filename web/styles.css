@@ -2126,21 +2126,25 @@ pattern.pat path { fill: none; stroke: var(--pat-ink); stroke-width: 1.5; stroke
 .pb-qr.is-failed { display: none; }
 @media (max-width: 760px) { .pb-qr { display: none; } }
 
-/* ---------- arrivals board: flights from level 2+ areas always under the title; banner when the data is old ---------- */
-.arr-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 10px 6px 14px; border-bottom: 1px solid var(--border); }
-.arr-strip[hidden], .arr-stale-bar[hidden] { display: none; }
+/* ---------- arrivals board: level 2+ filter button beside the checkpoint control; banner when the data is old ---------- */
+.arr-stale-bar[hidden], .arr-l2[hidden] { display: none; }
 .arr-l2 {
-  display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; min-height: 34px; padding: 4px 12px; cursor: pointer;
-  font: inherit; font-size: calc(13.5px * var(--arr-fs, 1)); font-weight: 700; color: var(--warn-text); text-align: left;
-  background: color-mix(in srgb, var(--lvl2) 12%, transparent); border: 1px solid color-mix(in srgb, var(--lvl2) 65%, transparent); border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 10px; cursor: pointer; white-space: nowrap;
+  font: inherit; font-size: .85em; font-weight: 700; color: var(--warn-text);
+  background: color-mix(in srgb, var(--lvl2) 12%, transparent); border: 1px solid color-mix(in srgb, var(--lvl2) 65%, transparent); border-radius: 8px;
 }
-.arr-l2::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--lvl2); flex: none; }
+.arr-l2 svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.arr-l2 b { min-width: 1.6em; padding: 0 5px; border-radius: 999px; text-align: center; background: var(--lvl2); color: #1a1200; }
 .arr-l2:hover, .arr-l2:focus-visible { background: color-mix(in srgb, var(--lvl2) 22%, transparent); outline: none; }
 .arr-l2[aria-pressed="true"] { background: var(--lvl2); color: #1a1200; }
-.arr-l2[aria-pressed="true"]::before { background: #1a1200; }
+.arr-l2[aria-pressed="true"] svg { fill: currentColor; }
+.arr-l2[aria-pressed="true"] b { background: #1a1200; color: var(--lvl2); }
 .arr-l2.is-zero:not([aria-pressed="true"]) { color: var(--fg-dim); background: none; border-color: var(--border); cursor: default; }
-.arr-l2.is-zero:not([aria-pressed="true"])::before { background: var(--fg-mute); }
-.arr-l2-act { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.arr-l2.is-zero:not([aria-pressed="true"]) b { background: none; color: inherit; border: 1px solid var(--border); }
+/* a collapsed board keeps just this button under its title */
+.arrivals.is-min.has-l2 .arr-controls { display: flex; padding: 6px 14px; border-bottom: 0; }
+.arrivals.is-min.has-l2 .arr-controls > :not(.arr-l2) { display: none; }
+@media (pointer: coarse) { .arr-l2 { min-height: 44px; } }
 .arr-stale-bar {
   margin: 0; padding: 8px 14px; font-size: calc(13.5px * var(--arr-fs, 1)); font-weight: 700; line-height: 1.45; color: #1a1200;
   background: var(--lvl2); border-bottom: 1px solid var(--border);
@@ -2151,3 +2155,15 @@ pattern.pat path { fill: none; stroke: var(--pat-ink); stroke-width: 1.5; stroke
 :root[lang="en"] .pb-list li b { margin-top: 5px; }
 /* a long status ("delayed · 29 h ago") wraps under the kicker instead of sliding under the buttons */
 .arr-kicker > .arr-status { white-space: normal; }
+
+/* the brief types itself like the AI overview: the hidden full text keeps each line's final size */
+.pb-cell { display: block; min-width: 0; }
+.pb-t { display: grid; }
+.pb-t > .tw-ghost, .pb-t > .pb-tw { grid-area: 1 / 1; min-width: 0; }
+.pb-tw.is-typing::after { content: ""; display: inline-block; width: .5em; height: 1em; margin-left: 2px; vertical-align: -.12em; background: var(--accent); animation: pb-caret .7s steps(1) infinite; }
+@keyframes pb-caret { 50% { opacity: 0; } }
+.panel-brief .pb-link { display: inline-block; margin-top: 2px; opacity: 0; transition: opacity .35s ease; }
+.panel-brief.is-typed .pb-link { opacity: 1; }
+.panel-brief.is-new { animation: pb-in .45s var(--ease, ease) both; }
+@keyframes pb-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .panel-brief.is-new { animation: none; } .panel-brief .pb-link { transition: none; } }

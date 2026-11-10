@@ -246,9 +246,8 @@ export default {
   arr_empty_risk: '此時段沒有來自第二級以上地區的班機。',
   // past 90 minutes a count of minutes is hard to read ("1445 分前"): hours, then days
   arr_in: ({ n }) => (n <= 0 ? '即將' : n < 90 ? `${n} 分後` : n < 2880 ? `${Math.round(n / 60)} 小時後` : `${Math.round(n / 1440)} 天後`),
-  arr_l2: ({ n }) => `來自第二級以上地區 ${n} 班`,
-  arr_l2_only: '只看這些',
-  arr_l2_all: '顯示全部',
+  arr_l2: '第二級以上',
+  arr_l2_title: ({ n, on }) => `來自第二級以上地區 ${n} 班：${on ? '目前只顯示這些，點一下顯示全部' : '點一下只看這些'}`,
   arr_stale_bar: ({ time, ago }) => `航班資料停在 ${time}（${ago}），沒有再更新。班機時間可能已變動，請以機場公告為準。`,
   arr_ago: ({ n }) => (n <= 0 ? '剛剛' : n < 90 ? `${n} 分前` : n < 2880 ? `${Math.round(n / 60)} 小時前` : `${Math.round(n / 1440)} 天前`),
   arr_sched: ({ time }) => `表定 ${time}`,

@@ -1300,7 +1300,7 @@ async function run(browser) {
     return 'floats, survives a reload, docks back';
   });
 
-  await check('extras: kiosk destination buttons, traveller brief with a QR code, level patterns with a menu switch, board L2 count and stale banner', async () => {
+  await check('extras: kiosk destination buttons, typed traveller brief with a QR code, level patterns with a menu switch, board L2 count and stale banner', async () => {
     const browser = page.context().browser();
     // 1. kiosk: "where to?" buttons beside the search box open a country in one tap; absent on ordinary screens
     let ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 }, hasTouch: true });
@@ -1333,19 +1333,28 @@ async function run(browser) {
 
     // 2. the panel starts with the essentials in plain words; with ?qr=1 also a QR code to the public trip check
     await pk.waitForSelector('[data-testid="panel-qr"].is-ready', { timeout: 10000 });
+    // the lines type themselves (like the AI overview) without moving anything, then the link appears
+    const typeRun = await pk.evaluate(() => {
+      const b = document.querySelector('[data-testid="panel-brief"]');
+      return { h: Math.round(b.getBoundingClientRect().height), typed: b.classList.contains('is-typed'), shown: b.querySelector('.pb-tw').textContent.length, full: b.querySelector('.pb-tw').dataset.full.length };
+    });
+    await pk.waitForSelector('[data-testid="panel-brief"].is-typed', { timeout: 8000 });
+    const typedH = await pk.$eval('[data-testid="panel-brief"]', (b) => Math.round(b.getBoundingClientRect().height));
+    assert(typedH === typeRun.h, `brief height while typing ${typeRun.h}px, after ${typedH}px`);
     const brief = await pk.evaluate(() => {
       const b = document.querySelector('[data-testid="panel-brief"]');
       const qr = b.querySelector('[data-testid="panel-qr"]');
       return {
         first: document.querySelector('#panel .panel-body').firstElementChild === b,
         rows: [...b.querySelectorAll('.pb-list li b')].map((x) => x.textContent),
-        health: b.querySelector('.pb-list li span').textContent,
+        health: b.querySelector('.pb-tw').textContent, whole: [...b.querySelectorAll('.pb-tw')].every((x) => x.textContent === x.dataset.full),
+        linkShown: getComputedStyle(b.querySelector('.pb-link')).opacity !== '0',
         link: b.querySelector('[data-testid="panel-trip-link"]').getAttribute('href'),
         qr: qr.dataset.qr, modules: Number(qr.querySelector('svg')?.dataset.modules), dark: qr.querySelector('svg path').getAttribute('d').length,
         size: Math.round(qr.querySelector('.pb-qr-img').getBoundingClientRect().width), label: qr.querySelector('[role="img"]').getAttribute('aria-label'),
       };
     });
-    assert(brief.first && brief.rows.join() === '疫情,安全,出發前' && /^疾管署/.test(brief.health), `brief: ${JSON.stringify(brief)}`);
+    assert(brief.first && brief.rows.join() === '疫情,安全,出發前' && /^疾管署/.test(brief.health) && brief.whole && brief.linkShown, `brief: ${JSON.stringify(brief)}`);
     assert(brief.link === 'trip.html#JP' && brief.qr === 'https://ancientsky.github.io/safetravel/trip.html#JP', `brief link / QR address: ${brief.link} / ${brief.qr}`);
     assert(brief.modules >= 25 && brief.dark > 500 && brief.size >= 96 && /日本/.test(brief.label), `QR: ${JSON.stringify(brief)}`);
     assert(!errs.length, `page errors: ${errs.join(' | ')}`);
@@ -1427,13 +1436,21 @@ async function run(browser) {
       return { text: b.textContent, pressed: b.getAttribute('aria-pressed'), rows: document.querySelectorAll('#arrivals .arr-row').length, stale: stale.hidden ? '' : stale.textContent, shown: b.getClientRects().length > 0 };
     });
     const b0 = await board();
-    assert(b0.text === '來自第二級以上地區 1 班只看這些' && b0.pressed === 'false' && b0.rows === 3 && !b0.stale, `board: ${JSON.stringify(b0)}`);
+    assert(b0.text === '第二級以上1' && b0.pressed === 'false' && b0.rows === 3 && !b0.stale, `board: ${JSON.stringify(b0)}`);
+    // a short button on the first control row (beside the checkpoint control), the title keeps one line
+    const place = await pk.evaluate(() => {
+      const b = document.querySelector('[data-testid="arrivals-l2"]').getBoundingClientRect();
+      const cp = document.querySelector('#arrivals .arr-cp-btn').getBoundingClientRect();
+      const h2 = document.querySelector('#arr-title');
+      return { sameRow: Math.abs((b.top + b.bottom) / 2 - (cp.top + cp.bottom) / 2) < 6 && b.left >= cp.right, w: Math.round(b.width), label: document.querySelector('[data-testid="arrivals-l2"]').getAttribute('aria-label'), titleLines: Math.round(h2.getBoundingClientRect().height / parseFloat(getComputedStyle(h2).lineHeight)) };
+    });
+    assert(place.sameRow && place.w <= 190 && place.titleLines === 1 && /來自第二級以上地區 1 班/.test(place.label), `L2 button: ${JSON.stringify(place)}`);
     await pk.click('[data-testid="arrivals-l2"]');
     const b1 = await board();
-    assert(b1.text === '來自第二級以上地區 1 班顯示全部' && b1.pressed === 'true' && b1.rows === 1, `board filtered: ${JSON.stringify(b1)}`);
+    assert(b1.pressed === 'true' && b1.rows === 1, `board filtered: ${JSON.stringify(b1)}`);
     await pk.click('#arrivals .arr-min');
     const b2 = await board();
-    assert(b2.shown, 'the count stays on a collapsed board');
+    assert(b2.shown, 'the button stays on a collapsed board');
     await pk.click('#arrivals .arr-min');
     await pk.click('[data-testid="arrivals-l2"]');
     doc.generated_at = iso(-200); doc.tdx_updated = iso(-200); // the feed stopped 200 minutes ago
@@ -1442,7 +1459,7 @@ async function run(browser) {
     const b3 = await board();
     assert(/航班資料停在 .*沒有再更新/.test(b3.stale), `stale banner: ${b3.stale}`);
     await ctx.close();
-    return `kiosk: ${ask.n} buttons, 日本 opens JP; brief ${brief.rows.length} lines; QR off by default, ?qr=1 → ${brief.modules}×${brief.modules} ${brief.qr}; patterns ${on.n} countries (${on.l3} hatched), off by menu; board "${b0.text}" → ${b1.rows} row; stale banner shown`;
+    return `kiosk: ${ask.n} buttons, 日本 opens JP; brief ${brief.rows.length} lines; QR off by default, ?qr=1 → ${brief.modules}×${brief.modules} ${brief.qr}; patterns ${on.n} countries (${on.l3} hatched), off by menu; board L2 button ${place.w}px beside the checkpoint control → ${b1.rows} row; stale banner shown`;
   });
 
   await check('boot guard: a stale cached module (half-updated cache) is re-downloaded and the page starts by itself', async () => {

@@ -84,36 +84,44 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
   const btnClose = root.querySelector('.arr-close');
   const swScroll = root.querySelector('.arr-scroll');
 
-  // Always in view under the title, also while the board is collapsed: how many listed flights come from areas at
-  // CDC level 2 or higher (a tap lists only those), and a banner when the flight data has stopped updating.
-  const strip = document.createElement('div');
-  strip.className = 'arr-strip';
-  strip.hidden = true;
+  // Flights from areas at CDC level 2 or higher: a compact filter button beside the checkpoint control (the only
+  // control left on a collapsed board), and a banner under the title when the flight data has stopped updating.
+  const SVG = 'http://www.w3.org/2000/svg';
   const l2Btn = document.createElement('button');
   l2Btn.type = 'button';
   l2Btn.className = 'arr-l2';
   l2Btn.dataset.risk = '';
   l2Btn.dataset.testid = 'arrivals-l2';
-  strip.append(l2Btn);
+  l2Btn.hidden = true;
+  const l2Icon = document.createElementNS(SVG, 'svg');
+  l2Icon.setAttribute('viewBox', '0 0 24 24');
+  l2Icon.setAttribute('aria-hidden', 'true');
+  const l2Path = document.createElementNS(SVG, 'path');
+  l2Path.setAttribute('d', 'M4 5.5h16l-6.2 7.3v5.4l-3.6 1.8v-7.2z');
+  l2Icon.append(l2Path);
+  const l2Text = document.createElement('span');
+  const l2Num = document.createElement('b');
+  l2Num.className = 'mono';
+  l2Btn.append(l2Icon, l2Text, l2Num);
+  (root.querySelector('.arr-cpf') || selAirport.closest('.arr-field'))?.after(l2Btn);
   const staleBar = document.createElement('p');
   staleBar.className = 'arr-stale-bar';
   staleBar.dataset.testid = 'arrivals-stale';
   staleBar.setAttribute('role', 'status');
   staleBar.hidden = true;
-  head.after(strip, staleBar);
+  head.after(staleBar);
   function renderL2(n) {
-    strip.hidden = n == null;
+    l2Btn.hidden = n == null;
+    root.classList.toggle('has-l2', n != null);
     if (n == null) return;
     const on = !!cfg.risk;
     l2Btn.setAttribute('aria-pressed', String(on));
     l2Btn.classList.toggle('is-zero', !n);
-    l2Btn.title = t('arr_risk_title');
-    const text = document.createElement('span');
-    text.textContent = t('arr_l2', { n });
-    const act = document.createElement('span');
-    act.className = 'arr-l2-act';
-    act.textContent = t(on ? 'arr_l2_all' : 'arr_l2_only');
-    l2Btn.replaceChildren(text, ...(n || on ? [act] : []));
+    l2Text.textContent = t('arr_l2');
+    l2Num.textContent = String(n);
+    const label = t('arr_l2_title', { n, on });
+    l2Btn.title = label;
+    l2Btn.setAttribute('aria-label', label);
   }
 
   const winNode = root.querySelector('.arr-win');

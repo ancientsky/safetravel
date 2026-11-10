@@ -87,7 +87,7 @@
       <p>可輸入國家、城市或機場的中英文名稱、常見俗稱或機場代碼，例如「日本」「曼谷」「名古屋」「Nagoya」「NRT」，選取後開啟該國面板。</p>
       <h3>國家面板</h3>
       <ul>
-        <li><b>旅客重點</b>（面板最上方）：用白話先講三件事——<b>疫情</b>（疾管署等級、主要疾病與建議）、<b>安全</b>（外交部或陸委會旅遊警示，含部分地區較高的等級）、<b>出發前</b>（建議 2–4 週前到旅遊醫學門診，連到該目的地的「出國前查詢」）。<b>QR code</b>（預設不顯示）：網址加上 <code>?qr=1</code> 後，重點旁會出現 QR code，用手機掃描即可開啟該目的地的出國前查詢（疫苗、用藥與門診），把資訊帶著走；手機版不顯示。QR code 一律指向公開網站，署內鏡像站的展示機也適用。</li>
+        <li><b>旅客重點</b>（面板最上方，開啟時逐字顯示）：用白話先講三件事——<b>疫情</b>（疾管署等級、主要疾病與建議）、<b>安全</b>（外交部或陸委會旅遊警示，含部分地區較高的等級）、<b>出發前</b>（建議 2–4 週前到旅遊醫學門診，連到該目的地的「出國前查詢」）。<b>QR code</b>（預設不顯示）：網址加上 <code>?qr=1</code> 後，重點旁會出現 QR code，用手機掃描即可開啟該目的地的出國前查詢（疫苗、用藥與門診），把資訊帶著走；手機版不顯示。QR code 一律指向公開網站，署內鏡像站的展示機也適用。</li>
         <li>疾管署與外交部兩種分級並列；所有有效的疫情建議（同疾病多個省分合併）。</li>
         <li>AI 兩年疫情總覽；疫情時間軸（預設近 6 個月，可切換 3／6／12／24 個月）。</li>
         <li>外交部旅遊警示可展開全文並連回領事事務局原文；開天氣時另有當地天氣預報。</li>
@@ -116,7 +116,7 @@
       <ul>
         <li><b>機場與檢疫站</b>：「檢疫站」按鈕可<b>同時勾選多個</b>（例如 B 和 C），「全部」還原；桃園 A·T1、B·T1、C·T2、D·T2。登機門未定或停靠遠端機坪的航班會列在該航廈每個檢疫站。</li>
         <li><b>查詢時段</b>（下拉選單）：前後 30 分、60 分（預設）、2 小時，或「全部」（前 2 小時～後 4 小時）。標題「INBOUND」旁顯示資料更新時間，延遲時變橘色。</li>
-        <li><b>需注意的班機</b>：標題下方固定顯示「<b>來自第二級以上地區 N 班</b>」（看板收合時也看得到），來自這些地區的班機整列加底色；按一下只列出它們，再按一下「顯示全部」。</li>
+        <li><b>需注意的班機</b>：檢疫站按鈕右邊的橘色小按鈕「<b>第二級以上 N</b>」（漏斗圖示）顯示目前清單中來自第二級以上地區的班數，看板收合時也看得到；來自這些地區的班機整列加底色。按一下只列出它們（按鈕變成實心），再按一下恢復全部。</li>
         <li><b>資料過舊</b>：航班資料停止更新時，標題下方會出現橘色橫幅，寫明資料停在什麼時候；此時班機時間可能已變動，請以機場公告為準。</li>
         <li><b>搜尋航班</b>：JK202、JK-202、jk 202、共掛班號都可以；也可輸入出發地（NRT、東京、名古屋）或國家（日本、Japan）。搜尋時不分檢疫站、涵蓋前 2 小時～後 4 小時。</li>
         <li>每列：抵達時間（表定不同時以刪除線標示）、出發地與國家、<b>出發國等級與主要疫病</b>、航班與機型、<b>登機門／航廈／檢疫站</b>、<b>行李轉盤</b>、狀態。點一列開啟該國資訊。</li>
@@ -293,7 +293,7 @@
       <ul>
         <li><b>Colours</b>: each country's highest Taiwan CDC level (1 Watch, 2 Alert, 3 Warning); switch to the MOFA travel-warning layer top-left.</li>
         <li><b>Patterns (colour-vision aid)</b>: besides colour, the second-highest level carries <b>dots</b> and the highest <b>hatching</b> (health layer: level 2 dots, level 3 hatching; travel-warning layer: orange dots, red hatching); the legend swatches show the same patterns. Switch it off under Menu → “Level patterns (colour-vision aid)”; remembered per screen.</li>
-        <li><b>For travellers</b> (top of the country panel): three plain lines — <b>Health</b> (Taiwan CDC level, main diseases and advice), <b>Safety</b> (MOFA / MAC travel warning, including a higher level for some areas) and <b>Before you go</b> (see a travel clinic 2–4 weeks ahead, with a link to that destination's trip check). A <b>QR code</b> (off by default) appears beside it when the address carries <code>?qr=1</code>: it opens the same trip check (vaccines, medicine and clinics) on a phone, always points to the public site, so it also works on intranet kiosks, and is not shown on phones.</li>
+        <li><b>For travellers</b> (top of the country panel, typed out when it opens): three plain lines — <b>Health</b> (Taiwan CDC level, main diseases and advice), <b>Safety</b> (MOFA / MAC travel warning, including a higher level for some areas) and <b>Before you go</b> (see a travel clinic 2–4 weeks ahead, with a link to that destination's trip check). A <b>QR code</b> (off by default) appears beside it when the address carries <code>?qr=1</code>: it opens the same trip check (vaccines, medicine and clinics) on a phone, always points to the public site, so it also works on intranet kiosks, and is not shown on phones.</li>
         <li><b>The legend is the filter</b>: tap a level to show only it (several allowed, “All” resets); ⌄ collapses the legend. A long legend scrolls in place (a fade at the bottom means there is more). A few small islands and areas have no shape on the world map and are not coloured, but search still opens them.</li>
         <li><b>Navigate</b>: wheel to zoom, drag to pan, double-click to reset; <kbd>/</kbd> focuses search, <kbd>Esc</kbd> closes the panel. On phones one finger taps, two fingers pan and zoom.</li>
         <li><b>Touch screens and phones</b>: on touch screens wider than a phone (kiosks, wall panels, tablets) the header buttons show a caption under their icon and every control is finger-sized; at tablet widths (761–1000 px) the legend starts as its title bar. On a phone the Back button closes the country panel instead of leaving the site.</li>
@@ -311,7 +311,7 @@
       <ul>
         <li>Open it from the map's <b>Arrivals</b> button or use the full-screen <a href="arrivals.html">arrivals.html</a> (no map, two columns on wide screens).</li>
         <li><b>Airport &amp; checkpoints</b>: the checkpoint button lets you tick <b>several at once</b> (e.g. B and C); Taoyuan A·T1, B·T1, C·T2, D·T2. <b>Time window</b> (drop-down): ±30, ±60 (default), ±2 h or all (−2 h … +4 h). The update time sits next to “INBOUND” and turns orange when data is late.</li>
-        <li><b>Flights that matter</b>: “<b>N flights from Level 2+ areas</b>” always sits under the title (also on a collapsed board) and those rows are tinted; tap it to list only them, tap again to show all.</li>
+        <li><b>Flights that matter</b>: the small orange “<b>L2+ N</b>” button (funnel icon) right of the checkpoint control shows how many listed flights come from Level 2+ areas, also on a collapsed board, and those rows are tinted; tap it to list only them (the button turns solid), tap again to show all.</li>
         <li><b>Old data</b>: when the flight data stops updating, an orange banner under the title says when it stopped; times may have changed, so check the airport's own displays.</li>
         <li><b>Search</b> a flight (JK202, JK-202, codeshares) or an origin (NRT, Tokyo, Nagoya, or a country: Japan, 日本) across all checkpoints and the whole window.</li>
         <li>Each row: time, origin and country, <b>origin level and main diseases</b>, flight and aircraft, <b>gate / terminal / checkpoint</b>, <b>baggage carousel</b>, status. Auto-scroll and large type for wall screens. Data refresh about every 10 minutes (30 at night).</li>

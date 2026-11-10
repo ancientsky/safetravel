@@ -298,15 +298,16 @@ export function createPanel({ root, map }) {
           : t('panel_brief_safety_none', { src });
     }
     const name = countryName(iso);
-    const row = (key, html) => `<li><b>${esc(t(key))}</b><span>${html}</span></li>`;
+    // each line is typed out like the AI overview; the full text sits invisibly underneath so nothing moves
+    const row = (key, text, extra = '') => `<li><b>${esc(t(key))}</b><span class="pb-cell"><span class="pb-t"><span class="tw-ghost" aria-hidden="true">${esc(text)}</span><span class="pb-tw" data-full="${esc(text)}"></span></span>${extra}</span></li>`;
     return `
       <section class="panel-brief" data-testid="panel-brief" aria-label="${esc(t('panel_brief_title'))}">
         <div class="pb-main">
           <h3 class="pb-title">${esc(t('panel_brief_title'))}</h3>
           <ul class="pb-list">
-            ${row('panel_brief_k_health', esc(health))}
-            ${safety ? row('panel_brief_k_safety', esc(safety)) : ''}
-            ${row('panel_brief_k_prep', `${esc(t('panel_brief_prep'))} <a class="pb-link" href="trip.html#${esc(iso)}" data-testid="panel-trip-link">${esc(t('panel_brief_link'))}<span aria-hidden="true"> →</span></a>`)}
+            ${row('panel_brief_k_health', health)}
+            ${safety ? row('panel_brief_k_safety', safety) : ''}
+            ${row('panel_brief_k_prep', t('panel_brief_prep'), `<a class="pb-link" href="trip.html#${esc(iso)}" data-testid="panel-trip-link">${esc(t('panel_brief_link'))}<span aria-hidden="true"> →</span></a>`)}
           </ul>
         </div>
         ${qrOn ? `<figure class="pb-qr" data-qr="${esc(tripUrl(iso))}" data-testid="panel-qr">
@@ -315,6 +316,39 @@ export function createPanel({ root, map }) {
         </figure>` : ''}
       </section>`;
   }
+  // The lines type themselves once per country and language; a re-render (data arriving, layer switch) carries on
+  // from where the text was instead of starting again.
+  const briefType = { key: '', pos: 0, timer: null };
+  function typeBrief() {
+    if (briefType.timer) { clearInterval(briefType.timer); briefType.timer = null; }
+    const box = $('.panel-brief', body);
+    if (!box) return;
+    const spans = [...box.querySelectorAll('.pb-tw')];
+    const texts = spans.map((el) => Array.from(el.dataset.full || ''));
+    const total = texts.reduce((n, x) => n + x.length, 0);
+    const key = `${iso}|${isEn() ? 'en' : 'zh'}|${spans.map((el) => el.dataset.full).join('|')}`;
+    if (key !== briefType.key) { briefType.key = key; briefType.pos = 0; box.classList.add('is-new'); } // fades in once
+    const paint = () => {
+      let left = briefType.pos;
+      spans.forEach((el, i) => {
+        const n = Math.min(texts[i].length, Math.max(0, left));
+        el.textContent = texts[i].slice(0, n).join('');
+        el.classList.toggle('is-typing', left > 0 && left < texts[i].length);
+        left -= texts[i].length;
+      });
+      box.classList.toggle('is-typed', briefType.pos >= total);
+    };
+    if (reducedMotion()) briefType.pos = total;
+    paint();
+    if (briefType.pos >= total) return;
+    const perTick = Math.max(1, Math.ceil(total / 90));
+    briefType.timer = setInterval(() => {
+      briefType.pos = Math.min(total, briefType.pos + perTick);
+      paint();
+      if (briefType.pos >= total) { clearInterval(briefType.timer); briefType.timer = null; }
+    }, 22);
+  }
+
   const qrOn = flagParam('qr') === true; // the QR code is off by default: ?qr=1 shows it (kiosk address)
   const qrCache = new Map(); // address → <svg>
   const qrWide = window.matchMedia('(min-width: 761px)'); // on a phone the reader is already holding the phone
@@ -642,6 +676,7 @@ export function createPanel({ root, map }) {
     sections = secs.map(([key], i) => ({ key, idx: 'ABCDEFG'[i] }));
     body.innerHTML = renderBrief() + secs.map(([, fn], i) => fn('ABCDEFG'[i])).join('');
     fillQr();
+    typeBrief();
     renderHead(); // after the body: the section bar reads the sections' positions
     if (wtext.status !== 'idle') fillWarnText();
     startTypewriter();
@@ -705,6 +740,8 @@ export function createPanel({ root, map }) {
     if (!iso) return;
     iso = null;
     state.selected = null;
+    if (briefType.timer) { clearInterval(briefType.timer); briefType.timer = null; }
+    briefType.key = ''; // the next opening types again
     if (typer) { clearInterval(typer); typer = null; }
     root.classList.remove('is-open');
     document.body.classList.remove('panel-open');
