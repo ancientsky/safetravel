@@ -17,8 +17,8 @@ export default {
   kicker: 'SafeTravel TW · Travel medicine',
   title: 'Malaria prophylaxis calculator',
   lede: 'Enter your itinerary and health details. Following Taiwan CDC’s travel prescriptions and its malaria prophylaxis guidance, the calculator shows whether the trip calls for preventive medicine, which drugs can be considered, when to start and stop, how many doses and tablets — and exports reminders to Google Calendar or your phone.',
-  draft_h: 'Draft',
-  draft: 'Pending review by Taiwan CDC-affiliated physicians; for discussion with your doctor only. Malaria prophylaxis must be prescribed by a doctor — do not buy or take it on your own. Everything you enter stays in your browser; nothing is stored or sent.',
+  draft_h: 'Draft · unofficial',
+  draft: 'Not a Taiwan CDC service: this site compiled it from CDC’s public guidance. It awaits review by physicians and may contain errors; for discussion with your doctor only. Malaria prophylaxis must be prescribed by a doctor — do not buy or take it on your own. Everything you enter stays in your browser; nothing is stored or sent.',
 
   trip_h: 'Itinerary',
   trip_sub: 'Add each country or area in order, with the local arrival and departure dates. Transit stops count too.',

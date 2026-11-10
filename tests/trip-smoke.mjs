@@ -632,6 +632,44 @@ async function run(page, context) {
     return out.join('; ');
   });
 
+  await check('malaria medicine in the card: unofficial timing table where CDC asks for a doctor\'s assessment, link to the calculator, absent elsewhere', async () => {
+    const pr = await context.newPage();
+    const open = async (q, iso) => {
+      await pr.goto(`${PAGE_URL.split('#')[0].split('?')[0]}${q}#${iso}`, { waitUntil: 'load' });
+      await pr.reload({ waitUntil: 'load' });
+      await pr.waitForSelector('[data-testid="med"] .med-place', { timeout: 15000 });
+      return pr.evaluate(() => {
+        const m = document.querySelector('[data-testid="med-malaria"]');
+        if (!m) return null;
+        return {
+          tag: m.querySelector('.mal-tag').textContent, rows: [...m.querySelectorAll('tbody tr')].map((tr) => [...tr.children].map((c) => c.textContent.trim())),
+          out: [...m.querySelectorAll('tbody tr.is-out th span')].map((x) => x.textContent), href: m.querySelector('[data-testid="med-malaria-link"]').getAttribute('href'),
+          disc: m.querySelector('.mal-disc').textContent, src: m.querySelector('.mal-disc a').href, after: m.previousElementSibling?.querySelector('[data-testid="med-vax"]') != null,
+        };
+      });
+    };
+    const th = await open('?lang=zh', 'TH');
+    assert(th && th.tag === '非官方' && th.rows.length === 3 && th.after, `Thailand block: ${JSON.stringify(th)}`);
+    assert(th.rows[0].slice(1, 4).join('|') === '每天一次|抵達前 1–2 天|再吃 7 天', `Malarone row: ${th.rows[0]}`);
+    assert(th.rows[1].slice(1, 4).join('|') === '每天一次|抵達前 1–2 天|再吃 4 週', `doxycycline row: ${th.rows[1]}`);
+    assert(th.rows[2].slice(1, 4).join('|') === '每週一次（同一天）|抵達前 2–3 週|再吃 4 週', `mefloquine row: ${th.rows[2]}`);
+    assert(th.out.join() === '美爾奎寧' && /抗藥/.test(th.rows[2][4]), `mefloquine marked for Thailand: ${th.out} / ${th.rows[2][4]}`);
+    assert(th.href === 'malaria.html?c=TH' && /不是疾管署的官方服務/.test(th.disc) && /醫師評估後處方/.test(th.disc) && /cdc\.gov\.tw/.test(th.src), `link and notice: ${th.href} / ${th.disc}`);
+    const ke = await open('?lang=en', 'KE');
+    assert(ke && ke.tag === 'Unofficial' && !ke.out.length && ke.href === 'malaria.html?c=KE&lang=en' && /not a Taiwan CDC service/.test(ke.disc), `Kenya (en): ${JSON.stringify(ke)}`);
+    const jp = await open('?lang=zh', 'JP');
+    const kr = await open('?lang=zh', 'KR');
+    assert(jp === null && kr === null, 'no block for Japan (no risk) or South Korea (mosquito protection only)');
+    // the link opens the calculator with the country filled in and its own unofficial notice
+    await open('?lang=zh', 'TH');
+    await Promise.all([pr.waitForURL(/malaria\.html\?c=TH/, { timeout: 10000 }), pr.click('[data-testid="med-malaria-link"]')]);
+    await pr.waitForFunction(() => /泰國/.test(document.querySelector('select')?.selectedOptions?.[0]?.textContent || ''), null, { timeout: 10000 });
+    const banner = await pr.evaluate(() => document.body.textContent.includes('不是疾管署的官方服務'));
+    assert(banner, 'the calculator says it is not an official service');
+    await pr.close();
+    return `TH: 3 drugs, mefloquine marked resistant, → ${th.href}; KE (en) → ${ke.href}; JP, KR: none`;
+  });
+
   await check('travel prescription in the card: vaccines, traveller-group notes on demand, emergency tel links', async () => {
     const pr = await context.newPage();
     await pr.addInitScript(() => { try { localStorage.removeItem('safetravel.trip.groups'); } catch {} });

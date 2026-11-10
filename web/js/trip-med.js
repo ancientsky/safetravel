@@ -7,6 +7,7 @@ import { h, extLink } from './trip-dom.js';
 import { t, isEn } from './trip-i18n.js';
 import { loadTravelmed, loadTravelmedDetail, telHref } from './trip-data.js';
 import { storageGet, storageSet, clean } from './util.js';
+import { DRUGS, SOURCE_URL as MALARIA_URL, SOURCE_DATE as MALARIA_DATE } from './malaria-calc.js';
 
 export const GROUPS = ['infants', 'pregnancy', 'chronic', 'immuno', 'longstay', 'aid'];
 const GROUP_KEY = 'safetravel.trip.groups';
@@ -22,6 +23,7 @@ const ICONS = {
   water: 'M3 15c2 0 2-1.5 4.5-1.5S10 15 12 15s2-1.5 4.5-1.5S19 15 21 15M3 19c2 0 2-1.5 4.5-1.5S10 19 12 19s2-1.5 4.5-1.5S19 19 21 19M12 3s-4 4.5-4 7a4 4 0 0 0 8 0c0-2.5-4-7-4-7z',
   syringe: 'M18 2l4 4M20 4l-9.5 9.5M14 4l6 6M15.5 8.5 8 16H5v-3l7.5-7.5M5 16l-3 3M9 9l2 2M7 11l2 2',
   phone: 'M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2z',
+  pill: 'M10.5 20.5a5 5 0 0 1-7-7l7-7a5 5 0 0 1 7 7zM7 10l7 7M17 3.5a3.5 3.5 0 0 1 3.5 3.5',
 };
 
 let groups = new Set(readGroups());
@@ -147,6 +149,50 @@ function vaxBlock(tm, entry, page) {
     list);
 }
 
+// ---- malaria medicine: an unofficial timing reference under the vaccine list, and the way into malaria.html ----
+const MALARIA_ROW = '瘧疾預防用藥';
+/**
+ * Shown when CDC's row for this place asks a doctor to assess preventive medicine (the wording the pipeline uses for
+ * its "drug" class, pipeline/travelmed.py malaria_risk), or when the row is listed but its text has not been read.
+ * Places where CDC advises mosquito protection only, or states there is no risk, get no block: the row says it.
+ */
+function malariaBlock(iso, entry, page) {
+  const listed = (page?.vaccines || []).some((v) => clean(v.name) === MALARIA_ROW) || (entry.vax || []).includes(MALARIA_ROW);
+  if (!listed) return null;
+  const row = (page?.vaccines || []).find((v) => clean(v.name) === MALARIA_ROW);
+  const text = (row?.lines || []).filter((ln) => !ln.g).map((ln) => `${ln.k || ''} ${ln.t || ''}`).join(' ');
+  if (row && !text.includes('預防藥物')) return null;
+  const mefResistant = /mefloquine|美爾奎寧/i.test(text);
+  const cell = (label, value) => h('td', { 'data-label': label, text: value });
+  const rows = DRUGS.map((d) => {
+    const weekly = d.freq === 'weekly';
+    const unit = t(weekly ? 'mal_weeks' : 'mal_days');
+    const out = weekly && mefResistant;
+    return h('tr', { class: out ? 'is-out' : null },
+      h('th', { scope: 'row' }, h('span', { text: isEn() ? d.en : d.zh }), h('small', { text: isEn() ? d.zh : `${d.en}${d.brand ? `（${d.brand}）` : ''}` })),
+      cell(t('mal_c_freq'), t(weekly ? 'mal_weekly' : 'mal_daily')),
+      cell(t('mal_c_start'), t('mal_start', { a: d.lead[0], b: d.lead[1], unit })),
+      cell(t('mal_c_after'), d.afterDays > 7 ? t('mal_after_w', { n: d.afterDays / 7 }) : t('mal_after_d', { n: d.afterDays })),
+      h('td', { class: 'mal-flag', 'data-label': t('mal_c_note'), text: out ? t('mal_mef_out') : '' }));
+  });
+  const href = `malaria.html?c=${encodeURIComponent(iso)}${isEn() ? '&lang=en' : ''}`;
+  return h('div', { class: 'med-block med-malaria', 'data-testid': 'med-malaria' },
+    h('h4', { class: 'med-bh' }, icon('pill'), h('span', { text: t('mal_h') }), h('span', { class: 'mal-tag', text: t('mal_unofficial') })),
+    h('p', { class: 'med-note', text: t(row ? 'mal_intro' : 'mal_intro_unknown') }),
+    h('div', { class: 'mal-scroll' },
+      h('table', { class: 'mal-table' },
+        h('thead', {}, h('tr', {},
+          h('th', { scope: 'col', text: t('mal_c_drug') }), h('th', { scope: 'col', text: t('mal_c_freq') }),
+          h('th', { scope: 'col', text: t('mal_c_start') }), h('th', { scope: 'col', text: t('mal_c_after') }),
+          h('th', { scope: 'col', text: t('mal_c_note') }))),
+        h('tbody', {}, rows))),
+    h('p', { class: 'mal-cta' },
+      h('a', { class: 'btn mal-open', href, 'data-testid': 'med-malaria-link' }, h('span', { text: t('mal_open') }), h('span', { 'aria-hidden': 'true', text: ' →' }))),
+    h('p', { class: 'mal-disc', role: 'note' },
+      h('b', { text: t('mal_unofficial') }), h('span', { text: t('mal_disc', { date: MALARIA_DATE }) }), ' ',
+      extLink(MALARIA_URL, t('mal_source'))));
+}
+
 function diseaseBlock(tm, entry, page) {
   const cards = [];
   for (const g of ['vector', 'food', 'contact', 'other']) {
@@ -254,6 +300,7 @@ export function medSection(d, { alive, onClinics }) {
       content.replaceChildren(...[
         groupBar(sec, page),
         vaxBlock(tm, b, page),
+        malariaBlock(d.iso, b, page),
         diseaseBlock(tm, b, page),
         duringBlock(page),
         beforeBlock(page),

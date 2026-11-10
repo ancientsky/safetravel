@@ -1060,3 +1060,30 @@ button.chg:hover { background: var(--surface-2); border-color: var(--border); }
   .back { flex: 0 1 auto; min-width: 0; }
   .back span { max-width: none; min-width: 0; flex: 0 1 auto; }
 }
+
+/* ---------- card: malaria medicine timing, an unofficial reference (js/trip-med.js malariaBlock) ---------- */
+.med-malaria { padding: 12px 14px; border: 1px dashed var(--border-strong); border-radius: 12px; background: var(--surface-2); }
+.mal-tag { margin-left: 4px; padding: 1px 8px; border-radius: 999px; font-size: calc(12px * var(--ts)); font-weight: 800; letter-spacing: .04em; color: var(--bg); background: var(--fg-dim); }
+.mal-scroll { overflow-x: auto; }
+.mal-table { width: 100%; border-collapse: collapse; font-size: calc(14.5px * var(--ts)); }
+.mal-table th, .mal-table td { padding: 7px 10px 7px 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.mal-table thead th { font-size: calc(12.5px * var(--ts)); font-weight: 700; color: var(--fg-mute); white-space: nowrap; }
+.mal-table tbody th { font-weight: 700; }
+.mal-table td:nth-child(3), .mal-table td:nth-child(4) { white-space: nowrap; }
+.mal-table tbody th small { display: block; font-weight: 500; color: var(--fg-mute); font-size: calc(12.5px * var(--ts)); }
+.mal-table tr.is-out th span, .mal-table tr.is-out td:not(.mal-flag) { text-decoration: line-through; text-decoration-color: var(--fg-mute); color: var(--fg-mute); }
+.mal-flag { font-weight: 700; color: var(--fg); }
+.mal-cta { margin: 2px 0 0; }
+.mal-open { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; font-weight: 700; }
+.mal-disc { font-size: calc(13px * var(--ts)); line-height: 1.55; color: var(--fg-dim); }
+.mal-disc b { color: var(--fg); }
+@media (max-width: 600px) {
+  /* phones: one drug per block, each value under its label */
+  .mal-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .mal-table, .mal-table tbody, .mal-table tr, .mal-table th, .mal-table td { display: block; }
+  .mal-table tr { padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .mal-table th, .mal-table td { padding: 1px 0; border: 0; }
+  .mal-table td::before { content: attr(data-label) "："; color: var(--fg-mute); }
+  .mal-table td.mal-flag:empty { display: none; }
+}
+@media print { .mal-cta { display: none; } }

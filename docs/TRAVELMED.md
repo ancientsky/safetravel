@@ -76,7 +76,12 @@ The CMS rich text is flattened into lines `{t, d?, h?, k?, g?}`:
 
 ## Malaria prophylaxis calculator (`malaria.html`, draft)
 
-A standalone page, not linked from the other pages and `noindex`, until Taiwan CDC-affiliated physicians have reviewed it.
+A page of its own, `noindex`, still a draft awaiting review by physicians and labelled **unofficial** on the page itself.
+It is reached from the destination card on `trip.html`: `trip-med.js` `malariaBlock` adds an "unofficial" timing table
+(the three drugs' frequency, start before arrival and duration after leaving, from `malaria-calc.js` `DRUGS`; mefloquine
+flagged where CDC's row mentions its resistance) and a link `malaria.html?c=<ISO>` under the vaccine list — only where
+CDC's malaria row asks a doctor to assess preventive medicine (the pipeline's `drug` class) or is listed without page
+text. Both carry the notice that they are not a Taiwan CDC service and that a doctor prescribes.
 - **Data**: `web/data/malaria.json` (built with `travelmed.json`): per destination, CDC's `瘧疾預防用藥` row from the
   travel prescription page — risk areas, resistance, traveller-group notes — and a class taken from CDC's own wording:
   `drug` when it asks a doctor to assess preventive medicine (「請醫師評估是否需口服預防藥物」), `none` when it says
