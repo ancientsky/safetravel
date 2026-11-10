@@ -290,6 +290,12 @@ async function run(browser) {
 
   // 12. Weather overlay (CWA world-city forecast): off by default, lazy, persistent, deep-linkable
   const WX_BTN = '[data-testid="weather-toggle"]';
+  /** The weather and routes switches are in the menu: open it, press the item, close it. */
+  const menuTap = async (p, proxy) => {
+    await p.click('[data-testid="menu-toggle"]');
+    await p.click(`#phone-menu [data-proxy="${proxy}"]`);
+    await p.click('#phone-menu .pm-close');
+  };
   const wxReady = (p) => p.waitForFunction(() => window.__safetravel?.weather?.status() === 'ready', null, { timeout: 15000, polling: 200 });
   const wxShown = (p) => p.evaluate(() => [...document.querySelectorAll('[data-testid="weather-marker"]')]
     .filter((e) => !e.closest('[hidden]') && getComputedStyle(e).display !== 'none').length);
@@ -308,7 +314,7 @@ async function run(browser) {
   });
 
   await check('weather toggle shows 80 markers, the day bar and the legend block', async () => {
-    await page.locator(WX_BTN).click();
+    await menuTap(page, 'weather-toggle');
     await wxReady(page);
     await page.locator('#zoom-reset').click();
     await page.waitForTimeout(1200);
@@ -380,7 +386,7 @@ async function run(browser) {
   });
 
   await check('toggling the weather overlay off removes the markers and panel section', async () => {
-    await page.locator(WX_BTN).click();
+    await menuTap(page, 'weather-toggle');
     await page.waitForTimeout(300);
     const shown = await wxShown(page);
     await page.evaluate(() => window.__safetravel.openCountry('JP'));
@@ -417,7 +423,7 @@ async function run(browser) {
     }));
     const offReqs = reqs.length; // counted before the click below, which switches the overlay on and fetches
     // the toggle keeps a shared ?wx= link in sync
-    await p1.locator(WX_BTN).click();
+    await menuTap(p1, 'weather-toggle');
     const url = await p1.evaluate(() => location.search);
     await ctx.close();
     if (on !== 80) throw new Error(`?wx=1 → ${on} markers`);
@@ -514,7 +520,9 @@ async function run(browser) {
     const panel = await box('#panel');
     const board = await box('#arrivals');
     const hud = await box('#flight-hud');
-    const routesInRow = await pw.$eval('[data-testid="routes-toggle"]', (el) => !!el.closest('.layer-row'));
+    // the toolbar keeps only the search box and the layer switch; weather and routes are menu items with their state
+    const routesInRow = await pw.evaluate(() => document.querySelectorAll('.toolbar .wx-toggle').length === 0 && document.querySelectorAll('.layer-row > *').length === 1
+      && !!document.querySelector('#phone-menu [data-proxy="routes-toggle"]') && !!document.querySelector('#phone-menu [data-proxy="weather-toggle"]'));
     // beside the open panel the zoom buttons must take taps (the toolbar's transparent box used to cover them)
     const zoomHit = await pw.evaluate(() => ['zoom-in', 'zoom-out', 'zoom-reset'].map((id) => { const r = document.getElementById(id).getBoundingClientRect();
       return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('button')?.id === id; }));
@@ -534,13 +542,19 @@ async function run(browser) {
     const kept = await box('[data-testid="weather-bar"]');
     await pw.click('[data-testid="weather-bar-dock"]', { timeout: 5000 }).catch((e) => { throw new Error(`dock click: ${e.message.split('\n').slice(0, 6).join(' | ')}`); });
     const docked = await pw.$eval('[data-testid="weather-bar"]', (el) => !!el.closest('.toolbar') && !el.classList.contains('is-floating'));
-    await pw.click('[data-testid="routes-toggle"]', { timeout: 5000 }).catch((e) => { throw new Error(`routes click: ${e.message.split('\n').slice(0, 6).join(' | ')}`); });
+    await pw.click('[data-testid="menu-toggle"]');
+    const menuState = async () => pw.$$eval('#phone-menu [data-proxy="routes-toggle"] .pm-state, #phone-menu [data-proxy="weather-toggle"] .pm-state', (els) => els.map((e) => e.textContent).join('/'));
+    const before = await menuState();
+    await pw.click('#phone-menu [data-proxy="routes-toggle"]');
+    const after = await menuState();
+    await pw.click('#phone-menu .pm-close');
+    assert(before === 'On/On' && after === 'On/Off', `menu states weather/routes: ${before} → ${after}`);
     const off = await pw.evaluate(() => ({ hud: document.querySelector('#flight-hud').hidden, pressed: document.querySelector('[data-testid="routes-toggle"]').getAttribute('aria-pressed') }));
-    await pw.click('[data-testid="routes-toggle"]');
+    await menuTap(pw, 'routes-toggle');
     await pw.evaluate(() => localStorage.removeItem('safetravel.wxbar.pos'));
     await ctx.close();
     assert(inToolbar && !bar.hidden && bar.vis === 'visible' && bar.r <= panel.x, `bar ${JSON.stringify(bar)} panel x ${panel.x}`);
-    assert(routesInRow, 'routes switch not in the layer row');
+    assert(routesInRow, 'weather / routes switches should be menu items, not toolbar buttons');
     assert(zoomHit.every(Boolean), `zoom buttons covered beside the open panel: ${zoomHit}`);
     assert(!sameCol, `route box and legend widths differ: ${sameCol}`);
     assert(hud.y >= board.b, `route box ${hud.y} over the board (bottom ${board.b})`);

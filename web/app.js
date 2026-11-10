@@ -629,7 +629,7 @@ async function main() {
   const pm = $('#phone-menu');
   const pmBtn = $('[data-testid="menu-toggle"]');
   const proxyOf = (b) => $(`[data-testid="${b.dataset.proxy}"]`);
-  const KEEP_OPEN = new Set(['textsize-toggle', 'theme-toggle', 'lang-toggle', 'sound-toggle', 'spotlight-autoopen']);
+  const KEEP_OPEN = new Set(['textsize-toggle', 'theme-toggle', 'lang-toggle', 'sound-toggle', 'spotlight-autoopen', 'weather-toggle', 'routes-toggle']);
   function pmRefresh() {
     pm.querySelectorAll('[data-proxy]').forEach((b) => {
       const src = proxyOf(b);

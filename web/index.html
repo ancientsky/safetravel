@@ -174,6 +174,10 @@
     </div>
     <div class="layer-row">
       <div id="layer-switch" class="seg" role="group" data-testid="layer-switch"></div>
+    </div>
+  </section>
+  <!-- weather and routes switches live in the menu (the items there press these); kept out of the toolbar to save room -->
+  <div class="menu-src" hidden>
       <button type="button" class="wx-toggle" data-testid="weather-toggle" aria-pressed="false" data-i18n-attr="title:wx_toggle_title">
         <svg class="wx-toggle-i" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><use href="#wx-partly"/></svg>
         <span data-i18n="wx_toggle">天氣</span><i class="wx-knob" aria-hidden="true"></i>
@@ -182,8 +186,7 @@
         <svg class="wx-toggle-i fh-toggle-i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 20.5h18"/><path d="M4.2 8.6l1.7-.4 2.6 2.7 3.9-1-3-5.6 2.1-.5 5 5 3.4-.9a1.5 1.5 0 0 1 .8 2.9L7.9 14.5a1.9 1.9 0 0 1-2-.8z"/></svg>
         <span class="fh-toggle-text">航線</span><span class="sr-only fh-toggle-sr"></span><i class="wx-knob" aria-hidden="true"></i>
       </button>
-    </div>
-  </section>
+  </div>
 
   <aside id="arrivals" class="arrivals glass" data-testid="arrivals" role="region" aria-labelledby="arr-title" hidden>
     <div class="arr-head" data-i18n-attr="title:arr_drag_hint">
@@ -238,6 +241,8 @@
       <h3 class="pm-sec" data-i18n="menu_here">這個地圖頁</h3>
       <ul class="pm-list">
         <li><button type="button" class="pm-item" data-proxy="arrivals-toggle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.5h18"/><path d="M4.2 8.6l1.7-.4 2.6 2.7 3.9-1-3-5.6 2.1-.5 5 5 3.4-.9a1.5 1.5 0 0 1 .8 2.9L7.9 14.5a1.9 1.9 0 0 1-2-.8z"/></svg><span class="pm-text"><b data-i18n="menu_arr"></b></span><span class="pm-state"></span></button></li>
+        <li><button type="button" class="pm-item" data-proxy="weather-toggle" data-testid="menu-weather"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 2.5v1M2.5 8h1M4.1 4.1l.8.8M12 4.1l-.8.8"/><path d="M9 19.5h8.5a3.5 3.5 0 0 0 .4-7 5 5 0 0 0-9.6-.8A3.9 3.9 0 0 0 9 19.5z"/></svg><span class="pm-text"><b data-i18n="menu_weather"></b><small data-i18n="menu_weather_d"></small></span><span class="pm-state"></span></button></li>
+        <li><button type="button" class="pm-item" data-proxy="routes-toggle" data-testid="menu-routes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.5h18"/><path d="M4.2 8.6l1.7-.4 2.6 2.7 3.9-1-3-5.6 2.1-.5 5 5 3.4-.9a1.5 1.5 0 0 1 .8 2.9L7.9 14.5a1.9 1.9 0 0 1-2-.8z"/></svg><span class="pm-text"><b data-i18n="menu_routes"></b><small data-i18n="menu_routes_d"></small></span><span class="pm-state"></span></button></li>
         <li><button type="button" class="pm-item" data-proxy="spotlight-autoopen" data-testid="menu-autoopen"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="11" height="14" rx="1.5"/><path d="M17.5 7.5h3M17.5 12h3M17.5 16.5h3M6.5 9h5M6.5 12.5h5M6.5 16h3"/></svg><span class="pm-text"><b data-i18n="menu_autoopen"></b><small data-i18n="menu_autoopen_d"></small></span><span class="pm-state"></span></button></li>
         <li><button type="button" class="pm-item" data-proxy="watch-toggle"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 7.4 4.3M19.4 16.2A8.5 8.5 0 0 1 12 20.5M4.6 16.2A8.5 8.5 0 0 1 4.6 7.8"/></svg><span class="pm-text"><b data-i18n="menu_watch"></b></span><span class="pm-state"></span></button></li>
         <li><button type="button" class="pm-item" role="switch" aria-checked="true" data-pat data-testid="menu-patterns"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12l8-8M4 20L20 4M12 20l8-8"/></svg><span class="pm-text"><b data-i18n="menu_patterns"></b><small data-i18n="menu_patterns_d"></small></span><span class="pm-state"></span></button></li>
