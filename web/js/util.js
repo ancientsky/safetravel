@@ -120,7 +120,7 @@ export function urlLang() {
   let v = '';
   try { v = (new URLSearchParams(location.search).get('lang') || '').toLowerCase(); } catch { return null; }
   if (v === 'en') return 'en';
-  if (v === 'zh' || v === 'zh-hant' || v === 'zh-tw') return 'zh-Hant';
+  if (/^(zh|zh[-_](hant|tw)|tw|cht)$/.test(v)) return 'zh-Hant'; // same list as js/lang-boot.js
   return null;
 }
 

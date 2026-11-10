@@ -444,6 +444,19 @@ async function run(browser) {
     await pr.waitForFunction(() => document.documentElement.lang === 'zh-Hant', null, { timeout: 5000 });
     const search = await pr.evaluate(() => location.search);
     await ctx.close();
+    // ?lang=tw (a natural guess) means Chinese too, over a stored English choice
+    const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx2.addInitScript(() => { try { localStorage.setItem('safetravel.lang', 'en'); } catch {} });
+    const pz = await ctx2.newPage();
+    const tw = [];
+    for (const v of ['tw', 'zh-TW', 'zh']) {
+      await pz.goto(new URL(`?lang=${v}`, BASE_URL).href, { waitUntil: 'load' });
+      await pz.waitForFunction(() => document.body.classList.contains('ready') || document.querySelector('#search-input')?.placeholder, null, { timeout: 15000 });
+      await pz.waitForTimeout(300);
+      tw.push(`${v}:${await pz.evaluate(() => `${document.documentElement.lang}/${document.querySelector('#search-input').placeholder.slice(0, 2)}`)}`);
+    }
+    await ctx2.close();
+    if (tw.join() !== 'tw:zh-Hant/搜尋,zh-TW:zh-Hant/搜尋,zh:zh-Hant/搜尋') throw new Error(`Chinese by ?lang: ${tw}`);
     if (!/Radar/.test(title)) throw new Error(`title ${title}`);
     if (stored !== 'zh-Hant') throw new Error(`?lang must not be stored (${stored})`);
     if (!/[?&]lang=zh(&|$)/.test(search)) throw new Error(`URL after toggle ${search}`);

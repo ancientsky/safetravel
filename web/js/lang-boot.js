@@ -6,5 +6,5 @@
   try { q = (new URLSearchParams(location.search).get('lang') || '').toLowerCase(); } catch (e) { return; }
   var d = document.documentElement;
   if (q === 'en') { d.lang = 'en'; d.classList.add('i18n-pending'); }
-  else if (q === 'zh' || q === 'zh-hant' || q === 'zh-tw') { d.lang = 'zh-Hant'; d.classList.remove('i18n-pending'); }
+  else if (/^(zh|zh[-_](hant|tw)|tw|cht)$/.test(q)) { d.lang = 'zh-Hant'; d.classList.remove('i18n-pending'); } // same list as js/util.js urlLang
 })();
