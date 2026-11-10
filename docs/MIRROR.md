@@ -136,10 +136,25 @@ tmp/                       建置中的版本（與 releases 同一檔案系統�
 | `Cache-Control: no-cache`（HTML、JS、CSS、JSON） | 本站檔名沒有版本雜湊，所以每次都向伺服器確認；未變動時只回 **304**（幾百 bytes），既即時又省流量。 |
 | `Cache-Control: public, max-age=3600`（圖片） | 圖片快取 1 小時。 |
 | `gzip`（JSON、JS、CSS、SVG） | `epidemics.json` 1.3 MB → 305 KB、`arrivals.json` 50 KB → 6 KB。 |
-| `X-Content-Type-Options`、`Referrer-Policy`、`X-Frame-Options` | 基本安全標頭。**不要另加 `Content-Security-Policy` 標頭**：每個頁面已有自己的 CSP `<meta>`（含內嵌腳本的雜湊），兩者不同會互相限制而讓頁面壞掉。 |
+| `X-Content-Type-Options`、`Referrer-Policy`（皆加 `always`） | 基本安全標頭；`always` 讓 304／404 回應也帶標頭。 |
+| `X-Frame-Options: SAMEORIGIN` + `Content-Security-Policy: frame-ancestors 'self'` | **禁止其他網站把本站內嵌在框架裡**（防點擊劫持）。前者給舊瀏覽器、後者給新瀏覽器；頁面內的 CSP `<meta>` 不能設定 `frame-ancestors`，所以要用標頭。這個標頭**只放 `frame-ancestors`**，不要加 `script-src` 等其他項目：每個頁面已有自己的 CSP `<meta>`（含內嵌腳本的雜湊），標頭若再限制腳本來源，兩者會互相限制而讓頁面壞掉。 |
 | `location ~ /\.` → 403 | 不提供隱藏檔。 |
 | `/safetravel/_mirror/status.json` | 同步狀態（JSON），給監控或維運人員查看；可用 `allow`／`deny` 限定網段。 |
 | **不要開 `open_file_cache`** | nginx 每個請求都要重新解析 `www/safetravel` 連結，切換版本才會立刻生效；若一定要開，`open_file_cache_valid` 請設幾秒以內。 |
+
+**已安裝的主機要補上「禁止內嵌」標頭**（安裝腳本不會覆蓋你編輯過的 nginx 設定）：打開 `/etc/nginx/conf.d/safetravel.conf`，把 `location /safetravel/ { … }` 裡原本的四行 `add_header` 換成下面五行，然後 `sudo nginx -t && sudo systemctl reload nginx`：
+
+```nginx
+        add_header Cache-Control $safetravel_cache_control always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header Content-Security-Policy "frame-ancestors 'self'" always;
+```
+
+確認：`curl -skI https://<主機>/safetravel/ | grep -i -E 'frame|content-security'` 應看到 `X-Frame-Options: SAMEORIGIN` 與 `Content-Security-Policy: frame-ancestors 'self'`。所有 kiosk 都只用 HTTPS 連線後，可再加一行 `add_header Strict-Transport-Security "max-age=31536000" always;`。
+
+**只發布一般檔案**：同步腳本在建立新版本前會檢查 `web/` 裡只有一般檔案與目錄；若出現符號連結（symbolic link）或子模組就拒絕發布、繼續提供目前版本，並在 `status.json` 與 journal 記錄原因（nginx 會跟隨符號連結，連結若指向主機上的其他檔案就會被讀到）。`/etc/safetravel/mirror.env` 的權限為 `640 root:safetravel`（可能含 proxy 帳密）；重新執行 `sudo bash scripts/mirror/install.sh` 會把舊安裝的權限一併收緊。若監控帳號要用非預設設定執行 `safetravel-sync.sh --check`，請把它加入 `safetravel` 群組。
 | `listen 443 ssl http2;` | nginx 1.25.1 以上也可改成 `listen 443 ssl;` ＋ `http2 on;`。主機停用 IPv6 時刪除 `listen [::]:…` 兩行。 |
 
 MIME 類型：網站需要 `.json`（`application/json`）、`.js`（`application/javascript` 或 `text/javascript`；網頁以 ES 模組載入，類型錯誤會載不到）、`.webp`、`.svg`；若日後上架 AVIF 圖片則需 `.avif`。確認方式：`grep -E 'json|javascript|webp|avif|svg' /etc/nginx/mime.types`，缺少的請在該檔加上（例如 `image/avif avif;`）。
@@ -238,7 +253,7 @@ CRITICAL - SafeTravel mirror: last successful sync 180 min ago …
 
 An intranet mirror that serves the whole site from a Linux host with nginx **without fetching any source twice**: GitHub Actions remains the only process that talks to Taiwan CDC, MOFA/BOCA, MAC, TDX and CWA, and the mirror copies its output.
 
-- `scripts/mirror/safetravel-sync.sh` (systemd timer, every 5 min, user `safetravel`): shallow, sparse, blob-less `git fetch` of `web/` on `main`, plus `data/arrivals.json` from GitHub Pages (the only file not in git). Nothing new → no-op. Otherwise it builds `releases/<UTC time>-<commit>` with `rsync --link-dest` (unchanged files hard-linked), checks required files and that every JSON parses, then switches `www/safetravel` with an atomic rename (600/600 requests returned 200 during 600 switches). A failed check keeps the current release. Keeps 12 releases; `--rollback` serves the previous one; `--check` is a Nagios/Zabbix-style probe (sync age, upstream data age); `state/status.json` is also served at `/safetravel/_mirror/status.json`.
+- `scripts/mirror/safetravel-sync.sh` (systemd timer, every 5 min, user `safetravel`): shallow, sparse, blob-less `git fetch` of `web/` on `main`, plus `data/arrivals.json` from GitHub Pages (the only file not in git). Nothing new → no-op. Otherwise it builds `releases/<UTC time>-<commit>` with `rsync --link-dest` (unchanged files hard-linked), refuses symbolic links and submodules (plain files only), checks required files and that every JSON parses, then switches `www/safetravel` with an atomic rename (600/600 requests returned 200 during 600 switches). A failed check keeps the current release. Keeps 12 releases; `--rollback` serves the previous one; `--check` is a Nagios/Zabbix-style probe (sync age, upstream data age); `state/status.json` is also served at `/safetravel/_mirror/status.json`.
 - `scripts/mirror/nginx-safetravel.conf`: HTTPS (80 → 443), `/safetravel/` sub-path like GitHub Pages, `Cache-Control: no-cache` for text (cheap 304s, as file names are not fingerprinted) and 1 h for images, gzip, basic security headers, no CSP header (the pages carry their own CSP meta with a script hash), hidden files denied, no `open_file_cache`.
 - `scripts/mirror/install.sh`: user, directories, units, SELinux labels, nginx template (not enabled automatically), first sync.
 - Sizing for 30–50 kiosks: steady state ≈ 80 requests/min and well under 1 Mbps; the twice-daily data reload peaks at a few hundred MB over 1–3 minutes in the worst case. 1 vCPU / 1 GB / 10 GB is enough; 2 vCPU / 2–4 GB / 40 GB recommended; for high availability run two VMs behind a load balancer or keepalived VIP, each syncing on its own. Outbound HTTPS to `github.com` and `ancientsky.github.io` only; set `HTTPS_PROXY` in `/etc/safetravel/mirror.env` if needed. Serve kiosks over HTTPS (Screen Wake Lock needs a secure context) and keep kiosk clocks on NTP. The sync also writes `version.json` (hash of the site's code files, identical to the GitHub deploys' `.github/scripts/stamp-version.sh`); the map, trip and poster pages poll it and reload themselves at a quiet moment, so kiosks never need a manual refresh.

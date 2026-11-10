@@ -20,7 +20,12 @@ install -d -o safetravel -g safetravel -m 755 "$BASE" "$BASE/repo" "$BASE/releas
 install -d -m 755 /opt/safetravel /etc/safetravel
 install -m 755 "$HERE/safetravel-sync.sh" /opt/safetravel/safetravel-sync.sh
 install -m 644 "$HERE/mirror.env.example" /etc/safetravel/mirror.env.example
-[ -e /etc/safetravel/mirror.env ] || install -m 644 "$HERE/mirror.env.example" /etc/safetravel/mirror.env
+[ -e /etc/safetravel/mirror.env ] || install -m 640 -o root -g safetravel "$HERE/mirror.env.example" /etc/safetravel/mirror.env
+# the settings may hold a proxy address with credentials: readable by root and the sync user only (also tightens an
+# older install). A monitoring account that runs "safetravel-sync.sh --check" with non-default settings needs to be
+# in the safetravel group.
+chown root:safetravel /etc/safetravel/mirror.env
+chmod 640 /etc/safetravel/mirror.env
 install -m 644 "$HERE/safetravel-sync.service" "$HERE/safetravel-sync.timer" /etc/systemd/system/
 
 # SELinux (RHEL / Rocky / Alma): let nginx read the mirror; new files inherit the label of their directory

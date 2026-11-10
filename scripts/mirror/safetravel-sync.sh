@@ -144,8 +144,20 @@ fingerprint() {
 }
 
 # ------------------------------------------------------------------ release: build, check, switch, prune
+# Only plain files and directories are ever published. A symbolic link committed under web/ could point at a file
+# of this host (nginx follows links), so a checkout that contains one — or a submodule — is refused outright.
+only_plain_files() { # only_plain_files <dir>: true when the tree holds nothing but regular files and directories
+  local odd
+  odd=$(find "$1" \( -type l -o ! \( -type f -o -type d \) \) -print 2>/dev/null | head -n 5)
+  if [ -n "$odd" ]; then
+    warn "not a regular file (symbolic link or special file); refusing to publish: $(echo "$odd" | tr '\n' ' ')"
+    return 1
+  fi
+}
+
 check_release() { # check_release <dir>
   local d=$1 f
+  only_plain_files "$d" || return 1
   for f in index.html trip.html slide.html arrivals.html m.html help.html app.js styles.css data/meta.json data/epidemics.json data/alerts.json \
            data/world.json slides/slides.json; do
     [ -s "$d/$f" ] || { warn "release is missing $f"; return 1; }
@@ -189,8 +201,14 @@ build_release() {
   RELEASE_NAME=$(date -u +%Y%m%dT%H%M%SZ)-${COMMIT:0:7}
   new=$RELEASES/$RELEASE_NAME
   rm -rf "$TMP/release"
-  # unchanged files become hard links to the previous release: a new release costs almost no disk or time
-  rsync -a --exclude='.git*' ${prev:+--link-dest="$prev"} "$REPO/web/" "$TMP/release/"
+  # the checkout itself must be plain files (git mode 120000 = symbolic link, 160000 = submodule)
+  if git -C "$REPO" ls-tree -r HEAD -- web | grep -qvE '^100(644|755) '; then
+    fail "web/ contains a symbolic link or submodule in ${COMMIT:0:7}; still serving $(basename "${prev:-none}")"
+  fi
+  only_plain_files "$REPO/web" || fail "web/ checkout is not plain files; still serving $(basename "${prev:-none}")"
+  # unchanged files become hard links to the previous release: a new release costs almost no disk or time.
+  # --no-links / --no-devices / --no-specials: even if a link got this far it would not be copied
+  rsync -a --no-links --no-devices --no-specials --exclude='.git*' ${prev:+--link-dest="$prev"} "$REPO/web/" "$TMP/release/"
   if [ -f "$STATE/arrivals.json" ]; then
     rm -f "$TMP/release/data/arrivals.json"   # never write through a hard link into an older release
     install -m 644 "$STATE/arrivals.json" "$TMP/release/data/arrivals.json"
