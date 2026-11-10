@@ -540,6 +540,72 @@ async function run(browser) {
     return `bar in toolbar (right edge ${Math.round(bar.r)} < panel ${Math.round(panel.x)}); dragged to ${Math.round(dragged.x)},${Math.round(dragged.y)} and back`;
   });
 
+  await check('kiosk stays on the site: external links, downloads and print show a notice; help / poster pages get the reset; normal visitors unaffected', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
+    await ctx.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, (r) => r.abort()); // never leave the test host
+    const pk = await ctx.newPage();
+    const errs = [];
+    pk.on('pageerror', (e) => errs.push(e.message));
+    let downloads = 0;
+    pk.on('download', () => { downloads += 1; });
+    const note = () => pk.$eval('[data-testid="kiosk-ext"]', (n) => (n.hidden ? '' : n.textContent)).catch(() => '');
+    // 1) map page in kiosk mode: an external footer link does nothing but explain itself
+    await pk.goto(new URL('?osk=1&lang=zh', BASE_URL).href, { waitUntil: 'load' });
+    await pk.waitForSelector('[data-testid="kiosk-reset"]', { timeout: 15000 });
+    await pk.click('.foot a[href^="https://www.cdc.gov.tw"]');
+    await pk.waitForTimeout(400);
+    const ext = { pages: ctx.pages().length, url: pk.url(), note: await note() };
+    // 2) the help link stays in this tab, and the help page has the reset button and the same guard
+    await pk.click('[data-testid="footer-help-link"]');
+    await pk.waitForURL(/help\.html/, { timeout: 10000 });
+    await pk.waitForSelector('[data-testid="kiosk-reset"]', { timeout: 10000 });
+    await pk.click('a[href^="https://tdx.transportdata.tw"]');
+    await pk.waitForTimeout(400);
+    const help = { pages: ctx.pages().length, url: pk.url(), note: await note() };
+    // 3) trip page: CSV export, print and a clinic's phone / website link
+    await pk.goto(new URL('trip.html#JP', BASE_URL).href, { waitUntil: 'load' });
+    await pk.waitForSelector('[data-testid="export-csv"]', { timeout: 20000 });
+    await pk.click('[data-testid="export-csv"]');
+    await pk.waitForTimeout(500);
+    const csv = { downloads, note: await note() };
+    const printed = await pk.evaluate(() => { let n = 0; const real = Window.prototype.print; Window.prototype.print = () => { n += 1; }; window.print(); Window.prototype.print = real; return n; });
+    const tel = await pk.evaluate(() => { const a = document.querySelector('a[href^="tel:"]'); if (!a) return 'none'; const ev = new MouseEvent('click', { bubbles: true, cancelable: true }); a.dispatchEvent(ev); return ev.defaultPrevented; });
+    // 4) poster page: reset button present
+    await pk.goto(new URL('slide.html', BASE_URL).href, { waitUntil: 'load' });
+    const slideReset = await pk.waitForSelector('[data-testid="kiosk-reset"]', { timeout: 10000 }).then(() => true, () => false);
+    await ctx.close();
+    // 5) ?reset=N alone guards too; a normal visitor's link still opens a new tab
+    const ctx2 = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 } });
+    await ctx2.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, (r) => r.abort());
+    const pr = await ctx2.newPage();
+    await pr.goto(new URL('?reset=5', BASE_URL).href, { waitUntil: 'load' });
+    await pr.waitForSelector('.foot a[href^="https://www.cdc.gov.tw"]');
+    await pr.waitForTimeout(500);
+    await pr.click('.foot a[href^="https://www.cdc.gov.tw"]');
+    await pr.waitForTimeout(400);
+    const resetOnly = { pages: ctx2.pages().length, note: await pr.$eval('[data-testid="kiosk-ext"]', (n) => (n.hidden ? '' : n.textContent)).catch(() => '') };
+    await ctx2.close();
+    const ctx3 = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 } });
+    await ctx3.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, (r) => r.abort());
+    const pn = await ctx3.newPage();
+    await pn.goto(BASE_URL, { waitUntil: 'load' });
+    await pn.waitForSelector('.foot a[href^="https://www.cdc.gov.tw"]');
+    await pn.waitForTimeout(500);
+    const [popup] = await Promise.all([pn.waitForEvent('popup', { timeout: 5000 }).catch(() => null), pn.click('.foot a[href^="https://www.cdc.gov.tw"]')]);
+    const normal = { popup: !!popup, guard: await pn.$('[data-testid="kiosk-ext"]') !== null };
+    await ctx3.close();
+    assert(ext.pages === 1 && /[?&]osk=1/.test(ext.url) && /展示機無法開啟外部網站/.test(ext.note) && ext.note.includes('www.cdc.gov.tw'), `external link ${JSON.stringify(ext)}`);
+    assert(help.pages === 1 && /help\.html/.test(help.url) && /展示機無法開啟外部網站/.test(help.note), `help page ${JSON.stringify(help)}`);
+    assert(csv.downloads === 0 && /無法下載或列印/.test(csv.note), `csv ${JSON.stringify(csv)}`);
+    assert(printed === 0, 'window.print still reaches the browser');
+    assert(tel === 'none' || tel === true, `tel link not blocked (${tel})`);
+    assert(slideReset, 'no reset button on slide.html');
+    assert(resetOnly.pages === 1 && /展示機無法開啟外部網站/.test(resetOnly.note), `?reset=5 ${JSON.stringify(resetOnly)}`);
+    assert(normal.popup && !normal.guard, `normal visitor ${JSON.stringify(normal)}`);
+    assert(!errs.length, errs[0]);
+    return `blocked: ${ext.note}; help and posters have ↻; CSV / print / tel blocked; ?reset alone guards; normal visitor opens a new tab`;
+  });
+
   await check('kiosk keyboard (?osk=1): ABC first on the Chinese page; 注音 kept while the visitor types, ABC again for the next one', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 }, hasTouch: true });
     const pk = await ctx.newPage();

@@ -54,6 +54,8 @@ const TEXT = {
     failed: '字典載入失敗', bksp: '刪除', label: '螢幕鍵盤',
     reset: '重設畫面', resetAgain: '再按一次：重設畫面', resetLabel: '重設畫面：回到開機時的頁面與設定',
     idle: ({ s }) => `沒有人操作，${s} 秒後回到初始畫面（碰一下即取消）`,
+    ext: ({ host }) => `展示機無法開啟外部網站${host ? `（${host}）` : ''}`,
+    extFile: '展示機無法下載或列印',
   },
   en: {
     abc: 'ABC', zhuyin: '注音', space: 'space', tone1: 'tone 1', clear: 'Clear', enter: 'Enter', hide: 'Hide',
@@ -61,6 +63,8 @@ const TEXT = {
     failed: 'Dictionary failed to load', bksp: 'Delete', label: 'On-screen keyboard',
     reset: 'Reset', resetAgain: 'Tap again to reset', resetLabel: 'Reset the screen to its start page and settings',
     idle: ({ s }) => `No one is using the screen: back to the start page in ${s} s (touch to cancel)`,
+    ext: ({ host }) => `This kiosk cannot open external websites${host ? ` (${host})` : ''}`,
+    extFile: 'This kiosk cannot download or print',
   },
 };
 
@@ -144,6 +148,62 @@ function loadCss() {
   link.href = 'osk.css';
   link.dataset.oskCss = '1';
   document.head.appendChild(link);
+}
+
+/**
+ * Kiosk screens stay on this site. A tap on a link to another site (or tel: / mailto:), a download or a print would
+ * open a new tab or a system dialog that the reset button and the idle reset cannot bring back, so the visitor gets
+ * a short notice instead (with the host, for their own phone). Links inside the site open in the same tab.
+ */
+function guardLinks() {
+  loadCss();
+  const lang = () => (document.documentElement.lang === 'en' ? 'en' : 'zh');
+  const note = document.createElement('div');
+  note.className = 'osk-ext';
+  note.hidden = true;
+  note.setAttribute('role', 'status');
+  note.dataset.testid = 'kiosk-ext';
+  let timer = 0;
+  const say = (text) => {
+    if (!note.isConnected) document.body.appendChild(note);
+    note.textContent = text;
+    note.hidden = false;
+    clearTimeout(timer);
+    timer = setTimeout(() => { note.hidden = true; }, 4000);
+  };
+  /** May this link be followed on a kiosk? Same-site pages only (made same-tab); anything else: notice, false. */
+  const allow = (a) => {
+    let u = null;
+    try { u = new URL(a.getAttribute('href'), location.href); } catch (err) { /* unparsable: treated as external */ }
+    const web = !!u && (u.protocol === 'http:' || u.protocol === 'https:');
+    if (web && u.origin === location.origin && !a.hasAttribute('download')) {
+      if (a.target && a.target !== '_self') a.removeAttribute('target'); // same tab: the reset stays in reach
+      return true;
+    }
+    const file = a.hasAttribute('download') || (!!u && (u.protocol === 'blob:' || u.protocol === 'data:'));
+    say(file ? TEXT[lang()].extFile : TEXT[lang()].ext({ host: web ? u.hostname : '' }));
+    return false;
+  };
+  const onLink = (e) => {
+    const a = e.target?.closest?.('a[href], area[href]');
+    if (a && !allow(a)) { e.preventDefault(); e.stopImmediatePropagation(); }
+  };
+  document.addEventListener('click', onLink, true);
+  document.addEventListener('auxclick', onLink, true); // middle click
+  // scripted paths that never reach the document: a.click() on a detached link (file exports), print, window.open
+  const click = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function kioskClick() {
+    if (this.hasAttribute('href') && !this.isConnected && !allow(this)) return;
+    click.call(this);
+  };
+  window.print = () => say(TEXT[lang()].extFile);
+  const open = window.open;
+  window.open = function kioskOpen(url, ...rest) {
+    const a = document.createElement('a');
+    a.setAttribute('href', String(url ?? ''));
+    if (!allow(a)) return null;
+    return open.call(window, a.href, '_self', ...rest.slice(1));
+  };
 }
 
 function startIdleReset(minutes) {
@@ -469,6 +529,7 @@ const oskOn = enabled();
 const idleMin = resetMinutes();
 if (oskOn || idleMin) {
   rememberHome();
+  guardLinks(); // before any page script can open something
   const start = () => {
     if (oskOn) init();
     if (idleMin) startIdleReset(idleMin);

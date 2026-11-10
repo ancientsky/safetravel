@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="m.css">
   <link rel="stylesheet" href="help.css">
   <script type="module" src="js/help.js"></script>
+  <script type="module" src="js/osk.js"></script>
 </head>
 <body class="help-page">
   <header class="m-head">
@@ -186,7 +187,7 @@
           <tr><td><code>?reset=5</code></td><td>閒置自動重設：有人用過、之後 5 分鐘沒人操作，就回到開機時的頁面與設定；重設前 10 秒會提示，碰一下即取消。沒人碰過的螢幕不會重新載入。<code>?reset=0</code> 關閉</td></tr>
           <tr><td><code>?months=6</code></td><td>國家面板疫情時間軸範圍（3／6／12／24 個月）</td></tr>
           <tr><td><code>?full=1</code></td><td>焦點輪播「查看完整資訊」：輪播時自動開啟並捲動國家面板（<code>?full=0</code> 關閉；不改該螢幕記住的設定）</td></tr>
-          <tr><td><code>?osk=1</code></td><td>觸控 kiosk 的螢幕小鍵盤：預設英數（ABC），按「注音」切換注音（鍵盤收起 2 分鐘後下一位訪客又從 ABC 開始），另有常用目的地按鈕；<code>?osk=0</code> 關閉。左下角的 <b>↻ 重設畫面</b>：按一下、4 秒內再按一次，就回到開機時的頁面與設定（訪客拖動、收合、切換的都會還原）</td></tr>
+          <tr><td><code>?osk=1</code></td><td>觸控 kiosk 的螢幕小鍵盤：預設英數（ABC），按「注音」切換注音（鍵盤收起 2 分鐘後下一位訪客又從 ABC 開始），另有常用目的地按鈕；<code>?osk=0</code> 關閉。左下角的 <b>↻ 重設畫面</b>：按一下、4 秒內再按一次，就回到開機時的頁面與設定（訪客拖動、收合、切換的都會還原）。<b>展示機只留在本站</b>：帶 <code>?osk=1</code> 或 <code>?reset=</code> 的螢幕上，點外部網站連結（疾管署、領務局、醫院網站、Google 地圖…）、電話連結、下載或列印都不會執行，只顯示「展示機無法開啟外部網站（網址）」；站內連結一律在同一個分頁開啟，使用說明、衛教海報頁也有 ↻ 與閒置重設</td></tr>
         </tbody>
       </table>
       <p class="note">展示螢幕會在資料或網站更新後、沒有人操作的時候自動重新載入，不需要手動刷新。署內鏡像站的架設方式見 repo 的 <code>docs/MIRROR.md</code>。</p>
@@ -339,7 +340,7 @@
           <tr><td><code>m.html?role=officer</code></td><td>Quick check opened as quarantine staff (<code>public</code>: traveller)</td></tr>
           <tr><td><code>?reset=5</code></td><td>Idle auto-reset: after someone used the screen, 5 idle minutes bring back its start page and settings, with a 10-second notice any touch cancels; untouched screens never reload (<code>?reset=0</code> off)</td></tr>
           <tr><td><code>?full=1</code></td><td>Spotlight “show full details”: the tour opens and scrolls the country panel (<code>?full=0</code> off)</td></tr>
-          <tr><td><code>?osk=1</code></td><td>On-screen keyboard for touch kiosks: starts in letters and digits (ABC); 「注音」 switches to Zhuyin, which stays for the visitor and goes back to ABC after 2 minutes without the keyboard (<code>?osk=0</code> off), plus a <b>↻ reset</b> button bottom left: tap, then tap again within 4 s, and the screen returns to its start page and settings</td></tr>
+          <tr><td><code>?osk=1</code></td><td>On-screen keyboard for touch kiosks: starts in letters and digits (ABC); 「注音」 switches to Zhuyin, which stays for the visitor and goes back to ABC after 2 minutes without the keyboard (<code>?osk=0</code> off), plus a <b>↻ reset</b> button bottom left: tap, then tap again within 4 s, and the screen returns to its start page and settings. <b>Kiosks stay on this site</b>: on a screen opened with <code>?osk=1</code> or <code>?reset=</code>, external links (CDC, BOCA, hospital sites, Google Maps…), phone links, downloads and printing do nothing but show “This kiosk cannot open external websites (host)”; links inside the site open in the same tab, and the help and poster pages have the ↻ button and the idle reset too</td></tr>
         </tbody>
       </table>
       <p class="note">Screens reload themselves at a quiet moment after data or site updates. Intranet mirror: <code>docs/MIRROR.md</code> in the repository.</p>
