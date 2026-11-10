@@ -18,6 +18,9 @@ const SCROLL_LEAD = 1000; // reach the bottom this long before the next country
 const MAX_GLIDE = 75000; // ms
 const TICK = 100;
 const USER_COOLDOWN = 15000;
+// With "auto-open on tour" on, a country the visitor opened themselves (search, map, board row) stays until the
+// panel is closed or nobody has touched the screen for this long — the tour must not swap it away mid-read.
+const MANUAL_HOLD = 75000;
 const WEIGHT = { 1: 1, 2: 4, 3: 10 };
 const AUTO_KEY = 'safetravel.spotlightAutoOpen';
 const SCROLL_KEY = 'safetravel.spotlightAutoScroll';
@@ -29,6 +32,7 @@ export function createSpotlight({ root, map, panel }) {
   const nextBtn = $('.spot-next', root);
   const autoBtn = $('[data-testid="spotlight-autoopen"]', root);
   const autobar = document.querySelector('.panel-autobar');
+  const autobarLabel = autobar?.querySelector('.pa-label [data-i18n]');
   const autobarFill = autobar?.querySelector('.pa-progress b');
   const autobarBtn = autobar?.querySelector('.pa-toggle');
   const scrollBtn = $('[data-testid="spotlight-autoscroll"]', root);
@@ -48,6 +52,9 @@ export function createSpotlight({ root, map, panel }) {
   let elapsed = 0;
   let hovering = false;
   let userUntil = 0;
+  let manualIso = null;   // country opened by hand while auto-open is on
+  let manualUntil = 0;
+  let selfOpening = false; // true while the tour itself opens the panel
   let history = [];
   let timer = 0;
 
@@ -100,7 +107,8 @@ export function createSpotlight({ root, map, panel }) {
       show(code, { fly: false });
       autoIso = code;
       scrollCancelled = false;
-      panel.open(code, { focus: false, fly: !reducedMotion() && !state.mapPinned });
+      selfOpening = true;
+      try { panel.open(code, { focus: false, fly: !reducedMotion() && !state.mapPinned }); } finally { selfOpening = false; }
       ensureScroll();
     } else {
       // Under reduced motion the carousel only swaps the card + outline, never moves the map.
@@ -189,9 +197,16 @@ export function createSpotlight({ root, map, panel }) {
       <span class="spot-open">${esc(t('spot_open'))} →</span>`;
   }
 
+  /** Seconds left of the hold on a hand-opened country (0 = no hold). */
+  function manualHoldLeft() {
+    if (!manualIso || !state.spotlight.autoOpen || !panel.isOpen() || panel.current() !== manualIso) return 0;
+    return Math.max(0, Math.ceil((manualUntil - Date.now()) / 1000));
+  }
+
   function paused() {
     const auto = state.spotlight.autoOpen;
     const open = panel.isOpen();
+    if (manualHoldLeft() > 0) return true;
     // With auto-open the panel being open is the normal state, so it must not pause the tour.
     return !state.spotlight.playing
       || (hovering && !open)
@@ -243,6 +258,11 @@ export function createSpotlight({ root, map, panel }) {
       if (autobar.hidden === showBar) autobar.hidden = !showBar;
       autobar.classList.toggle('is-paused', p);
       if (showBar) autobarFill.style.transform = progress;
+      // the label says why the tour stands still and when it goes on
+      const left = showBar ? manualHoldLeft() : 0;
+      const label = left > 0 ? t('panel_auto_hold', { s: left }) : t('panel_auto_running');
+      if (autobarLabel && autobarLabel.textContent !== label) autobarLabel.textContent = label;
+      autobar.classList.toggle('is-held', left > 0);
     }
     ensureScroll();
   }
@@ -281,6 +301,7 @@ export function createSpotlight({ root, map, panel }) {
     userUntil = 0; // no hand-close hold: the compact tour simply continues
   });
   autobarBtn?.addEventListener('click', () => {
+    if (manualHoldLeft() > 0 && state.spotlight.playing) { manualIso = null; userUntil = 0; return; } // "go on now"
     state.spotlight.playing = !state.spotlight.playing;
     userUntil = 0;
     syncButtons();
@@ -290,7 +311,7 @@ export function createSpotlight({ root, map, panel }) {
     userUntil = 0;
     syncButtons();
   });
-  nextBtn.addEventListener('click', () => { userUntil = 0; next(); });
+  nextBtn.addEventListener('click', () => { userUntil = 0; manualIso = null; next(); });
   root.addEventListener('pointerenter', () => { hovering = true; });
   root.addEventListener('pointerleave', () => { hovering = false; });
   root.addEventListener('focusin', () => { hovering = true; });
@@ -301,8 +322,16 @@ export function createSpotlight({ root, map, panel }) {
   on('user:interact', () => {
     cooldown();
     scrollCancelled = true;
+    if (manualIso) manualUntil = Date.now() + MANUAL_HOLD; // still reading: the hold starts over
+  });
+  // a country opened by hand (not by the tour): keep it until closed or MANUAL_HOLD without input
+  on('panel:open', (code) => {
+    if (selfOpening) { manualIso = null; return; }
+    manualIso = code;
+    manualUntil = Date.now() + MANUAL_HOLD;
   });
   on('panel:close', () => {
+    manualIso = null;
     cooldown(); // closing the panel by hand holds the tour ~15 s, then it resumes
     if (iso) map.setSpotlight(iso);
   });

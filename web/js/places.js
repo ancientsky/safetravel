@@ -67,6 +67,53 @@ export function airportMatches(code, q) {
   return e.keys.some((k) => (cjk || s.length >= 3 ? k.includes(s) : k.startsWith(s)));
 }
 
+// Names people type that are not the official short name in the data (both languages).
+export const COUNTRY_ALIASES = {
+  US: ['usa', 'u.s.', 'u.s.a.', 'america', 'united states of america', 'the states', '美利堅'],
+  GB: ['uk', 'u.k.', 'britain', 'great britain', 'england', 'scotland', 'wales', 'northern ireland', '英格蘭', '蘇格蘭', '威爾斯', '大不列顛'],
+  AE: ['uae', 'u.a.e.', 'emirates', '阿聯', '阿聯酋', '阿拉伯聯合酋長國'],
+  KR: ['korea', 'rok', 'republic of korea', '南韓', '大韓民國'],
+  KP: ['dprk', '朝鮮', '北朝鮮'],
+  CN: ['china', 'prc', 'mainland china', '中國', '大陸', '中華人民共和國'],
+  TR: ['turkey', 'turkiye'],
+  NL: ['holland', 'the netherlands'],
+  CZ: ['czech republic', 'czech'],
+  MM: ['burma'],
+  CI: ['ivory coast', 'cote divoire'],
+  RU: ['russian federation', '俄國'],
+  VN: ['viet nam'],
+  LA: ['lao', 'lao pdr'],
+  CD: ['drc', 'dr congo', 'congo kinshasa', '民主剛果', '剛果（金）'],
+  CG: ['congo brazzaville', '剛果（布）'],
+  AU: ['澳大利亞', '澳洲'],
+  NZ: ['新西蘭'],
+  SA: ['saudi', 'ksa', '沙烏地', '沙特'],
+  PH: ['the philippines'],
+  TH: ['siam'],
+  SZ: ['swaziland'],
+  MK: ['macedonia'],
+  CV: ['cape verde'],
+  TL: ['east timor', '東帝汶'],
+  PS: ['palestine', '巴勒斯坦'],
+  VA: ['vatican', '梵蒂岡'],
+};
+// Common destinations from Taiwan: among equally good matches these come first ("ind" → India / Indonesia first).
+export const POPULAR_ISO = ['JP', 'KR', 'TH', 'VN', 'CN', 'HK', 'MO', 'PH', 'ID', 'MY', 'SG', 'KH', 'IN', 'US', 'CA', 'AU', 'GB', 'FR', 'DE', 'IT', 'ES', 'TR', 'AE', 'NZ'];
+export const popRank = (iso) => { const i = POPULAR_ISO.indexOf(iso); return i < 0 ? POPULAR_ISO.length : i; };
+
+/**
+ * Rank of a place among search results that also hold countries (exact 0, prefix 1, inside 2): exact name 0.5,
+ * prefix 1.5, inside 2.5. A three-letter airport code only outranks a country that starts with those letters when it
+ * was typed as a code, in capitals: "jap" means Japan (not JAP Chacarita), "ind" India or Indonesia (not IND
+ * Indianapolis); "NRT" still goes straight to Narita. score = findPlaces' score.
+ */
+export function placeRank(place, score, q) {
+  const s = norm(q);
+  const code = String(place.code || '').toLowerCase();
+  const byCodeOnly = !!code && code === s && !place.keys.some((k) => k === s && k !== code);
+  return byCodeOnly && !/^[A-Z]{3}$/.test(String(q).trim()) ? 1.3 + (score % 1) : score + 0.5;
+}
+
 /**
  * Places matching q, best first: [{ place, score }] with score 0 exact (or exact IATA code), 1 prefix, 2 substring.
  * Latin queries need 2+ characters (3+ for substring matches) so a single letter does not list thousands of airports.

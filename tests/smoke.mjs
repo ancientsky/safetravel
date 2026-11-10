@@ -540,6 +540,56 @@ async function run(browser) {
     return `bar in toolbar (right edge ${Math.round(bar.r)} < panel ${Math.round(panel.x)}); dragged to ${Math.round(dragged.x)},${Math.round(dragged.y)} and back`;
   });
 
+  await check('search ranking: a country beats a look-alike airport code, aliases work, a code in capitals still wins; m.html too', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 } });
+    const ps = await ctx.newPage();
+    await ps.goto(new URL('?lang=zh', BASE_URL).href, { waitUntil: 'load' });
+    await ps.waitForSelector('#search-input');
+    await ps.focus('#search-input');
+    await ps.waitForFunction(() => window.__safetravel, null, { timeout: 30000 });
+    await ps.waitForTimeout(1500); // the place index loads on first focus
+    const first = async (q) => { await ps.fill('#search-input', q); await ps.waitForTimeout(200); return ps.$eval('#search [role="option"]', (li) => `${li.dataset.iso}${li.classList.contains('opt-place') ? '*' : ''}`).catch(() => 'none'); };
+    const got = {};
+    for (const q of ['jap', 'JAP', 'usa', 'uk', 'uae', 'england', 'ind', 'can', 'tur', 'korea', '南韓', 'NRT', 'nrt', '東京']) got[q] = await first(q);
+    await ps.fill('#search-input', 'jap');
+    await ps.press('#search-input', 'Enter');
+    const opened = await ps.evaluate(() => location.hash);
+    await ps.goto(new URL('m.html?role=public', BASE_URL).href, { waitUntil: 'load' });
+    await ps.waitForSelector('body[data-ready="1"]', { timeout: 10000 });
+    await ps.focus('#m-q');
+    await ps.waitForTimeout(1500);
+    const mfirst = async (q) => { await ps.fill('#m-q', q); await ps.waitForTimeout(250); return ps.$eval('#m-results li', (li) => li.dataset.iso).catch(() => 'none'); };
+    const m = { jap: await mfirst('jap'), usa: await mfirst('usa'), uk: await mfirst('uk') };
+    await ctx.close();
+    const want = { jap: 'JP', JAP: 'CR*', usa: 'US', uk: 'GB', uae: 'AE', england: 'GB', can: 'CA', tur: 'TR', korea: 'KR', 南韓: 'KR', NRT: 'JP*', nrt: 'JP*', 東京: 'JP*' };
+    for (const [q, w] of Object.entries(want)) assert(got[q] === w, `"${q}" → ${got[q]}, expected ${w}`);
+    assert(['IN', 'ID'].includes(got.ind), `"ind" → ${got.ind}`);
+    assert(opened === '#/country/JP', `Enter on "jap" opened ${opened}`);
+    assert(m.jap === 'JP' && m.usa === 'US' && m.uk === 'GB', `m.html ${JSON.stringify(m)}`);
+    return Object.entries(got).map(([q, r]) => `${q}→${r}`).join(' ');
+  });
+
+  await check('auto-open tour keeps a hand-opened country: no swap while it is held, the bar says why, "next" moves on', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 1440, height: 900 } });
+    const pt = await ctx.newPage();
+    await pt.addInitScript(() => { try { localStorage.setItem('safetravel.spotlightAutoOpen', 'on'); } catch (e) { /* ignore */ } });
+    await pt.goto(new URL('?lang=zh&full=1', BASE_URL).href, { waitUntil: 'load' });
+    await pt.waitForFunction(() => window.__safetravel?.spotlight, null, { timeout: 40000 });
+    await pt.evaluate(() => window.__safetravel.openCountry('JP'));
+    // jump the clock 40 s: two tour cycles' worth, still inside the 75 s hold
+    await pt.evaluate(() => { const real = Date.now.bind(Date); const t0 = real(); Date.now = () => real() + 40000 + 0 * t0; });
+    await pt.waitForTimeout(2500);
+    const held = await pt.evaluate(() => ({ hash: location.hash, label: document.querySelector('.panel-autobar .pa-label').textContent.trim(), bar: !document.querySelector('.panel-autobar').hidden }));
+    // past the hold: the tour takes over again
+    await pt.evaluate(() => { const real = Date.now.bind(Date); Date.now = () => real() + 80000; });
+    await pt.waitForFunction(() => location.hash !== '#/country/JP', null, { timeout: 30000 }).catch(() => {});
+    const after = await pt.evaluate(() => location.hash);
+    await ctx.close();
+    assert(held.hash === '#/country/JP' && held.bar && /無操作後繼續輪播/.test(held.label), `held ${JSON.stringify(held)}`);
+    assert(after !== '#/country/JP' && after.startsWith('#/country/'), `after the hold: ${after}`);
+    return `held on JP (“${held.label}”), then ${after}`;
+  });
+
   await check('kiosk stays on the site: external links, downloads and print show a notice; help / poster pages get the reset; normal visitors unaffected', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
     await ctx.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, (r) => r.abort()); // never leave the test host

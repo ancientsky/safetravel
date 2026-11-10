@@ -1976,7 +1976,10 @@ body.panel-open .wx-bar { transform: translateX(calc(-1 * (var(--panel-w) + var(
 @media (max-width: 1799px) { .m-link span[data-i18n], .slides-link span[data-i18n] { display: none; } }
 :root[lang="en"] .m-link span[data-i18n] { display: none; } /* English labels are longer: icon only (title says what it is) */
 .arr-heading { min-width: 0; }
-.arr-kicker { white-space: nowrap; max-width: 100%; overflow: hidden; }
+/* "INBOUND · delayed · 24 h ago": the data age must never be cut ("delayed · 1" read as one minute); when the row is
+   too narrow the status drops to its own line instead */
+.arr-kicker { flex-wrap: wrap; row-gap: 2px; max-width: 100%; }
+.arr-kicker > * { white-space: nowrap; }
 .brand-text { min-width: 0; }
 .brand-kicker { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* decorative line: never wraps the header */
 .foot a { white-space: nowrap; } /* never break inside an organisation's or a page's name */

@@ -67,7 +67,7 @@
           <tr><td>機場檢疫同仁（手機）</td><td><a href="m.html?role=officer">快查・檢疫同仁</a>：首頁就是未來 60 分鐘來自第二級以上地區的入境班機；可直接搜尋航班號（如 BR384）。</td></tr>
           <tr><td>檢疫站櫃台的平板／螢幕</td><td><a href="arrivals.html">入境航班看板（全螢幕）</a>，或情報板加 <code>?arr=TPE-C</code>（見「展示螢幕設定」）。</td></tr>
           <tr><td>要出國的民眾、旅行社</td><td><a href="m.html?role=public">快查・一般民眾</a>（手機）或 <a href="trip.html">出國前查詢</a>（電腦、可列印）。</td></tr>
-          <tr><td>大廳展示螢幕</td><td><a href="./">情報板</a>：開「查看完整資訊」與「自動捲動」即可無人值守輪播；或 <a href="slide.html">衛教海報輪播</a>。</td></tr>
+          <tr><td>大廳展示螢幕</td><td><a href="./">情報板</a>：開「輪播時自動展開」與「自動捲動」即可無人值守輪播；或 <a href="slide.html">衛教海報輪播</a>。</td></tr>
         </tbody>
       </table>
     </section>
@@ -78,7 +78,7 @@
       <ul>
         <li><b>顏色</b>：各國依疾管署旅遊疫情建議的最高等級上色（第一級注意、第二級警示、第三級警告）。左上可切換成「旅遊警示・外交部」圖層。</li>
         <li><b>圖例就是篩選</b>：點左下圖例的某個等級，地圖只突顯該等級（可複選，按「全部」還原）。圖例右上 ⌄ 可收合；內容較長時直接在圖例上捲動（底部漸層表示下面還有）。少數小島與地區在世界地圖上沒有形狀，不會上色，但一樣可以從搜尋開啟。</li>
-        <li><b>操作</b>：滾輪縮放、拖曳移動、雙擊重設；按 <kbd>/</kbd> 跳到搜尋框，<kbd>Esc</kbd> 關閉面板。手機上單指點國家、雙指移動縮放。</li>
+        <li><b>操作</b>：滾輪縮放、拖曳移動、雙擊重設；按 <kbd>/</kbd> 跳到搜尋框，<kbd>Esc</kbd> 關閉面板。手機上單指點國家、雙指移動縮放。 搜尋時國家優先：打 jap 會先出現日本，機場代碼要用大寫（NRT、JAP）才優先；也認得常見別名（USA、UK、UAE、England、南韓、阿聯…）。</li>
         <li><b>天氣</b>：「天氣」開關疊加中央氣象署 80 個城市的天氣與最高溫，可逐日切換或播放；日期一律是臺灣日期（UTC+8），不是當地日期。日期列在寬螢幕位於右上；1399 px 以下與直式螢幕排在開關下方（國家面板開著也看得到）。按住日期列左側的 ⠿ 可拖到任何位置（每台螢幕記住），▯ 放回原位。</li>
       </ul>
       <h3>搜尋</h3>
@@ -93,7 +93,7 @@
       </ul>
       <p><b>移動國家面板</b>：拖曳面板最上方（國名一帶或「自動輪播中」那一列）就能把面板移到任何位置，右下角可調整大小，每台螢幕記住；面板右上的 ▯ 按鈕放回右側預設位置。</p>
       <h3>焦點輪播</h3>
-      <p>右下卡片每 15 秒介紹一個國家。打開「查看完整資訊」會自動開啟國家面板並以閱讀速度自動捲動；面板上方的「精簡資訊」回到卡片。開著國家面板或入境航班看板時，焦點卡片會自動收起讓出畫面（輪播照常進行），兩者都關上後再出現；牆面螢幕想同時看看板與國家資訊，請打開「查看完整資訊」——卡片上的開關，或右上角「選單」→「焦點輪播：查看完整資訊」（卡片收起時也找得到），展示機網址也可加 <code>?full=1</code>。</p>
+      <p>右下卡片每 15 秒介紹一個國家。打開「輪播時自動展開」會自動開啟國家面板並以閱讀速度自動捲動；面板上方的「精簡資訊」回到卡片。開著這個開關時，你自己打開的國家（搜尋、點地圖、點看板）會留著不被輪播換掉，直到關閉面板或 75 秒沒有人操作（面板上方會倒數）。開著國家面板或入境航班看板時，焦點卡片會自動收起讓出畫面（輪播照常進行），兩者都關上後再出現；牆面螢幕想同時看看板與國家資訊，請打開「輪播時自動展開」——卡片上的開關，或右上角「選單」→「焦點輪播：自動展開完整資訊」（卡片收起時也找得到），展示機網址也可加 <code>?full=1</code>。</p>
       <h3>航線雷達</h3>
       <p>畫出今天桃園機場的航線。預設<b>只看入境</b>（所有線同一顏色），可切到「出入境」。航線的開關在「天氣」開關右邊（「航線」），關掉時航線雷達框也一起收起。</p>
       <p><b>其他機場的航線</b>：右上角「選單」→「機場航線」可打開<b>松山 TSA、臺中 RMQ、臺南 TNN、高雄 KHH</b> 的國際航線（紫、粉紅、藍、金色，可同時開；桃園也可關掉，但至少留一個機場；每台螢幕記住）。每個機場下方有「入境看板 →」（開啟該機場的入境航班看板）與「機場網站 ↗」。在入境航班看板切換機場時，地圖也會打開該機場的航線。圖例、航線雷達框與臺灣上的「基地」標籤會列出目前畫的機場；滑鼠移到航點上會分機場列出出入境班次。當天沒有國際航班的機場（例如臺南週一、週六）會顯示「今日沒有國際航班」，不能打開；沒有資料的機場顯示「目前沒有國際航班資料」。資料來自交通部 TDX 航班動態，每天更新 2 次。</p>
@@ -186,7 +186,7 @@
           <tr><td><code>m.html?role=officer</code></td><td>快查頁直接以檢疫同仁身分開啟（<code>public</code> 一般民眾）</td></tr>
           <tr><td><code>?reset=5</code></td><td>閒置自動重設：有人用過、之後 5 分鐘沒人操作，就回到開機時的頁面與設定；重設前 10 秒會提示，碰一下即取消。沒人碰過的螢幕不會重新載入。<code>?reset=0</code> 關閉</td></tr>
           <tr><td><code>?months=6</code></td><td>國家面板疫情時間軸範圍（3／6／12／24 個月）</td></tr>
-          <tr><td><code>?full=1</code></td><td>焦點輪播「查看完整資訊」：輪播時自動開啟並捲動國家面板（<code>?full=0</code> 關閉；不改該螢幕記住的設定）</td></tr>
+          <tr><td><code>?full=1</code></td><td>焦點輪播「輪播時自動展開」：輪播時自動開啟並捲動國家面板（<code>?full=0</code> 關閉；不改該螢幕記住的設定）</td></tr>
           <tr><td><code>?osk=1</code></td><td>觸控 kiosk 的螢幕小鍵盤：預設英數（ABC），按「注音」切換注音（鍵盤收起 2 分鐘後下一位訪客又從 ABC 開始），另有常用目的地按鈕；<code>?osk=0</code> 關閉。左下角的 <b>↻ 重設畫面</b>：按一下、4 秒內再按一次，就回到開機時的頁面與設定（訪客拖動、收合、切換的都會還原）。<b>展示機只留在本站</b>：帶 <code>?osk=1</code> 或 <code>?reset=</code> 的螢幕上，點外部網站連結（疾管署、領務局、醫院網站、Google 地圖…）、電話連結、下載或列印都不會執行，只顯示「展示機無法開啟外部網站（網址）」；站內連結一律在同一個分頁開啟，使用說明、衛教海報頁也有 ↻ 與閒置重設</td></tr>
         </tbody>
       </table>
@@ -274,7 +274,7 @@
           <tr><td>Quarantine staff (phone)</td><td><a href="m.html?role=officer">Quick check · staff</a>: the start view lists flights from level 2+ areas arriving in the next 60 minutes; search a flight number (e.g. BR384).</td></tr>
           <tr><td>Counter tablet / screen</td><td><a href="arrivals.html">Full-screen inbound board</a>, or the map with <code>?arr=TPE-C</code> (see kiosk settings).</td></tr>
           <tr><td>Traveller, travel agency</td><td><a href="m.html?role=public">Quick check · traveller</a> on a phone, or the <a href="trip.html">trip check</a> on a computer (printable).</td></tr>
-          <tr><td>Lobby display</td><td>The <a href="./">map</a> with “Show full details” and auto-scroll on, or the <a href="slide.html">health posters</a>.</td></tr>
+          <tr><td>Lobby display</td><td>The <a href="./">map</a> with “Auto-open on tour” and auto-scroll on, or the <a href="slide.html">health posters</a>.</td></tr>
         </tbody>
       </table>
     </section>
@@ -285,9 +285,9 @@
         <li><b>Colours</b>: each country's highest Taiwan CDC level (1 Watch, 2 Alert, 3 Warning); switch to the MOFA travel-warning layer top-left.</li>
         <li><b>The legend is the filter</b>: tap a level to show only it (several allowed, “All” resets); ⌄ collapses the legend. A long legend scrolls in place (a fade at the bottom means there is more). A few small islands and areas have no shape on the world map and are not coloured, but search still opens them.</li>
         <li><b>Navigate</b>: wheel to zoom, drag to pan, double-click to reset; <kbd>/</kbd> focuses search, <kbd>Esc</kbd> closes the panel. On phones one finger taps, two fingers pan and zoom.</li>
-        <li><b>Search</b> countries, cities and airports by Chinese / English name, nickname or IATA code (Bangkok, 名古屋, Nagoya, NRT).</li>
+        <li><b>Search</b> countries, cities and airports by Chinese / English name, nickname or IATA code (Bangkok, 名古屋, Nagoya, NRT). Countries come first: “jap” lists Japan before airport JAP (type a code in capitals to put the airport first), and common aliases work (USA, UK, UAE, England, Korea).</li>
         <li><b>Country panel</b>: both official ratings, every active notice, an AI two-year overview, an outbreak timeline (3 / 6 / 12 / 24 months), the MOFA warning text and local weather. A <b>section bar</b> under the name (Advisories 5, MOFA, AI overview, ✈ Flights, Epidemics 4…) shows each section's count; tap one to scroll there, and the section in view lights up. Countries with direct flights get a <b>Direct flights with Taoyuan</b> section (arrivals / departures and airlines per airport that day) with “Show arrivals from … on the board”, which opens the arrivals board searched for that country. Drag its top (name area or the tour bar) to move it anywhere, resize it from its corner; ▯ docks it back on the right.</li>
-        <li><b>Spotlight tour</b>: a country every 15 s; “Show full details” opens and auto-scrolls the panel. The card steps aside while the country panel or the arrivals board is open (the tour keeps running) and returns when both are closed; wall screens that show the board can turn on “Show full details” to keep country info on screen — the switch on the card, or Menu → “Spotlight: show full details” (reachable while the card is hidden), or <code>?full=1</code> in a kiosk link.</li>
+        <li><b>Spotlight tour</b>: a country every 15 s; “Auto-open on tour” opens and auto-scrolls the panel. With it on, a country you opened yourself stays until you close the panel or nobody touches the screen for 75 s (the bar above the panel counts down). The card steps aside while the country panel or the arrivals board is open (the tour keeps running) and returns when both are closed; wall screens that show the board can turn on “Auto-open on tour” to keep country info on screen — the switch on the card, or Menu → “Spotlight: auto-open full details” (reachable while the card is hidden), or <code>?full=1</code> in a kiosk link.</li>
         <li><b>Route radar</b>: today's Taoyuan routes, inbound only by default (“Both ways” adds departures). Menu → <b>Airport routes</b> adds the international routes of <b>Songshan TSA, Taichung RMQ, Tainan TNN and Kaohsiung KHH</b> (violet, pink, blue, gold; several at once; Taoyuan can be switched off too, but one airport always stays; remembered per screen), each with “Arrivals board →” and “Airport website ↗”. Picking an airport on the arrivals board switches its routes on as well. The legend, the radar box and the “HOME” label on Taiwan list the airports drawn; an airport with no international flights that day (Tainan flies some weekdays only) says so and cannot be switched on. Data: MOTC TDX flight boards, updated twice a day. With the arrivals board docked on the left, the legend shrinks to its title bar (tap to open) and the radar box sits on top of it, right of the board. In portrait the radar box sits above the legend and the board stops above it.</li>
         <li><b>Outbreak routes</b> (in the Menu; a dot on the Menu button while on): the direct-flight networks of Irkutsk (suspected plague) and Kinshasa (Bundibugyo Ebola); cyan stops have direct flights to Taoyuan. The legend explains the dotted lines.</li>
         <li><b>Weather</b>: CWA forecasts for 80 cities with a 7-day selector; dates are Taiwan dates (UTC+8), not local dates (top right on wide screens; below the switches on screens up to 1399 px and in portrait, so an open country panel never hides it; drag it anywhere by the ⠿ grip, remembered per screen, ▯ puts it back). The <b>Routes</b> switch next to Weather turns the route animation and its radar box on or off. <b>Aa</b>: text size 100 / 112 / 125 / 140 % (computers default to 140 %, phones to 112 %). On screens under 900 px tall (laptops, or browser zoom 125 %+) 140 % shows as 125 % and the stat tiles are hidden, so the board and panel fit.</li>
@@ -339,7 +339,7 @@
           <tr><td><code>?lang=en</code></td><td>English on every page (<code>?lang=zh</code> Chinese); the screen’s own choice is not changed</td></tr>
           <tr><td><code>m.html?role=officer</code></td><td>Quick check opened as quarantine staff (<code>public</code>: traveller)</td></tr>
           <tr><td><code>?reset=5</code></td><td>Idle auto-reset: after someone used the screen, 5 idle minutes bring back its start page and settings, with a 10-second notice any touch cancels; untouched screens never reload (<code>?reset=0</code> off)</td></tr>
-          <tr><td><code>?full=1</code></td><td>Spotlight “show full details”: the tour opens and scrolls the country panel (<code>?full=0</code> off)</td></tr>
+          <tr><td><code>?full=1</code></td><td>Spotlight “auto-open on tour”: the tour opens and scrolls the country panel (<code>?full=0</code> off)</td></tr>
           <tr><td><code>?osk=1</code></td><td>On-screen keyboard for touch kiosks: starts in letters and digits (ABC); 「注音」 switches to Zhuyin, which stays for the visitor and goes back to ABC after 2 minutes without the keyboard (<code>?osk=0</code> off), plus a <b>↻ reset</b> button bottom left: tap, then tap again within 4 s, and the screen returns to its start page and settings. <b>Kiosks stay on this site</b>: on a screen opened with <code>?osk=1</code> or <code>?reset=</code>, external links (CDC, BOCA, hospital sites, Google Maps…), phone links, downloads and printing do nothing but show “This kiosk cannot open external websites (host)”; links inside the site open in the same tab, and the help and poster pages have the ↻ button and the idle reset too</td></tr>
         </tbody>
       </table>

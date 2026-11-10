@@ -7,19 +7,25 @@ import {
   t, countryName, badge, fmtNum, wbadge,
 } from './i18n.js';
 import { esc, $ } from './util.js';
-import { loadPlaces, findPlaces, placeName } from './places.js';
+import {
+  loadPlaces, findPlaces, placeName, COUNTRY_ALIASES, popRank, placeRank,
+} from './places.js';
+
+/** Lower case, full-width → half-width, accents dropped ("Türkiye" answers to "tur", "Côte" to "cote"). */
+export const fold = (s) => String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').normalize('NFKC').toLowerCase().trim();
 
 function index() {
   const map = new Map();
   const add = (iso, ...names) => {
     if (!/^[A-Z]{2}$/.test(iso)) return;
     if (!map.has(iso)) map.set(iso, new Set());
-    names.filter(Boolean).forEach((n) => map.get(iso).add(String(n).toLowerCase().normalize('NFKC')));
+    names.filter(Boolean).forEach((n) => map.get(iso).add(fold(n)));
   };
   for (const [iso, c] of Object.entries(state.data.countries || {})) add(iso, c.zh, c.en, iso);
   for (const [iso, c] of Object.entries(state.data.alerts?.countries || {})) add(iso, c.name_zh, c.name_en, iso);
   for (const [iso, c] of Object.entries(state.data.warnings?.countries || {})) add(iso, c.name_zh, c.name_en);
   for (const [iso, n] of state.data.worldNames) add(iso, n, iso);
+  for (const [iso, names] of Object.entries(COUNTRY_ALIASES)) if (map.has(iso)) add(iso, ...names);
   return map;
 }
 
@@ -32,7 +38,7 @@ export function createSearch({ root, onPick }) {
 
   function search(q) {
     idx = idx || index();
-    const s = q.trim().toLowerCase().normalize('NFKC');
+    const s = fold(q);
     if (!s) return [];
     const scored = [];
     for (const [iso, names] of idx) {
@@ -44,11 +50,11 @@ export function createSearch({ root, onPick }) {
       }
       if (best < Infinity) scored.push({ iso, score: best, lvl: mofaMode() ? warnLevel(iso) : levelOf(iso) });
     }
-    scored.sort((a, b) => a.score - b.score || b.lvl - a.lvl || countryName(a.iso).localeCompare(countryName(b.iso)));
+    scored.sort((a, b) => a.score - b.score || popRank(a.iso) - popRank(b.iso) || b.lvl - a.lvl || countryName(a.iso).localeCompare(countryName(b.iso)));
     const countries = scored.slice(0, 8);
-    // airports / cities: after the countries of the same score (a country named like the query wins)
+    // airports / cities: after the countries of the same quality (places.js placeRank)
     const places = findPlaces(q, 6).map(({ place, score }) => ({
-      iso: place.iso, place, score: score + 0.5, lvl: mofaMode() ? warnLevel(place.iso) : levelOf(place.iso),
+      iso: place.iso, place, score: placeRank(place, score, q), lvl: mofaMode() ? warnLevel(place.iso) : levelOf(place.iso),
     }));
     return [...countries, ...places].sort((a, b) => a.score - b.score).slice(0, 10);
   }

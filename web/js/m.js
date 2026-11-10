@@ -10,7 +10,9 @@ import {
   levelInstruction, badge, wbadge, wLevelFull, fmtDay, pick,
 } from './i18n.js';
 import { $, esc, storageGet, storageSet, safeUrl, levelNum, truncate, urlLang, syncUrlLang } from './util.js';
-import { loadPlaces, findPlaces, placeName } from './places.js';
+import {
+  loadPlaces, findPlaces, placeName, COUNTRY_ALIASES, popRank, placeRank,
+} from './places.js';
 import { bindTextSize } from './textsize.js';
 import { bestTime, flightKey, inCheckpoints } from './arrivals.js';
 import { autoReload } from './autoreload.js';
@@ -327,7 +329,7 @@ function countries() {
   countryIndex = [...isos].map((iso) => {
     const a = state.data.alerts?.countries?.[iso];
     const c = state.data.countries?.[iso];
-    return { iso, keys: [...new Set([iso, a?.name_zh, a?.name_en, c?.zh, c?.en].filter(Boolean).map(norm))] };
+    return { iso, keys: [...new Set([iso, a?.name_zh, a?.name_en, c?.zh, c?.en, ...(COUNTRY_ALIASES[iso] || [])].filter(Boolean).map(norm))] };
   });
   return countryIndex;
 }
@@ -345,7 +347,8 @@ function search(q) {
     }
     if (best < Infinity && (cjk || s.length >= 2 || best === 0)) out.push({ kind: 'country', iso: c.iso, score: best });
   }
-  for (const { place, score } of findPlaces(q, 5)) out.push({ kind: 'place', iso: place.iso, place, score: score + 0.5 });
+  // airports / cities after countries of the same quality; a lower-case "jap" means Japan, not airport JAP
+  for (const { place, score } of findPlaces(q, 5)) out.push({ kind: 'place', iso: place.iso, place, score: placeRank(place, score, q) });
   if (app.role === 'officer' && arrivals) {
     const fk = flightKey(q);
     if (fk.length >= 3 && /\d/.test(fk)) {
@@ -355,7 +358,7 @@ function search(q) {
       }
     }
   }
-  out.sort((a, b) => a.score - b.score);
+  out.sort((a, b) => a.score - b.score || popRank(a.iso) - popRank(b.iso));
   return out.slice(0, 8);
 }
 function renderResults() {
