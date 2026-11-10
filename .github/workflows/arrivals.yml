@@ -115,7 +115,9 @@ jobs:
           enablement: true
       - name: Download the published arrivals.json again (under the lock)
         id: prev
-        run: .github/scripts/prev-arrivals.sh "${{ steps.pages.outputs.base_url }}" /tmp/prev.json
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}   # through env, never interpolated into the script text
+        run: .github/scripts/prev-arrivals.sh "$BASE_URL" /tmp/prev.json
       - name: Guard again
         id: guard
         if: steps.prev.outputs.ok == 'true'

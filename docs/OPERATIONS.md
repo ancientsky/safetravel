@@ -136,8 +136,16 @@ After a rebuild, commit the three JSON files, open `web/` locally (`python -m ht
   only inside the "Commit and push" step.
 - The push step retries up to 3 times. After each `git pull --rebase -X theirs` it re-runs `python -m pipeline export` and
   `python -m pipeline validate` and commits any difference before pushing again (the SQLite file has two writers and cannot be merged).
-- `deploy-pages.yml` runs `python -m pipeline validate` before uploading `web/`, so hand edits or routine pushes with invalid
-  `web/data` are not deployed.
+- `deploy-pages.yml` has two jobs. `build` (read access only, `persist-credentials: false`) installs the locked packages and runs
+  repository code: `python -m pipeline validate` (hand edits or routine pushes with invalid `web/data` are not deployed), the poster
+  index, the d3 check and the version stamp; it also refuses symbolic links under `web/` and hands the finished site over as an
+  artifact. `deploy` (`pages: write`, `id-token: write`) runs no repository code: it downloads that artifact, adds the live
+  `arrivals.json` and publishes. Nothing executed from the repository can therefore obtain a deployment token.
+- Machine-made data commits (subject starting with `data:` — `update-data.yml` and the daily translation routine) may only change
+  `data/` and `web/data/`. `.github/scripts/check-data-commit.sh` enforces it in `deploy-pages.yml` (the deploy stops) and in the
+  `Data commit guard` workflow on every push to `main` (a red run and a mail when such a commit touches site code, pipeline code,
+  workflows or scripts). The routine itself stages the two data paths by name and stops when anything else changed
+  (`docs/TRANSLATION_GUIDE.md`).
 - Fetch safeguards: HTTP bodies are capped at 50 MB (`http.get(max_bytes=...)`); a CSV with a malformed/oversized field is rejected like any
   other bad download (previous file kept); URLs discovered in data.gov.tw responses must be https on `data.gov.tw`,
   `www.taoyuan-airport.com` or `odp.taoyuan-airport.com`; `FLIGHT_FILE_URL` must be https (or a `file:` path for tests). The Gemini key is sent in the

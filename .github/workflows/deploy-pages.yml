@@ -1,31 +1,36 @@
 name: Deploy Pages
 
+# Two jobs on purpose:
+#   build   installs packages and runs repository code (validation, poster index, d3 check). It has read access only,
+#           so nothing it runs can publish the site or ask for a deployment token.
+#   deploy  holds the Pages rights and runs no repository code: it takes the finished site from the build job, adds the
+#           live arrivals.json and publishes.
+
 on:
   push:
     branches: [main]
     paths:
       - 'web/**'
       - '.github/workflows/deploy-pages.yml'
+      - '.github/scripts/**'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+permissions: {}
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    concurrency:
-      group: pages
-      cancel-in-progress: false
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 1
+          fetch-depth: 20          # the data-commit check compares the pushed commits with their parents
+          persist-credentials: false
+      - name: Automated data commits may only change data files
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: .github/scripts/check-data-commit.sh "${BEFORE:-}" "$GITHUB_SHA"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.14'
@@ -53,6 +58,39 @@ jobs:
           "$RUNNER_TEMP/node/bin/node" --version
       - name: Check the vendored d3 subset covers every d3 call
         run: node scripts/check-d3.mjs
+      - name: Stamp the code version (open pages reload themselves when it changes)
+        run: .github/scripts/stamp-version.sh
+      - name: Only plain files are published (no symbolic links)
+        run: |
+          if [ -n "$(find web -type l -print -quit)" ]; then
+            echo "::error::web/ contains a symbolic link:"; find web -type l; exit 1
+          fi
+      - name: Hand the site to the deploy job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site
+          path: web
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Fetch the site built by the build job
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+          path: web
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
         id: pages
         with:
@@ -61,9 +99,8 @@ jobs:
         env:
           BASE_URL: ${{ steps.pages.outputs.base_url }}
         run: |
+          test -s web/index.html
           curl -fsS "${BASE_URL}/data/arrivals.json?t=$(date +%s)" -o web/data/arrivals.json && python3 -m json.tool web/data/arrivals.json >/dev/null || rm -f web/data/arrivals.json
-      - name: Stamp the code version (open pages reload themselves when it changes)
-        run: .github/scripts/stamp-version.sh
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: web

@@ -1,0 +1,26 @@
+name: Data commit guard
+
+# Commits whose subject starts with "data:" are made by machines (update-data.yml, the daily translation routine) and
+# may only change data/ and web/data/. This run fails — and GitHub mails the owner — when one touches anything else
+# (site code, pipeline code, workflows, scripts). deploy-pages.yml runs the same check before publishing.
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 20
+          persist-credentials: false
+      - name: Automated data commits may only change data files
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: .github/scripts/check-data-commit.sh "${BEFORE:-}" "$GITHUB_SHA"
