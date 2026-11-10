@@ -30,6 +30,9 @@ const PLANE = 'M0-5.5 1.1-1.6 5.5 1.3V2.6L1.1 1.1.8 4 2.3 5.1V6L0 5.3-2.3 6V5.1L
 
 const HM = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const hm = (ms) => (Number.isFinite(ms) ? HM.format(ms) : '—');
+const MD = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit' });
+/** "07:03", or "11-09 07:03" when that moment is not today (Taipei). */
+const dayHm = (ms, now) => (!Number.isFinite(ms) ? '—' : MD.format(ms) === MD.format(now) ? hm(ms) : `${MD.format(ms)} ${hm(ms)}`);
 const ts = (s) => (s ? Date.parse(s) : NaN);
 
 function readJSON(key) {
@@ -80,6 +83,38 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
   const btnMin = root.querySelector('.arr-min');
   const btnClose = root.querySelector('.arr-close');
   const swScroll = root.querySelector('.arr-scroll');
+
+  // Always in view under the title, also while the board is collapsed: how many listed flights come from areas at
+  // CDC level 2 or higher (a tap lists only those), and a banner when the flight data has stopped updating.
+  const strip = document.createElement('div');
+  strip.className = 'arr-strip';
+  strip.hidden = true;
+  const l2Btn = document.createElement('button');
+  l2Btn.type = 'button';
+  l2Btn.className = 'arr-l2';
+  l2Btn.dataset.risk = '';
+  l2Btn.dataset.testid = 'arrivals-l2';
+  strip.append(l2Btn);
+  const staleBar = document.createElement('p');
+  staleBar.className = 'arr-stale-bar';
+  staleBar.dataset.testid = 'arrivals-stale';
+  staleBar.setAttribute('role', 'status');
+  staleBar.hidden = true;
+  head.after(strip, staleBar);
+  function renderL2(n) {
+    strip.hidden = n == null;
+    if (n == null) return;
+    const on = !!cfg.risk;
+    l2Btn.setAttribute('aria-pressed', String(on));
+    l2Btn.classList.toggle('is-zero', !n);
+    l2Btn.title = t('arr_risk_title');
+    const text = document.createElement('span');
+    text.textContent = t('arr_l2', { n });
+    const act = document.createElement('span');
+    act.className = 'arr-l2-act';
+    act.textContent = t(on ? 'arr_l2_all' : 'arr_l2_only');
+    l2Btn.replaceChildren(text, ...(n || on ? [act] : []));
+  }
 
   const winNode = root.querySelector('.arr-win');
   const url = fromUrl(standalone);
@@ -307,6 +342,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
   }
 
   function renderStatus(now) {
+    if (!data) staleBar.hidden = true;
     if (status === 'loading' && !data) { statusNode.textContent = t('arr_loading'); statusNode.className = 'arr-status'; return; }
     if (!data) { statusNode.textContent = ''; return; }
     const gen = ts(data.tdx_updated || data.generated_at);
@@ -318,6 +354,8 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     statusNode.className = `arr-status${stale ? ' is-stale' : ''}`;
     root.classList.toggle('is-stale', stale);
     statusNode.textContent = stale ? t('arr_stale', { ago }) : t('arr_updated', { time: hm(gen), ago });
+    staleBar.hidden = !stale;
+    staleBar.textContent = stale ? t('arr_stale_bar', { time: dayHm(gen, now), ago }) : '';
     // TDX API usage is for whoever runs the site: a quiet footer note (map page), else the status tooltip
     const q = data.quota;
     const quota = q?.cap_month ? t('arr_quota', { used: q.calls_month ?? 0, cap: q.cap_month }) : '';
@@ -377,6 +415,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     if (!data) {
       const msg = status === 'none' ? t('arr_none') : status === 'error' ? t('arr_error') : t('arr_loading');
       body.innerHTML = `<p class="arr-empty">${esc(msg)}</p>`;
+      renderL2(null);
       layer.update([]);
       return;
     }
@@ -392,11 +431,10 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     root.classList.toggle('is-empty', empty); // a docked board with nothing to list shrinks to its content
     // nothing in this time window: one tap widens it to everything published (2 h back … 4 h ahead)
     const widen = empty && !q && cfg.win ? `<button type="button" class="btn arr-widen" data-widen data-testid="arrivals-widen">${esc(t('arr_widen'))}</button>` : '';
-    body.innerHTML = `${q ? `<p class="arr-found mono">${esc(t('arr_find_count', { q, n: up.length + past.length }))}</p>` : ''}<p class="arr-summary"><span>${esc(t('arr_count', { up: up.length, past: past.length }))}</span>${
-      risky || cfg.risk ? `<button type="button" class="arr-risk" data-risk aria-pressed="${!!cfg.risk}" title="${esc(t('arr_risk_title'))}">${
-        esc(cfg.risk ? t('arr_risk_on', { n: risky }) : t('arr_risk', { n: risky }))}</button>` : ''}</p>${
+    body.innerHTML = `${q ? `<p class="arr-found mono">${esc(t('arr_find_count', { q, n: up.length + past.length }))}</p>` : ''}<p class="arr-summary"><span>${esc(t('arr_count', { up: up.length, past: past.length }))}</span></p>${
       empty ? `<p class="arr-empty">${esc(q ? t('arr_find_none') : cfg.risk ? t('arr_empty_risk') : cfg.cps.length ? t('arr_empty_cp') : t('arr_empty'))}</p>${widen}` : ''}${
       empty ? '' : section('upcoming', 'next', up) + section('arrived', 'past', past)}`;
+    renderL2(risky);
     layer.update([...up, ...past]);
   }
 
@@ -576,15 +614,13 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
   });
   document.addEventListener('pointerdown', (e) => { if (cpPop && !cpPop.hidden && !e.target.closest('.arr-cpf')) openCp(false); });
   cpPop?.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); openCp(false); cpBtn.focus(); } });
+  l2Btn.addEventListener('click', () => {
+    cfg.risk = !cfg.risk;
+    saveCfg();
+    render();
+    toTop();
+  });
   body.addEventListener('click', (e) => {
-    if (e.target.closest('[data-risk]')) {
-      cfg.risk = !cfg.risk;
-      saveCfg();
-      render();
-      toTop();
-      body.querySelector('[data-risk]')?.focus();
-      return;
-    }
     if (e.target.closest('[data-widen]')) { cfg.win = 0; saveCfg(); render(); toTop(); return; }
     const b = e.target.closest('.arr-hit[data-iso]');
     if (b) openCountry(b.dataset.iso);

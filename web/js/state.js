@@ -18,6 +18,7 @@ export const state = {
   flightsOn: true,
   flightDir: 'in', // routes: 'in' arrivals only (default) | 'both' directions
   hubs: ['TPE'], // airports whose routes are on the map (menu → airport routes); Taoyuan by default
+  patterns: true, // levels 2 and 3 also carry a pattern on the map, so they do not rely on colour alone
   legendMin: false, // legend collapsed to its title bar
   legendDockOpen: false, // legend opened by hand while a left-docked arrivals board collapses it
   spotlight: { iso: null, playing: true },

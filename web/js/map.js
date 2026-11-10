@@ -48,12 +48,16 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     <radialGradient id="ocean-grad" cx="50%" cy="42%" r="70%">
       <stop offset="0%"/>
       <stop offset="100%"/>
-    </radialGradient>`);
+    </radialGradient>
+    <pattern id="pat-2" class="pat" patternUnits="userSpaceOnUse" width="7" height="7"><circle cx="1.75" cy="1.75" r="1.05"/><circle cx="5.25" cy="5.25" r="1.05"/></pattern>
+    <pattern id="pat-3" class="pat" patternUnits="userSpaceOnUse" width="6" height="6"><path d="M-1.5 1.5l3-3M0 6l6-6M4.5 7.5l3-3"/></pattern>`);
 
   const gZoom = svg.append('g').attr('class', 'zoom-layer');
   const sphere = gZoom.append('path').attr('class', 'sphere').datum({ type: 'Sphere' });
   const graticule = gZoom.append('path').attr('class', 'graticule').datum(d3.geoGraticule10());
   const gCountries = gZoom.append('g').attr('class', 'countries');
+  // Not colour alone: the two highest levels of the active layer also carry a pattern (dots, then hatching).
+  const gPat = gZoom.append('g').attr('class', 'patterns').attr('aria-hidden', 'true');
   const gFx = gZoom.append('g').attr('class', 'fx').attr('aria-hidden', 'true');
   const hoverOutline = gFx.append('path').attr('class', 'outline hover-outline');
   const gDots = gZoom.append('g').attr('class', 'flight-dots');
@@ -241,6 +245,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     const tw = byIso.get('TW');
     homeGlow.setAttribute('d', tw ? tw._d || path(tw) : '');
     renderDanger();
+    renderPatterns();
     renderDots();
     if (state.selected) setSelected(state.selected);
     if (spotIso) setSpotlight(spotIso);
@@ -372,6 +377,24 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     emit('map:hover', null);
   }
 
+  /** Pattern of a country on the active layer: 3 hatching (CDC level 3 / MOFA red), 2 dots (CDC level 2 / MOFA orange), 0 none. */
+  function patOf(iso) {
+    const lvl = layerLevel(iso);
+    if (mofaMode()) return lvl >= 3 ? lvl - 1 : 0;
+    return lvl >= 2 ? lvl : 0;
+  }
+  const patEls = [...svgEl.querySelectorAll('pattern.pat')];
+  function renderPatterns() {
+    const filter = mofaMode() ? state.wfilter : state.filter;
+    const rows = state.patterns
+      ? features.filter((f) => patOf(f.id) && f.id !== 'TW' && (!filter.size || filter.has(layerLevel(f.id))))
+      : [];
+    gPat.selectAll('path').data(rows, (f) => f.id).join('path')
+      .attr('class', (f) => `pat-${patOf(f.id)}`)
+      .attr('d', (f) => f._d || path(f));
+    svgEl.classList.toggle('has-patterns', rows.length > 0);
+  }
+
   // Breathing outline on the top level of the active layer (CDC L3 / MOFA red).
   function renderDanger() {
     const mofa = mofaMode();
@@ -440,6 +463,8 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     const k = transform.k;
     const tr = transform.toString();
     fxGroups.forEach((g) => g.setAttribute('transform', tr));
+    // patterns keep their size on screen at any zoom
+    patEls.forEach((el) => el.setAttribute('patternTransform', `scale(${1 / k})`));
     if (homeXY) {
       const [x, y] = transform.apply(homeXY);
       homePin.style.transform = `translate(${x}px, ${y}px)`;
@@ -618,6 +643,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
 
   function applyFilter() {
     if (countrySel) countrySel.attr('class', classFor);
+    renderPatterns();
   }
 
   /** Re-colour after a layer switch or when the travel warnings arrive. */
@@ -627,6 +653,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     countrySel.attr('class', classFor).attr('tabindex', tabFor).attr('aria-label', labelFor);
     svg.attr('aria-label', t(mofaMode() ? 'map_label_mofa' : 'map_label'));
     renderDanger();
+    renderPatterns();
   }
 
   function relabel() {
@@ -660,6 +687,7 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     setSpotlight,
     applyFilter,
     applyLayer,
+    applyPatterns: renderPatterns,
     relabel,
     renderDots,
     setHomeLabel,

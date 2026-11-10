@@ -1300,6 +1300,143 @@ async function run(browser) {
     return 'floats, survives a reload, docks back';
   });
 
+  await check('extras: kiosk destination buttons, traveller brief with a QR code, level patterns with a menu switch, board L2 count and stale banner', async () => {
+    const browser = page.context().browser();
+    // 1. kiosk: "where to?" buttons beside the search box open a country in one tap; absent on ordinary screens
+    let ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 }, hasTouch: true });
+    let pk = await ctx.newPage();
+    const errs = [];
+    pk.on('pageerror', (e) => errs.push(e.message));
+    await pk.addInitScript(() => { try { localStorage.setItem('safetravel.spotlight.autoopen', 'off'); } catch (e) { /* ignore */ } });
+    await pk.goto(new URL('?lang=zh&osk=1', BASE_URL).href, { waitUntil: 'load' });
+    await pk.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    await pk.waitForSelector('[data-testid="ask"] .ask-chip', { timeout: 10000 });
+    const ask = await pk.evaluate(() => {
+      const el = document.querySelector('[data-testid="ask"]');
+      const chips = [...el.querySelectorAll('.ask-chip')].filter((c) => !c.hidden);
+      const box = document.querySelector('#search').getBoundingClientRect();
+      const zoom = document.querySelector('.zoom-ctrl').getBoundingClientRect();
+      return {
+        title: el.querySelector('.ask-q').textContent, n: chips.length, first: chips[0]?.textContent,
+        clear: chips.every((c) => { const r = c.getBoundingClientRect(); return r.left >= box.right && r.right <= zoom.left && r.height >= 44; }),
+        doc: document.documentElement.scrollWidth,
+      };
+    });
+    assert(ask.title === '要去哪裡？' && ask.n >= 5 && ask.first === '日本' && ask.clear && ask.doc <= 1920, `kiosk prompt: ${JSON.stringify(ask)}`);
+    await pk.fill('[data-testid="search"]', 'x');
+    const typing = await pk.$eval('[data-testid="ask"]', (el) => el.hidden);
+    await pk.fill('[data-testid="search"]', '');
+    await pk.keyboard.press('Escape');
+    assert(typing, 'the prompt stays while someone types');
+    await pk.evaluate(() => document.querySelector('[data-testid="ask"] .ask-chip[data-iso="JP"]').click());
+    await pk.waitForFunction(() => location.hash === '#/country/JP' && !document.querySelector('#panel').hidden, null, { timeout: 5000 });
+
+    // 2. the panel starts with the essentials in plain words and a QR code to the public trip check
+    await pk.waitForSelector('[data-testid="panel-qr"].is-ready', { timeout: 10000 });
+    const brief = await pk.evaluate(() => {
+      const b = document.querySelector('[data-testid="panel-brief"]');
+      const qr = b.querySelector('[data-testid="panel-qr"]');
+      return {
+        first: document.querySelector('#panel .panel-body').firstElementChild === b,
+        rows: [...b.querySelectorAll('.pb-list li b')].map((x) => x.textContent),
+        health: b.querySelector('.pb-list li span').textContent,
+        link: b.querySelector('[data-testid="panel-trip-link"]').getAttribute('href'),
+        qr: qr.dataset.qr, modules: Number(qr.querySelector('svg')?.dataset.modules), dark: qr.querySelector('svg path').getAttribute('d').length,
+        size: Math.round(qr.querySelector('.pb-qr-img').getBoundingClientRect().width), label: qr.querySelector('[role="img"]').getAttribute('aria-label'),
+      };
+    });
+    assert(brief.first && brief.rows.join() === '疫情,安全,出發前' && /^疾管署/.test(brief.health), `brief: ${JSON.stringify(brief)}`);
+    assert(brief.link === 'trip.html#JP' && brief.qr === 'https://ancientsky.github.io/safetravel/trip.html#JP', `brief link / QR address: ${brief.link} / ${brief.qr}`);
+    assert(brief.modules >= 25 && brief.dark > 500 && brief.size >= 96 && /日本/.test(brief.label), `QR: ${JSON.stringify(brief)}`);
+    assert(!errs.length, `page errors: ${errs.join(' | ')}`);
+    await ctx.close();
+    ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    pk = await ctx.newPage();
+    await pk.goto(new URL('?lang=en#/country/JP', BASE_URL).href, { waitUntil: 'load' });
+    await pk.waitForSelector('[data-testid="panel-qr"].is-ready', { timeout: 30000 });
+    const plain = await pk.evaluate(() => ({ ask: !!document.querySelector('[data-testid="ask"]'), qr: document.querySelector('[data-testid="panel-qr"]').dataset.qr, k: document.querySelector('.pb-list li b').textContent }));
+    assert(!plain.ask && plain.qr.endsWith('/trip.html?lang=en#JP') && plain.k === 'Health', `ordinary screen: ${JSON.stringify(plain)}`);
+
+    // 3. levels 2 and 3 carry a pattern (not colour alone); the menu switches it off and remembers
+    const pat = async () => pk.evaluate(() => {
+      const st = window.__safetravel.state;
+      const want = Object.values(st.data.alerts.countries).filter((c) => c.max_level >= 2).length;
+      const paths = [...document.querySelectorAll('#map-svg .patterns path')];
+      return {
+        want, n: paths.length, l3: paths.filter((x) => x.classList.contains('pat-3')).length,
+        fill: paths[0] ? getComputedStyle(paths[0]).fill : '', on: document.documentElement.classList.contains('pat-on'),
+        swatch: getComputedStyle(document.querySelector('#legend .swatch.lvl-3')).backgroundImage,
+        stored: localStorage.getItem('safetravel.patterns'),
+      };
+    });
+    const on = await pat();
+    assert(on.on && on.n > 0 && on.n <= on.want && on.l3 >= 1 && /url\(/.test(on.fill) && /gradient/.test(on.swatch), `patterns on: ${JSON.stringify(on)}`);
+    await pk.click('[data-testid="menu-toggle"]');
+    await pk.click('[data-testid="menu-patterns"]');
+    const off = await pat();
+    const sw = await pk.$eval('[data-testid="menu-patterns"]', (b) => `${b.getAttribute('aria-checked')}/${b.querySelector('.pm-state').textContent}`);
+    assert(!off.on && off.n === 0 && off.stored === 'off' && off.swatch === 'none' && sw === 'false/Off', `patterns off: ${JSON.stringify(off)} ${sw}`);
+    await pk.goto(new URL('?lang=en&pat=1', BASE_URL).href, { waitUntil: 'load' });
+    await pk.waitForFunction(() => document.querySelectorAll('#map-svg .patterns path').length > 0, null, { timeout: 30000 });
+    await ctx.close();
+
+    // phones: no QR code (the reader is on the phone already), the generator is not even fetched
+    ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    pk = await ctx.newPage();
+    let qrFetched = false;
+    pk.on('request', (r) => { if (/vendor\/qrcode\.js/.test(r.url())) qrFetched = true; });
+    await pk.addInitScript(() => { try { localStorage.setItem('safetravel.mpromo', 'off'); } catch (e) { /* ignore */ } });
+    await pk.goto(new URL('?lang=zh#/country/JP', BASE_URL).href, { waitUntil: 'load' });
+    await pk.waitForSelector('[data-testid="panel-brief"]', { timeout: 30000 });
+    await pk.waitForTimeout(500);
+    const phone = await pk.evaluate(() => ({ qr: getComputedStyle(document.querySelector('[data-testid="panel-qr"]')).display, rows: document.querySelectorAll('.pb-list li').length, doc: document.documentElement.scrollWidth }));
+    assert(phone.qr === 'none' && !qrFetched && phone.rows === 3 && phone.doc <= 390, `phone brief: ${JSON.stringify(phone)} fetched=${qrFetched}`);
+    await ctx.close();
+
+    // 4. board: the L2+ count is fixed under the title and filters; old data raises a banner
+    const now = Date.now();
+    const iso = (min) => new Date(now + min * 60000 + 8 * 3600000).toISOString().slice(0, 16) + '+08:00';
+    const fl = (id, flight, min, country, from) => ({
+      id, airport: 'TPE', flight, airline: flight.slice(0, 2), codeshares: [], from, from_zh: from, from_en: from, country, lat: 20, lon: 110,
+      terminal: '1', gate: 'A5', checkpoint: 'A', apron: '', scheduled: iso(min), estimated: iso(min), actual: null,
+      status: 'on_time', status_zh: '準時', status_en: 'ON TIME', aircraft: 'A321',
+    });
+    const l2 = await page.evaluate(() => Object.entries(window.__safetravel.state.data.alerts.countries).find(([, v]) => v.max_level === 2)?.[0]);
+    const doc = {
+      generated_at: iso(0), source: 'tdx', endpoint: 'test', tdx_updated: iso(0), window: { from: iso(-120), to: iso(240) },
+      refresh_minutes: { day: 10, night: 30 }, quota: null,
+      airports: { TPE: { name_zh: '桃園', name_en: 'Taoyuan', lat: 25.08, lon: 121.23, flights: 3, checkpoints: [{ id: 'A', terminal: '1' }] } },
+      flights: [fl('a', 'CI 101', 10, 'JP', 'NRT'), fl('b', 'BR 384', 45, l2, 'XXA'), fl('c', 'CI 777', 30, 'JP', 'KIX')],
+    };
+    ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    pk = await ctx.newPage();
+    await pk.route('**/data/arrivals.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(doc) }));
+    await pk.goto(new URL('?lang=zh&arr=TPE', BASE_URL).href, { waitUntil: 'load' });
+    await pk.waitForSelector('#arrivals .arr-row', { timeout: 30000 });
+    const board = () => pk.evaluate(() => {
+      const b = document.querySelector('[data-testid="arrivals-l2"]');
+      const stale = document.querySelector('[data-testid="arrivals-stale"]');
+      return { text: b.textContent, pressed: b.getAttribute('aria-pressed'), rows: document.querySelectorAll('#arrivals .arr-row').length, stale: stale.hidden ? '' : stale.textContent, shown: b.getClientRects().length > 0 };
+    });
+    const b0 = await board();
+    assert(b0.text === '來自第二級以上地區 1 班只看這些' && b0.pressed === 'false' && b0.rows === 3 && !b0.stale, `board: ${JSON.stringify(b0)}`);
+    await pk.click('[data-testid="arrivals-l2"]');
+    const b1 = await board();
+    assert(b1.text === '來自第二級以上地區 1 班顯示全部' && b1.pressed === 'true' && b1.rows === 1, `board filtered: ${JSON.stringify(b1)}`);
+    await pk.click('#arrivals .arr-min');
+    const b2 = await board();
+    assert(b2.shown, 'the count stays on a collapsed board');
+    await pk.click('#arrivals .arr-min');
+    await pk.click('[data-testid="arrivals-l2"]');
+    doc.generated_at = iso(-200); doc.tdx_updated = iso(-200); // the feed stopped 200 minutes ago
+    await pk.reload({ waitUntil: 'load' });
+    await pk.waitForSelector('[data-testid="arrivals-stale"]:not([hidden])', { timeout: 30000 });
+    const b3 = await board();
+    assert(/航班資料停在 .*沒有再更新/.test(b3.stale), `stale banner: ${b3.stale}`);
+    await ctx.close();
+    return `kiosk: ${ask.n} buttons, 日本 opens JP; brief ${brief.rows.length} lines + QR ${brief.modules}×${brief.modules} → ${brief.qr}; patterns ${on.n} countries (${on.l3} hatched), off by menu; board "${b0.text}" → ${b1.rows} row; stale banner shown`;
+  });
+
   await check('boot guard: a stale cached module (half-updated cache) is re-downloaded and the page starts by itself', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 1440, height: 900 } });
     const pg = await ctx.newPage();
@@ -1350,7 +1487,7 @@ async function run(browser) {
     const chips = await pj.$$eval('.panel-jump .pj', (bs) => bs.map((b) => ({ key: [...b.classList].find((c) => c.startsWith('pj-')), idx: b.dataset.jump, cur: b.getAttribute('aria-current') })));
     const letters = await pj.$$eval('#panel .psec h3 .psec-idx', (ns) => ns.map((n) => n.textContent));
     const advN = await pj.$eval('.pj-adv b', (b) => b.textContent);
-    const advHead = await pj.$eval('#panel .psec:first-child h3 .count', (b) => b.textContent);
+    const advHead = await pj.$eval('#panel .psec h3 .count', (b) => b.textContent);
     await pj.click('.pj-fl');
     await pj.waitForFunction(() => document.querySelector('.pj-fl')?.getAttribute('aria-current') === 'true', null, { timeout: 5000 });
     await pj.waitForTimeout(800); // smooth scroll lands

@@ -77,6 +77,7 @@
       <h3>看地圖</h3>
       <ul>
         <li><b>顏色</b>：各國依疾管署旅遊疫情建議的最高等級上色（第一級注意、第二級警示、第三級警告）。左上可切換成「旅遊警示・外交部」圖層。</li>
+        <li><b>花紋（色覺輔助）</b>：除了顏色，次高等級另加<b>圓點</b>、最高等級另加<b>斜線</b>（疫情建議圖層：第二級圓點、第三級斜線；旅遊警示圖層：橙色圓點、紅色斜線），圖例的色塊也有相同花紋，分不清紅綠色也能辨識。不需要時到右上角「選單」→「等級花紋（色覺輔助）」關閉，每台螢幕記住。</li>
         <li><b>圖例就是篩選</b>：點左下圖例的某個等級，地圖只突顯該等級（可複選，按「全部」還原）。圖例右上 ⌄ 可收合；內容較長時直接在圖例上捲動（底部漸層表示下面還有）。少數小島與地區在世界地圖上沒有形狀，不會上色，但一樣可以從搜尋開啟。</li>
         <li><b>操作</b>：滾輪縮放、拖曳移動、雙擊重設；按 <kbd>/</kbd> 跳到搜尋框，<kbd>Esc</kbd> 關閉面板。手機上單指點國家、雙指移動縮放。 搜尋時國家優先：打 jap 會先出現日本，機場代碼要用大寫（NRT、JAP）才優先；也認得常見別名（USA、UK、UAE、England、南韓、阿聯…）。</li>
         <li><b>觸控螢幕與手機</b>：比手機寬的觸控螢幕（展示機、牆面螢幕、平板）上，右上角按鈕的圖示下方會顯示名稱，所有按鈕放大到手指好按的大小；平板寬度（761–1000 px）圖例預設收成標題列，點一下展開。手機上按「返回」鍵會關閉國家面板，不會離開網站。</li>
@@ -86,6 +87,7 @@
       <p>可輸入國家、城市或機場的中英文名稱、常見俗稱或機場代碼，例如「日本」「曼谷」「名古屋」「Nagoya」「NRT」，選取後開啟該國面板。</p>
       <h3>國家面板</h3>
       <ul>
+        <li><b>旅客重點</b>（面板最上方）：用白話先講三件事——<b>疫情</b>（疾管署等級、主要疾病與建議）、<b>安全</b>（外交部或陸委會旅遊警示，含部分地區較高的等級）、<b>出發前</b>（建議 2–4 週前到旅遊醫學門診，連到該目的地的「出國前查詢」）。旁邊的 <b>QR code</b> 用手機掃描即可開啟該目的地的出國前查詢（疫苗、用藥與門診），把資訊帶著走；手機版不顯示 QR code。QR code 一律指向公開網站，署內鏡像站的展示機也適用。</li>
         <li>疾管署與外交部兩種分級並列；所有有效的疫情建議（同疾病多個省分合併）。</li>
         <li>AI 兩年疫情總覽；疫情時間軸（預設近 6 個月，可切換 3／6／12／24 個月）。</li>
         <li>外交部旅遊警示可展開全文並連回領事事務局原文；開天氣時另有當地天氣預報。</li>
@@ -114,7 +116,8 @@
       <ul>
         <li><b>機場與檢疫站</b>：「檢疫站」按鈕可<b>同時勾選多個</b>（例如 B 和 C），「全部」還原；桃園 A·T1、B·T1、C·T2、D·T2。登機門未定或停靠遠端機坪的航班會列在該航廈每個檢疫站。</li>
         <li><b>查詢時段</b>（下拉選單）：前後 30 分、60 分（預設）、2 小時，或「全部」（前 2 小時～後 4 小時）。標題「INBOUND」旁顯示資料更新時間，延遲時變橘色。</li>
-        <li><b>需注意的班機</b>：來自第二級以上地區的班機整列加底色；按「來自 L2+ 地區 N 班 · 只看這些」只列出它們。</li>
+        <li><b>需注意的班機</b>：標題下方固定顯示「<b>來自第二級以上地區 N 班</b>」（看板收合時也看得到），來自這些地區的班機整列加底色；按一下只列出它們，再按一下「顯示全部」。</li>
+        <li><b>資料過舊</b>：航班資料停止更新時，標題下方會出現橘色橫幅，寫明資料停在什麼時候；此時班機時間可能已變動，請以機場公告為準。</li>
         <li><b>搜尋航班</b>：JK202、JK-202、jk 202、共掛班號都可以；也可輸入出發地（NRT、東京、名古屋）或國家（日本、Japan）。搜尋時不分檢疫站、涵蓋前 2 小時～後 4 小時。</li>
         <li>每列：抵達時間（表定不同時以刪除線標示）、出發地與國家、<b>出發國等級與主要疫病</b>、航班與機型、<b>登機門／航廈／檢疫站</b>、<b>行李轉盤</b>、狀態。點一列開啟該國資訊。</li>
         <li><b>自動捲動</b>（↓ 圖示，預設開）：以閱讀速度往下捲，有人操作時暫停。<b>大字</b>適合牆面螢幕。地圖頁的看板可拖曳標題列移動位置，「放回原位」（方框圖示） 按鈕放回預設位置，↗ 按鈕開啟全螢幕版。</li>
@@ -190,6 +193,8 @@
           <tr><td><code>?reset=5</code></td><td>閒置自動重設：有人用過、之後 5 分鐘沒人操作，就回到開機時的頁面與設定；重設前 10 秒會提示，碰一下即取消。沒人碰過的螢幕不會重新載入。<code>?reset=0</code> 關閉</td></tr>
           <tr><td><code>?months=6</code></td><td>國家面板疫情時間軸範圍（3／6／12／24 個月）</td></tr>
           <tr><td><code>?full=1</code></td><td>焦點輪播「輪播時自動展開」：輪播時自動開啟並捲動國家面板（<code>?full=0</code> 關閉；不改該螢幕記住的設定）</td></tr>
+          <tr><td><code>?pat=0</code></td><td>關閉地圖的等級花紋（<code>?pat=1</code> 開啟；預設開啟，不改該螢幕記住的設定）</td></tr>
+          <tr><td><code>?ask=1</code></td><td>搜尋框旁顯示「要去哪裡？」與常用目的地按鈕，點一下就開啟該國，不必打字。展示機（<code>?osk=1</code> 或 <code>?reset=</code>）會自動顯示；<code>?ask=0</code> 關閉。有人在搜尋框打字或螢幕小鍵盤開著時會先讓開，放不下的按鈕不顯示</td></tr>
           <tr><td><code>?osk=1</code></td><td>觸控 kiosk 的螢幕小鍵盤：預設英數（ABC），按「注音」切換注音（鍵盤收起 2 分鐘後下一位訪客又從 ABC 開始），另有常用目的地按鈕；<code>?osk=0</code> 關閉。左下角的 <b>↻ 重設畫面</b>：按一下、4 秒內再按一次，就回到開機時的頁面與設定（訪客拖動、收合、切換的都會還原）。<b>展示機只留在本站</b>：帶 <code>?osk=1</code> 或 <code>?reset=</code> 的螢幕上，點外部網站連結（疾管署、領務局、醫院網站、Google 地圖…）、電話連結、下載或列印都不會執行，只顯示「展示機無法開啟外部網站（網址）」；站內連結一律在同一個分頁開啟，使用說明、衛教海報頁也有 ↻ 與閒置重設</td></tr>
         </tbody>
       </table>
@@ -286,6 +291,8 @@
       <h2>Global Travel Health Radar (map)</h2>
       <ul>
         <li><b>Colours</b>: each country's highest Taiwan CDC level (1 Watch, 2 Alert, 3 Warning); switch to the MOFA travel-warning layer top-left.</li>
+        <li><b>Patterns (colour-vision aid)</b>: besides colour, the second-highest level carries <b>dots</b> and the highest <b>hatching</b> (health layer: level 2 dots, level 3 hatching; travel-warning layer: orange dots, red hatching); the legend swatches show the same patterns. Switch it off under Menu → “Level patterns (colour-vision aid)”; remembered per screen.</li>
+        <li><b>For travellers</b> (top of the country panel): three plain lines — <b>Health</b> (Taiwan CDC level, main diseases and advice), <b>Safety</b> (MOFA / MAC travel warning, including a higher level for some areas) and <b>Before you go</b> (see a travel clinic 2–4 weeks ahead, with a link to that destination's trip check). The <b>QR code</b> beside it opens the same trip check (vaccines, medicine and clinics) on a phone; it always points to the public site, so it also works on intranet kiosks, and is not shown on phones.</li>
         <li><b>The legend is the filter</b>: tap a level to show only it (several allowed, “All” resets); ⌄ collapses the legend. A long legend scrolls in place (a fade at the bottom means there is more). A few small islands and areas have no shape on the world map and are not coloured, but search still opens them.</li>
         <li><b>Navigate</b>: wheel to zoom, drag to pan, double-click to reset; <kbd>/</kbd> focuses search, <kbd>Esc</kbd> closes the panel. On phones one finger taps, two fingers pan and zoom.</li>
         <li><b>Touch screens and phones</b>: on touch screens wider than a phone (kiosks, wall panels, tablets) the header buttons show a caption under their icon and every control is finger-sized; at tablet widths (761–1000 px) the legend starts as its title bar. On a phone the Back button closes the country panel instead of leaving the site.</li>
@@ -303,7 +310,8 @@
       <ul>
         <li>Open it from the map's <b>Arrivals</b> button or use the full-screen <a href="arrivals.html">arrivals.html</a> (no map, two columns on wide screens).</li>
         <li><b>Airport &amp; checkpoints</b>: the checkpoint button lets you tick <b>several at once</b> (e.g. B and C); Taoyuan A·T1, B·T1, C·T2, D·T2. <b>Time window</b> (drop-down): ±30, ±60 (default), ±2 h or all (−2 h … +4 h). The update time sits next to “INBOUND” and turns orange when data is late.</li>
-        <li><b>Flights that matter</b>: rows from level 2+ areas are tinted; “from L2+ areas · show only these” filters to them.</li>
+        <li><b>Flights that matter</b>: “<b>N flights from Level 2+ areas</b>” always sits under the title (also on a collapsed board) and those rows are tinted; tap it to list only them, tap again to show all.</li>
+        <li><b>Old data</b>: when the flight data stops updating, an orange banner under the title says when it stopped; times may have changed, so check the airport's own displays.</li>
         <li><b>Search</b> a flight (JK202, JK-202, codeshares) or an origin (NRT, Tokyo, Nagoya, or a country: Japan, 日本) across all checkpoints and the whole window.</li>
         <li>Each row: time, origin and country, <b>origin level and main diseases</b>, flight and aircraft, <b>gate / terminal / checkpoint</b>, <b>baggage carousel</b>, status. Auto-scroll and large type for wall screens. Data refresh about every 10 minutes (30 at night).</li>
       </ul>
@@ -345,6 +353,8 @@
           <tr><td><code>m.html?role=officer</code></td><td>Quick check opened as quarantine staff (<code>public</code>: traveller)</td></tr>
           <tr><td><code>?reset=5</code></td><td>Idle auto-reset: after someone used the screen, 5 idle minutes bring back its start page and settings, with a 10-second notice any touch cancels; untouched screens never reload (<code>?reset=0</code> off)</td></tr>
           <tr><td><code>?full=1</code></td><td>Spotlight “auto-open on tour”: the tour opens and scrolls the country panel (<code>?full=0</code> off)</td></tr>
+          <tr><td><code>?pat=0</code></td><td>Level patterns on the map off (<code>?pat=1</code> on; on by default, the screen's stored choice is not changed)</td></tr>
+          <tr><td><code>?ask=1</code></td><td>“Where to?” with common-destination buttons beside the search box: one tap opens the country, no typing. Shown automatically on kiosks (<code>?osk=1</code> or <code>?reset=</code>); <code>?ask=0</code> turns it off. It steps aside while someone types or the on-screen keyboard is up, and only shows the buttons that fit</td></tr>
           <tr><td><code>?osk=1</code></td><td>On-screen keyboard for touch kiosks: starts in letters and digits (ABC); 「注音」 switches to Zhuyin, which stays for the visitor and goes back to ABC after 2 minutes without the keyboard (<code>?osk=0</code> off), plus a <b>↻ reset</b> button bottom left: tap, then tap again within 4 s, and the screen returns to its start page and settings. <b>Kiosks stay on this site</b>: on a screen opened with <code>?osk=1</code> or <code>?reset=</code>, external links (CDC, BOCA, hospital sites, Google Maps…), phone links, downloads and printing do nothing but show “This kiosk cannot open external websites (host)”; links inside the site open in the same tab, and the help and poster pages have the ↻ button and the idle reset too</td></tr>
         </tbody>
       </table>

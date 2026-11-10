@@ -10,6 +10,7 @@ import {
   esc, clean, reducedMotion, safeUrl, levelNum, $, storageGet, storageSet, todayTaipei, textScale,
 } from './util.js';
 import { toast } from './toast.js';
+import { qrSvg } from './qr.js';
 
 const PAGE = 20;
 // Epidemic timeline range in months (the data covers two years). Default 6; per-screen choice in localStorage;
@@ -262,6 +263,79 @@ export function createPanel({ root, map }) {
     const b = ev.target.closest('.pj[data-jump]');
     if (b) jumpTo(b.dataset.jump);
   });
+
+  // ---- for travellers: the essentials in plain words before the details, and a QR code to take them along ----
+  /** Absolute address of a destination's trip check (vaccines, medicine, clinics) on the public site. */
+  function tripUrl(code) {
+    const here = new URL('.', location.href);
+    let base = here;
+    try { base = new URL(document.querySelector('meta[name="safetravel-public-url"]')?.content || '.', here); } catch (e) { /* keep this site */ }
+    const u = new URL('trip.html', /^https?:$/.test(base.protocol) ? base : here);
+    if (isEn()) u.searchParams.set('lang', 'en');
+    u.hash = code;
+    return u.href;
+  }
+  const noStop = (s) => clean(s).replace(/[。.．]+$/, '');
+  function renderBrief() {
+    if (iso === 'TW') return '';
+    const lvl = levelNum(levelOf(iso));
+    const names = [...new Set(groupAlerts(iso).map((g) => diseaseName(g.disease)).filter(Boolean))];
+    const health = lvl && names.length
+      ? t('panel_brief_health', {
+        level: levelShort(lvl), full: noStop(levelFull(lvl)), instr: noStop(levelInstruction(lvl)), diseases: names.slice(0, 3).join(isEn() ? ', ' : '、'), n: names.length,
+      })
+      : t('panel_brief_health_none');
+    let safety = '';
+    if (state.data.warnings) {
+      const mac = warningOf(iso)?.source === 'mac';
+      const src = t(mac ? 'tip_mac' : 'tip_mofa');
+      const wl = warnLevel(iso);
+      const part = warnPartial(iso);
+      const partText = part ? t('panel_brief_part', { level: wLevelShort(part, mac) }) : '';
+      safety = wl ? t('panel_brief_safety', { src, level: noStop(wLevelFull(wl, mac)), part: partText })
+        : part ? t('panel_brief_safety_part', { src, level: wLevelShort(part, mac) })
+          : t('panel_brief_safety_none', { src });
+    }
+    const name = countryName(iso);
+    const row = (key, html) => `<li><b>${esc(t(key))}</b><span>${html}</span></li>`;
+    return `
+      <section class="panel-brief" data-testid="panel-brief" aria-label="${esc(t('panel_brief_title'))}">
+        <div class="pb-main">
+          <h3 class="pb-title">${esc(t('panel_brief_title'))}</h3>
+          <ul class="pb-list">
+            ${row('panel_brief_k_health', esc(health))}
+            ${safety ? row('panel_brief_k_safety', esc(safety)) : ''}
+            ${row('panel_brief_k_prep', `${esc(t('panel_brief_prep'))} <a class="pb-link" href="trip.html#${esc(iso)}" data-testid="panel-trip-link">${esc(t('panel_brief_link'))}<span aria-hidden="true"> →</span></a>`)}
+          </ul>
+        </div>
+        <figure class="pb-qr" data-qr="${esc(tripUrl(iso))}" data-testid="panel-qr">
+          <span class="pb-qr-img" role="img" aria-label="${esc(t('panel_brief_qr_label', { name }))}"></span>
+          <figcaption>${esc(t('panel_brief_qr'))}</figcaption>
+        </figure>
+      </section>`;
+  }
+  const qrCache = new Map(); // address → <svg>
+  const qrWide = window.matchMedia('(min-width: 761px)'); // on a phone the reader is already holding the phone
+  async function fillQr() {
+    const fig = $('.pb-qr', body);
+    if (!fig || !qrWide.matches) return;
+    const url = fig.dataset.qr;
+    try {
+      let svg = qrCache.get(url);
+      if (!svg) {
+        svg = await qrSvg(url);
+        if (qrCache.size >= 40) qrCache.delete(qrCache.keys().next().value);
+        qrCache.set(url, svg);
+      }
+      const now = $('.pb-qr', body); // the panel may have moved on while the generator loaded
+      if (!now || now.dataset.qr !== url) return;
+      $('.pb-qr-img', now).replaceChildren(svg.cloneNode(true));
+      now.classList.add('is-ready');
+    } catch (e) {
+      fig.classList.add('is-failed'); // no code: the link beside it still opens the page
+    }
+  }
+  qrWide.addEventListener('change', () => { if (iso) fillQr(); });
 
   // ---- direct flights with Taoyuan today (data/flights.json, TDX FIDS) ----
   const inbound = () => routesTo(iso).reduce((sum, r) => sum + (r.arrivals || 0), 0);
@@ -564,7 +638,8 @@ export function createPanel({ root, map }) {
     if (weather?.has(iso)) secs.splice(before('tl'), 0, ['wx', renderWeather]); // before the long timeline
     if (routesTo(iso).length) secs.splice(before('tl'), 0, ['fl', renderFlights]);
     sections = secs.map(([key], i) => ({ key, idx: 'ABCDEFG'[i] }));
-    body.innerHTML = secs.map(([, fn], i) => fn('ABCDEFG'[i])).join('');
+    body.innerHTML = renderBrief() + secs.map(([, fn], i) => fn('ABCDEFG'[i])).join('');
+    fillQr();
     renderHead(); // after the body: the section bar reads the sections' positions
     if (wtext.status !== 'idle') fillWarnText();
     startTypewriter();

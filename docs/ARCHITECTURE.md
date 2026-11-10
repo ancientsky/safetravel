@@ -28,7 +28,7 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
 | `data/safetravel.db` | pipeline | SQLite. Source of truth for history + Gemini cache. Committed. |
 | `web/` | frontend | The static site served by GitHub Pages (root = `web/`) |
 | `web/data/` | pipeline export | JSON consumed by the browser. Overwritten every run. `epidemics.json` is a slim index; full texts are lazy-loaded from `web/data/epidemics/<ISO2>.json` (+ `_global.json`). `world.json` (50m) and `world-110m.json` (narrow screens) are built by `build_geo.py`. |
-| `web/vendor/` | npm (vendored, `npm run vendor`) | `d3.min.js` (only the d3 functions listed in `scripts/d3-entry.mjs`, bundled by esbuild; the Pages deploy runs `scripts/check-d3.mjs` and fails if `web/` calls a d3 function outside that list), `topojson-client.min.js` — no CDN at runtime; `zhuyin.json` (Zhuyin dictionary of the on-screen keyboard `js/osk.js` + `osk.css`, opt-in with `?osk=1`; built by `scripts/build-zhuyin.py` from McBopomofo data, MIT, `zhuyin.LICENSE.txt`, plus the Chinese names in `web/data/countries.json` / `places.json`) |
+| `web/vendor/` | npm (vendored, `npm run vendor`) | `d3.min.js` (only the d3 functions listed in `scripts/d3-entry.mjs`, bundled by esbuild; the Pages deploy runs `scripts/check-d3.mjs` and fails if `web/` calls a d3 function outside that list), `topojson-client.min.js` — no CDN at runtime; `zhuyin.json` (Zhuyin dictionary of the on-screen keyboard `js/osk.js` + `osk.css`, opt-in with `?osk=1`; built by `scripts/build-zhuyin.py` from McBopomofo data, MIT, `zhuyin.LICENSE.txt`, plus the Chinese names in `web/data/countries.json` / `places.json`) `qrcode.js` (qrcode-generator 1.4.4, MIT, copied unchanged from npm with `qrcode.LICENSE.txt`; fetched on first use by `web/js/qr.js`). |
 | `web/slides/` | humans + Actions | Health-poster carousel (`slide.html`): `slides.json` playlist, `assets/` artwork, `auto/` auto-publish folder (images dropped there + generated `index.json`), `export/` PNG written by `slides.yml`. Spec: `SLIDES.md` |
 | `scripts/slide-sources/` | humans | Original Taiwan CDC posters + seal; `scripts/crop-slide-assets.py` cuts the artwork into `web/slides/assets/` |
 | `scripts/mirror/` | humans | Intranet mirror kit (sync script, systemd units, nginx site, installer): copies `web/` of `main` + the live `arrivals.json` to an internal nginx host; never contacts the data sources. Spec: `MIRROR.md` |
@@ -141,6 +141,24 @@ the same re-fetch first (`freshReload`), so kiosks never mix versions. New pages
 `trip-med.js` (card section "出國前健康準備": vaccines, local diseases and prevention, emergency numbers, traveller-group
 notes) and `trip-clinics.js` (section "旅遊醫學門診": city / open-now / M痘 filters, nearest-first, week grid, locator
 map). Data and refresh: `docs/TRAVELMED.md`.
+
+## Traveller aids on the map page
+
+- **Brief + QR code** (`js/panel.js` `renderBrief`, `js/qr.js`): the country panel opens with three plain lines built from the
+  data already loaded (CDC level, diseases and instruction; MOFA / MAC level incl. a higher regional level; a fixed pre-trip
+  line linking to `trip.html#ISO`). The QR code encodes the absolute address of that trip check on the public site, taken
+  from `<meta name="safetravel-public-url">` in `index.html` (so an intranet mirror still hands out a public link; forks
+  change the meta). Not rendered at 760 px and below, where the generator is never fetched.
+- **Kiosk destination buttons** (`js/ask.js`, `js/kiosk.js`): "要去哪裡？" plus `places.js` `POPULAR_ISO` beside the search
+  box on kiosk screens (`?osk=1`, `?reset=N`, or `?ask=1`; `?ask=0` off). `fit()` measures what is to the right of the
+  search box (zoom buttons, panel, board, spotlight) and under it (layer switches, weather day bar) and keeps one or two
+  rows of whole buttons.
+- **Level patterns** (`js/map.js` `renderPatterns`): a `g.patterns` layer above the countries repeats the paths of the two
+  highest levels of the active layer with SVG pattern fills (dots, hatching); `patternTransform` is rescaled on zoom so the
+  pattern keeps its size on screen. `state.patterns`, `localStorage` `safetravel.patterns` (`off` to disable), `?pat=0|1`,
+  class `pat-on` on `<html>` for the legend swatches.
+- **Board strip** (`js/arrivals.js`): the count of listed flights from level 2+ areas is a toggle under the title (also on a
+  collapsed board); `.arr-stale-bar` appears when the feed is older than twice the refresh interval plus 5 minutes.
 
 ## `trip.html` on phones
 

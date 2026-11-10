@@ -18,6 +18,7 @@ import { createSpotlight } from './js/spotlight.js';
 import { createArrivals } from './js/arrivals.js';
 import { createWatch } from './js/watch.js';
 import { createSearch, renderLayerSwitch } from './js/search.js';
+import { createAsk, askWanted } from './js/ask.js';
 import {
   startClock, renderTiles, renderFreshness, renderLegend, renderFlightHud, setLegendExtra, setLegendWatch, legendDocked,
 } from './js/hud.js';
@@ -46,6 +47,14 @@ function initialLayer() {
   const q = new URLSearchParams(location.search).get('layer');
   if (q === 'mofa' || q === 'cdc') return q;
   return storageGet(LAYER_KEY) === 'mofa' ? 'mofa' : 'cdc';
+}
+
+/** Level patterns on the map (default on): ?pat=1|0 deep link, else the stored choice. */
+const PAT_KEY = 'safetravel.patterns';
+function initialPatterns() {
+  const q = new URLSearchParams(location.search).get('pat');
+  if (q === '1' || q === '0') return q === '1';
+  return storageGet(PAT_KEY) !== 'off';
 }
 
 /** Weather overlay (default off): ?wx=1|0 deep link, else the stored choice. */
@@ -151,6 +160,8 @@ async function main() {
   state.lang = setLang(urlLang() || (storageGet(LANG_KEY) === 'en' ? 'en' : 'zh-Hant'));
   applyTheme(initialTheme());
   state.flightsOn = storageGet(FLIGHTS_KEY) !== 'off';
+  state.patterns = initialPatterns();
+  document.documentElement.classList.toggle('pat-on', state.patterns);
   const qRoutes = new URLSearchParams(location.search).get('routes'); // ?routes=in|both pins it (kiosks)
   state.flightDir = (qRoutes === 'both' || qRoutes === 'in' ? qRoutes : storageGet(FLIGHT_DIR_KEY)) === 'both' ? 'both' : 'in';
   // ?hubs=TPE,KHH pins the airports for a kiosk (not stored); otherwise this screen's last choice; Taoyuan by default
@@ -353,12 +364,14 @@ async function main() {
   });
   // Layer switch (CDC health advisories ↔ MOFA/MAC travel warnings): re-colours map, chips, legend, panel.
   let search = null;
+  let ask = null; // kiosk destination prompt (js/ask.js)
   const applyLayer = () => {
     document.documentElement.dataset.layer = state.layer;
     renderLayerSwitch(layerNode, setLayer);
     renderLegend($('#legend'));
     if (state.data.world) map.applyLayer();
     search?.refresh();
+    ask?.refresh();
     panel.refresh();
   };
   function setLayer(layer) {
@@ -434,6 +447,14 @@ async function main() {
   }
 
   search = createSearch({ root: $('#search'), onPick: (iso) => openCountry(iso) });
+  // kiosks: "where are you going?" with one-tap destinations beside the search box
+  ask = askWanted()
+    ? createAsk({
+      searchRoot: $('#search'), onPick: (iso) => openCountry(iso), has: (iso) => !!state.data.countries?.[iso] || map.has(iso),
+      obstacles: [$('.zoom-ctrl'), $('#panel'), $('#arrivals'), $('#spotlight')],
+    })
+    : null;
+  ['panel:open', 'panel:close', 'arrivals:open', 'arrivals:close'].forEach((name) => on(name, () => ask?.fit()));
 
   // Inbound flights board for quarantine stations (off by default; ?arr=TPE-C deep link).
   const relayout = () => {
@@ -572,6 +593,7 @@ async function main() {
     renderLayerSwitch(layerNode, setLayer);
     map.relabel();
     search.refresh();
+    ask?.refresh();
     panel.refresh();
     spotlight?.refresh();
     arrivals.refresh();
@@ -626,7 +648,23 @@ async function main() {
       st.hidden = !txt;
       st.classList.toggle('is-on', isOn);
     });
+    const pat = pm.querySelector('[data-pat]');
+    if (pat) {
+      pat.setAttribute('aria-checked', String(state.patterns));
+      const st = pat.querySelector('.pm-state');
+      st.textContent = t(state.patterns ? 'menu_on' : 'menu_off');
+      st.classList.toggle('is-on', state.patterns);
+    }
   }
+  /** Patterns on the two highest levels (map and legend swatches), for people who cannot tell the colours apart. */
+  function setPatterns(v) {
+    state.patterns = !!v;
+    storageSet(PAT_KEY, state.patterns ? 'on' : 'off');
+    document.documentElement.classList.toggle('pat-on', state.patterns);
+    map.applyPatterns();
+    pmRefresh();
+  }
+  window.__safetravel.setPatterns = setPatterns;
   function pmOpen(v) {
     pm.hidden = !v;
     pmBtn.setAttribute('aria-expanded', String(v));
@@ -646,6 +684,7 @@ async function main() {
   pm.querySelector('.pm-close').addEventListener('click', () => pmOpen(false));
   pm.addEventListener('click', (e) => {
     if (e.target === pm) { pmOpen(false); return; } // tap outside the sheet
+    if (e.target.closest('[data-pat]')) { setPatterns(!state.patterns); return; }
     const b = e.target.closest('[data-proxy]');
     if (!b) return;
     const keep = KEEP_OPEN.has(b.dataset.proxy);
