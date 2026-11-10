@@ -1475,7 +1475,25 @@ async function run(browser) {
     const b3 = await board();
     assert(/航班資料停在 .*沒有再更新/.test(b3.stale), `stale banner: ${b3.stale}`);
     await ctx.close();
-    return `?ask=1: ${ask.n} buttons, 日本 opens JP, off by default; brief ${brief.rows.length} lines; QR off by default, ?qr=1 → ${brief.modules}×${brief.modules} ${brief.qr}; patterns ${on.n} countries (${on.l3} hatched), off by menu; board L2 button ${place.w}px beside the checkpoint control → ${b1.rows} row; stale banner shown`;
+    // a narrow board (portrait touch screen, English, largest text, country panel open): the title keeps one line
+    doc.generated_at = iso(0); doc.tdx_updated = iso(0);
+    ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, hasTouch: true });
+    pk = await ctx.newPage();
+    await pk.addInitScript(() => { try { localStorage.setItem('safetravel.spotlight.autoopen', 'off'); } catch (e) { /* ignore */ } });
+    await pk.route('**/data/arrivals.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(doc) }));
+    await pk.goto(new URL('?lang=en&text=xl&arr=TPE#/country/GT', BASE_URL).href, { waitUntil: 'load' });
+    await pk.waitForSelector('#arrivals .arr-row', { timeout: 30000 });
+    await pk.waitForTimeout(800);
+    const narrow = await pk.evaluate(() => {
+      const h2 = document.querySelector('#arr-title');
+      const st = document.querySelector('#arrivals .arr-status');
+      const lines = (el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight));
+      const acts = document.querySelector('#arrivals .arr-actions').getBoundingClientRect();
+      return { w: Math.round(document.querySelector('#arrivals').getBoundingClientRect().width), title: h2.textContent, titleLines: lines(h2), statusLines: lines(st), below: h2.getBoundingClientRect().top >= acts.bottom - 1 };
+    });
+    assert(narrow.title === 'Arrivals board' && narrow.titleLines === 1 && narrow.statusLines === 1 && narrow.below, `narrow board head: ${JSON.stringify(narrow)}`);
+    await ctx.close();
+    return `?ask=1: ${ask.n} buttons, 日本 opens JP, off by default; brief ${brief.rows.length} lines; QR off by default, ?qr=1 → ${brief.modules}×${brief.modules} ${brief.qr}; patterns ${on.n} countries (${on.l3} hatched), off by menu; board L2 button ${place.w}px beside the checkpoint control → ${b1.rows} row; stale banner shown; ${narrow.w}px board: title on one line`;
   });
 
   await check('boot guard: a stale cached module (half-updated cache) is re-downloaded and the page starts by itself', async () => {

@@ -2167,3 +2167,21 @@ pattern.pat path { fill: none; stroke: var(--pat-ink); stroke-width: 1.5; stroke
 .panel-brief.is-new { animation: pb-in .45s var(--ease, ease) both; }
 @keyframes pb-in { from { opacity: 0; transform: translateY(6px); } }
 @media (prefers-reduced-motion: reduce) { .panel-brief.is-new { animation: none; } .panel-brief .pb-link { transition: none; } }
+
+/* ---------- arrivals board head: row 1 = INBOUND + buttons, row 2 = title + update time ----------
+   The title used to share its column with six buttons and wrapped ("Arrivals / board") on narrow boards. Now it has
+   the whole width; the update time sits at the end of its row and moves below only when both cannot fit. */
+.arr-head { flex-wrap: wrap; align-items: center; row-gap: 4px; }
+.arr-heading, .arr-kicker { display: contents; }
+.arr-kicker > .rec { order: 1; }
+.arr-kicker > span:not(.arr-status) { order: 1; margin-right: auto; }
+.arr-actions { order: 2; }
+.arr-head::after { content: ""; order: 3; flex-basis: 100%; height: 0; }
+.arr-heading h2 { order: 4; flex: 0 1 auto; min-width: 0; margin: 0; white-space: nowrap; }
+.arr-kicker > .arr-status { order: 5; flex: 0 1 auto; margin-left: auto; white-space: normal; text-align: right; }
+.arr-status:not(:empty)::before { content: none; }
+/* full-screen board page: its title is the page heading, so the head stays one row (INBOUND · update time … buttons) */
+.arrivals.is-standalone .arr-head::after { content: none; }
+.arrivals.is-standalone .arr-kicker > span:not(.arr-status) { margin-right: 0; }
+.arrivals.is-standalone .arr-kicker > .arr-status { order: 1; margin: 0 auto 0 0; text-align: left; }
+.arrivals.is-standalone .arr-status:not(:empty)::before { content: "·"; }
