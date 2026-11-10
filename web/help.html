@@ -87,7 +87,7 @@
       <p>可輸入國家、城市或機場的中英文名稱、常見俗稱或機場代碼，例如「日本」「曼谷」「名古屋」「Nagoya」「NRT」，選取後開啟該國面板。</p>
       <h3>國家面板</h3>
       <ul>
-        <li><b>旅客重點</b>（面板最上方）：用白話先講三件事——<b>疫情</b>（疾管署等級、主要疾病與建議）、<b>安全</b>（外交部或陸委會旅遊警示，含部分地區較高的等級）、<b>出發前</b>（建議 2–4 週前到旅遊醫學門診，連到該目的地的「出國前查詢」）。旁邊的 <b>QR code</b> 用手機掃描即可開啟該目的地的出國前查詢（疫苗、用藥與門診），把資訊帶著走；手機版不顯示 QR code。QR code 一律指向公開網站，署內鏡像站的展示機也適用。</li>
+        <li><b>旅客重點</b>（面板最上方）：用白話先講三件事——<b>疫情</b>（疾管署等級、主要疾病與建議）、<b>安全</b>（外交部或陸委會旅遊警示，含部分地區較高的等級）、<b>出發前</b>（建議 2–4 週前到旅遊醫學門診，連到該目的地的「出國前查詢」）。<b>QR code</b>（預設不顯示）：網址加上 <code>?qr=1</code> 後，重點旁會出現 QR code，用手機掃描即可開啟該目的地的出國前查詢（疫苗、用藥與門診），把資訊帶著走；手機版不顯示。QR code 一律指向公開網站，署內鏡像站的展示機也適用。</li>
         <li>疾管署與外交部兩種分級並列；所有有效的疫情建議（同疾病多個省分合併）。</li>
         <li>AI 兩年疫情總覽；疫情時間軸（預設近 6 個月，可切換 3／6／12／24 個月）。</li>
         <li>外交部旅遊警示可展開全文並連回領事事務局原文；開天氣時另有當地天氣預報。</li>
@@ -193,6 +193,7 @@
           <tr><td><code>?reset=5</code></td><td>閒置自動重設：有人用過、之後 5 分鐘沒人操作，就回到開機時的頁面與設定；重設前 10 秒會提示，碰一下即取消。沒人碰過的螢幕不會重新載入。<code>?reset=0</code> 關閉</td></tr>
           <tr><td><code>?months=6</code></td><td>國家面板疫情時間軸範圍（3／6／12／24 個月）</td></tr>
           <tr><td><code>?full=1</code></td><td>焦點輪播「輪播時自動展開」：輪播時自動開啟並捲動國家面板（<code>?full=0</code> 關閉；不改該螢幕記住的設定）</td></tr>
+          <tr><td><code>?qr=1</code></td><td>國家面板的「旅客重點」旁顯示 QR code（開啟該目的地的出國前查詢）；預設不顯示</td></tr>
           <tr><td><code>?pat=0</code></td><td>關閉地圖的等級花紋（<code>?pat=1</code> 開啟；預設開啟，不改該螢幕記住的設定）</td></tr>
           <tr><td><code>?ask=1</code></td><td>搜尋框旁顯示「要去哪裡？」與常用目的地按鈕，點一下就開啟該國，不必打字。展示機（<code>?osk=1</code> 或 <code>?reset=</code>）會自動顯示；<code>?ask=0</code> 關閉。有人在搜尋框打字或螢幕小鍵盤開著時會先讓開，放不下的按鈕不顯示</td></tr>
           <tr><td><code>?osk=1</code></td><td>觸控 kiosk 的螢幕小鍵盤：預設英數（ABC），按「注音」切換注音（鍵盤收起 2 分鐘後下一位訪客又從 ABC 開始），另有常用目的地按鈕；<code>?osk=0</code> 關閉。左下角的 <b>↻ 重設畫面</b>：按一下、4 秒內再按一次，就回到開機時的頁面與設定（訪客拖動、收合、切換的都會還原）。<b>展示機只留在本站</b>：帶 <code>?osk=1</code> 或 <code>?reset=</code> 的螢幕上，點外部網站連結（疾管署、領務局、醫院網站、Google 地圖…）、電話連結、下載或列印都不會執行，只顯示「展示機無法開啟外部網站（網址）」；站內連結一律在同一個分頁開啟，使用說明、衛教海報頁也有 ↻ 與閒置重設</td></tr>
@@ -292,7 +293,7 @@
       <ul>
         <li><b>Colours</b>: each country's highest Taiwan CDC level (1 Watch, 2 Alert, 3 Warning); switch to the MOFA travel-warning layer top-left.</li>
         <li><b>Patterns (colour-vision aid)</b>: besides colour, the second-highest level carries <b>dots</b> and the highest <b>hatching</b> (health layer: level 2 dots, level 3 hatching; travel-warning layer: orange dots, red hatching); the legend swatches show the same patterns. Switch it off under Menu → “Level patterns (colour-vision aid)”; remembered per screen.</li>
-        <li><b>For travellers</b> (top of the country panel): three plain lines — <b>Health</b> (Taiwan CDC level, main diseases and advice), <b>Safety</b> (MOFA / MAC travel warning, including a higher level for some areas) and <b>Before you go</b> (see a travel clinic 2–4 weeks ahead, with a link to that destination's trip check). The <b>QR code</b> beside it opens the same trip check (vaccines, medicine and clinics) on a phone; it always points to the public site, so it also works on intranet kiosks, and is not shown on phones.</li>
+        <li><b>For travellers</b> (top of the country panel): three plain lines — <b>Health</b> (Taiwan CDC level, main diseases and advice), <b>Safety</b> (MOFA / MAC travel warning, including a higher level for some areas) and <b>Before you go</b> (see a travel clinic 2–4 weeks ahead, with a link to that destination's trip check). A <b>QR code</b> (off by default) appears beside it when the address carries <code>?qr=1</code>: it opens the same trip check (vaccines, medicine and clinics) on a phone, always points to the public site, so it also works on intranet kiosks, and is not shown on phones.</li>
         <li><b>The legend is the filter</b>: tap a level to show only it (several allowed, “All” resets); ⌄ collapses the legend. A long legend scrolls in place (a fade at the bottom means there is more). A few small islands and areas have no shape on the world map and are not coloured, but search still opens them.</li>
         <li><b>Navigate</b>: wheel to zoom, drag to pan, double-click to reset; <kbd>/</kbd> focuses search, <kbd>Esc</kbd> closes the panel. On phones one finger taps, two fingers pan and zoom.</li>
         <li><b>Touch screens and phones</b>: on touch screens wider than a phone (kiosks, wall panels, tablets) the header buttons show a caption under their icon and every control is finger-sized; at tablet widths (761–1000 px) the legend starts as its title bar. On a phone the Back button closes the country panel instead of leaving the site.</li>
@@ -353,6 +354,7 @@
           <tr><td><code>m.html?role=officer</code></td><td>Quick check opened as quarantine staff (<code>public</code>: traveller)</td></tr>
           <tr><td><code>?reset=5</code></td><td>Idle auto-reset: after someone used the screen, 5 idle minutes bring back its start page and settings, with a 10-second notice any touch cancels; untouched screens never reload (<code>?reset=0</code> off)</td></tr>
           <tr><td><code>?full=1</code></td><td>Spotlight “auto-open on tour”: the tour opens and scrolls the country panel (<code>?full=0</code> off)</td></tr>
+          <tr><td><code>?qr=1</code></td><td>QR code beside “For travellers” in the country panel (opens that destination's trip check); off by default</td></tr>
           <tr><td><code>?pat=0</code></td><td>Level patterns on the map off (<code>?pat=1</code> on; on by default, the screen's stored choice is not changed)</td></tr>
           <tr><td><code>?ask=1</code></td><td>“Where to?” with common-destination buttons beside the search box: one tap opens the country, no typing. Shown automatically on kiosks (<code>?osk=1</code> or <code>?reset=</code>); <code>?ask=0</code> turns it off. It steps aside while someone types or the on-screen keyboard is up, and only shows the buttons that fit</td></tr>
           <tr><td><code>?osk=1</code></td><td>On-screen keyboard for touch kiosks: starts in letters and digits (ABC); 「注音」 switches to Zhuyin, which stays for the visitor and goes back to ABC after 2 minutes without the keyboard (<code>?osk=0</code> off), plus a <b>↻ reset</b> button bottom left: tap, then tap again within 4 s, and the screen returns to its start page and settings. <b>Kiosks stay on this site</b>: on a screen opened with <code>?osk=1</code> or <code>?reset=</code>, external links (CDC, BOCA, hospital sites, Google Maps…), phone links, downloads and printing do nothing but show “This kiosk cannot open external websites (host)”; links inside the site open in the same tab, and the help and poster pages have the ↻ button and the idle reset too</td></tr>

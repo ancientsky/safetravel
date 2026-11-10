@@ -11,6 +11,7 @@ import {
 } from './util.js';
 import { toast } from './toast.js';
 import { qrSvg } from './qr.js';
+import { flagParam } from './kiosk.js';
 
 const PAGE = 20;
 // Epidemic timeline range in months (the data covers two years). Default 6; per-screen choice in localStorage;
@@ -308,12 +309,13 @@ export function createPanel({ root, map }) {
             ${row('panel_brief_k_prep', `${esc(t('panel_brief_prep'))} <a class="pb-link" href="trip.html#${esc(iso)}" data-testid="panel-trip-link">${esc(t('panel_brief_link'))}<span aria-hidden="true"> →</span></a>`)}
           </ul>
         </div>
-        <figure class="pb-qr" data-qr="${esc(tripUrl(iso))}" data-testid="panel-qr">
+        ${qrOn ? `<figure class="pb-qr" data-qr="${esc(tripUrl(iso))}" data-testid="panel-qr">
           <span class="pb-qr-img" role="img" aria-label="${esc(t('panel_brief_qr_label', { name }))}"></span>
           <figcaption>${esc(t('panel_brief_qr'))}</figcaption>
-        </figure>
+        </figure>` : ''}
       </section>`;
   }
+  const qrOn = flagParam('qr') === true; // the QR code is off by default: ?qr=1 shows it (kiosk address)
   const qrCache = new Map(); // address → <svg>
   const qrWide = window.matchMedia('(min-width: 761px)'); // on a phone the reader is already holding the phone
   async function fillQr() {

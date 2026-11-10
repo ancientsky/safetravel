@@ -148,7 +148,8 @@ map). Data and refresh: `docs/TRAVELMED.md`.
   data already loaded (CDC level, diseases and instruction; MOFA / MAC level incl. a higher regional level; a fixed pre-trip
   line linking to `trip.html#ISO`). The QR code encodes the absolute address of that trip check on the public site, taken
   from `<meta name="safetravel-public-url">` in `index.html` (so an intranet mirror still hands out a public link; forks
-  change the meta). Not rendered at 760 px and below, where the generator is never fetched.
+  change the meta). The code is off by default and only rendered with `?qr=1`; never at 760 px and below. Without it
+  the generator is not fetched.
 - **Kiosk destination buttons** (`js/ask.js`, `js/kiosk.js`): "要去哪裡？" plus `places.js` `POPULAR_ISO` beside the search
   box on kiosk screens (`?osk=1`, `?reset=N`, or `?ask=1`; `?ask=0` off). `fit()` measures what is to the right of the
   search box (zoom buttons, panel, board, spotlight) and under it (layer switches, weather day bar) and keeps one or two
