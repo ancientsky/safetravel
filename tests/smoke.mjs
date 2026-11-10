@@ -590,6 +590,62 @@ async function run(browser) {
     return `held on JP (“${held.label}”), then ${after}`;
   });
 
+  await check('phone map: Back closes the country panel instead of leaving; the quick-check promo leaves when the panel opens', async () => {
+    const ctx = await page.context().browser().newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const ph = await ctx.newPage();
+    await ph.goto(new URL('help.html', BASE_URL).href, { waitUntil: 'load' }); // a previous page to fall back to
+    await ph.goto(new URL('?lang=zh', BASE_URL).href, { waitUntil: 'load' });
+    await ph.waitForFunction(() => window.__safetravel, null, { timeout: 30000 });
+    await ph.waitForSelector('[data-testid="m-promo"]', { timeout: 10000 });
+    await ph.evaluate(() => window.__safetravel.openCountry('JP'));
+    await ph.waitForTimeout(500);
+    const opened = await ph.evaluate(() => ({ hash: location.hash, promo: !!document.querySelector('[data-testid="m-promo"]'), panel: document.body.classList.contains('panel-open') }));
+    await ph.goBack();
+    await ph.waitForTimeout(600);
+    const back = await ph.evaluate(() => ({ path: location.pathname.split('/').pop(), hash: location.hash, panel: document.body.classList.contains('panel-open') }));
+    // closing by hand leaves no extra history entry: one more Back leaves the map for the page before it
+    await ph.evaluate(() => window.__safetravel.openCountry('TH'));
+    await ph.waitForTimeout(300);
+    await ph.evaluate(() => window.__safetravel.closePanel());
+    await ph.waitForTimeout(600);
+    await ph.goBack();
+    await ph.waitForTimeout(600);
+    const left = await ph.evaluate(() => location.pathname.split('/').pop());
+    await ctx.close();
+    assert(opened.hash === '#/country/JP' && opened.panel && !opened.promo, `open ${JSON.stringify(opened)}`);
+    assert(back.path !== 'help.html' && back.hash === '' && !back.panel, `Back ${JSON.stringify(back)}`);
+    assert(left === 'help.html', `after open + close + Back: ${left}`);
+    return 'Back closes the panel and stays on the map; promo gone once the panel opened';
+  });
+
+  await check('touch screens wider than a phone: captions under header icons, finger-sized controls, nothing overlaps (portrait kiosk, tablet)', async () => {
+    const out = [];
+    for (const [w, h, q] of [[1080, 1920, '?lang=zh&osk=1&arr=TPE&wx=1#/country/JP'], [820, 1180, '?lang=en']]) {
+      const ctx = await page.context().browser().newContext({ viewport: { width: w, height: h }, hasTouch: true });
+      const pt = await ctx.newPage();
+      await pt.goto(new URL(q, BASE_URL).href, { waitUntil: 'load' });
+      await pt.waitForFunction(() => window.__safetravel && document.querySelectorAll('g.dest').length > 0, null, { timeout: 40000 });
+      await pt.waitForTimeout(2500);
+      const r = await pt.evaluate(() => {
+        const vis = (el) => { const b = el.getBoundingClientRect(); const cs = getComputedStyle(el); return b.width > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && !el.closest('[hidden]'); };
+        const R = (sel) => { const el = document.querySelector(sel); return el && vis(el) ? el.getBoundingClientRect() : null; };
+        const ov = (a, b) => a && b && a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+        const small = [...document.querySelectorAll('.hud .toggles > .btn-icon, .zoom-ctrl .btn-icon, .seg-btn, .wx-toggle, .arr-actions .btn-icon, .arr-controls select, .arr-q, .pj, .panel-close, .wxb-day, .wxb-play, .lg-min')]
+          .filter(vis).map((el) => ({ n: String(el.dataset.testid || el.className).slice(0, 24), h: Math.round(el.getBoundingClientRect().height) })).filter((x) => x.h < 40);
+        const captions = [...document.querySelectorAll('.hud .toggles > .arr-toggle > span, .hud .toggles > .trip-link > span, .hud .toggles > .m-link > span, .hud .toggles > .menu-toggle > span')].filter(vis).map((x) => x.textContent.trim());
+        const overlaps = [['#legend', '#flight-hud'], ['#flight-hud', '#arrivals'], ['#arrivals', '#panel'], ['.zoom-ctrl', '#arrivals'], ['.zoom-ctrl', '#panel'], ['#legend', '#spotlight'], ['.zoom-ctrl', '#search']].filter(([a, c]) => ov(R(a), R(c))).map((x) => x.join('×'));
+        return { coarse: matchMedia('(pointer: coarse)').matches, small, captions, overlaps, overflowX: document.documentElement.scrollWidth - innerWidth };
+      });
+      await ctx.close();
+      assert(r.coarse, `${w}px: the test browser does not report a coarse pointer`);
+      assert(!r.small.length, `${w}px: small targets ${JSON.stringify(r.small)}`);
+      assert(r.captions.length === 4, `${w}px: header captions ${JSON.stringify(r.captions)}`);
+      assert(!r.overlaps.length && r.overflowX <= 0, `${w}px: overlaps ${r.overlaps} overflow ${r.overflowX}`);
+      out.push(`${w}px: ${r.captions.join('/')}`);
+    }
+    return out.join('; ');
+  });
+
   await check('kiosk stays on the site: external links, downloads and print show a notice; help / poster pages get the reset; normal visitors unaffected', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
     await ctx.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, (r) => r.abort()); // never leave the test host

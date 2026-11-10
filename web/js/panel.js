@@ -580,9 +580,13 @@ export function createPanel({ root, map }) {
     else ev.currentTarget.textContent = t('panel_more', { n: items.length - shown });
   }
 
-  function open(code, { fly = true, focus = true } = {}) {
+  // A country opened by hand from "no country" adds one history entry, so the browser's / phone's Back button closes
+  // the panel instead of leaving the site; closing it by hand goes back over that entry (no pile-up).
+  let pushed = false;
+  function open(code, { fly = true, focus = true, push = false } = {}) {
     const up = String(code || '').toUpperCase();
     if (!up) return false;
+    const wasClosed = !iso;
     const known = state.data.alerts?.countries?.[up] || state.data.countries?.[up] || map.has(up);
     if (!known) return false;
     const changed = up !== iso;
@@ -611,7 +615,10 @@ export function createPanel({ root, map }) {
       });
     }
     const want = `#/country/${up}`;
-    if (location.hash !== want) history.replaceState(null, '', want);
+    if (location.hash !== want) {
+      if (push && wasClosed && !location.hash) { history.pushState(null, '', want); pushed = true; }
+      else history.replaceState(null, '', want);
+    }
     if (focus) $('#panel-title', root)?.focus({ preventScroll: true });
     emit('panel:open', up);
     return true;
@@ -626,7 +633,11 @@ export function createPanel({ root, map }) {
     document.body.classList.remove('panel-open');
     hideTimer = setTimeout(() => { root.hidden = true; }, reducedMotion() ? 0 : 320);
     map.setSelected(null);
-    if (location.hash.startsWith('#/country/')) history.replaceState(null, '', location.pathname + location.search);
+    if (location.hash.startsWith('#/country/')) {
+      if (pushed) history.back(); // over the entry this panel added (hashchange finds it already closed)
+      else history.replaceState(null, '', location.pathname + location.search);
+    }
+    pushed = false;
     if (lastFocus && document.contains(lastFocus) && lastFocus !== document.body) lastFocus.focus({ preventScroll: true });
     emit('panel:close');
   }

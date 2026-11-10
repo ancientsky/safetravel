@@ -166,7 +166,8 @@ button { font: inherit; color: inherit; }
 .f-risk { min-height: 40px; padding: 2px 12px; border: 1px solid var(--lvl2); border-radius: 999px; background: none; color: var(--fg); font-weight: 700; cursor: pointer; }
 .f-risk[aria-pressed="true"] { background: var(--lvl2); color: var(--lvl-fg-2); }
 .f-stamp { font-size: .8em; color: var(--fg-mute); }
-.f-stamp.is-stale { color: var(--lvl2); }
+.f-stamp.is-stale { color: #a85400; font-weight: 700; } /* 4.9:1 on the light page; the fill orange was 2.9:1 */
+:root[data-theme="dark"] .f-stamp.is-stale { color: var(--lvl2); }
 .f-head { margin: 14px 0 6px; font-size: .9em; color: var(--fg-dim); }
 
 /* news */
@@ -214,3 +215,9 @@ button { font: inherit; color: inherit; }
 }
 @media print { .m-head, .m-search, .m-tabs { display: none; } body { padding: 0; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* finger-sized controls (this page is used on phones and counter tablets): 44 px high, links with room around them */
+.m-btn { min-width: 44px; min-height: 44px; }
+.seg button { min-height: 42px; }
+.f-tools select, .f-risk { min-height: 44px; }
+.c-back .m-link-btn, .m-link-btn.more { display: inline-block; padding: 10px 4px; }

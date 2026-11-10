@@ -155,7 +155,10 @@ async function main() {
   state.flightDir = (qRoutes === 'both' || qRoutes === 'in' ? qRoutes : storageGet(FLIGHT_DIR_KEY)) === 'both' ? 'both' : 'in';
   // ?hubs=TPE,KHH pins the airports for a kiosk (not stored); otherwise this screen's last choice; Taoyuan by default
   state.hubs = parseHubs(new URLSearchParams(location.search).get('hubs')) || parseHubs(storageGet(HUBS_KEY)) || ['TPE'];
-  state.legendMin = storageGet(LEGEND_KEY) === 'min';
+  // collapsed when this screen chose so; with no choice yet, tablets and narrow windows (761–1000 px) start with the
+  // legend as its title bar so it does not cover half of the map (one tap opens it, and that is remembered)
+  const legendPref = storageGet(LEGEND_KEY);
+  state.legendMin = legendPref ? legendPref === 'min' : (window.innerWidth > 760 && window.innerWidth <= 1000);
   document.documentElement.dataset.flightdir = state.flightDir;
   state.layer = initialLayer();
   state.weather = { on: initialWeather(), status: 'idle', data: null, day: 0 };
@@ -248,7 +251,7 @@ async function main() {
   // Manual opens (map click, search, deep link, test API) count as user interaction for the spotlight.
   function openCountry(iso, opts) {
     emit('user:interact');
-    return panel.open(iso, opts);
+    return panel.open(iso, { push: true, ...opts });
   }
 
   window.__safetravel = {
@@ -542,6 +545,12 @@ async function main() {
       goLink.addEventListener('click', () => storageSet(PROMO_KEY, 'off'));
       bar.append(txt, goLink, no);
       document.body.append(bar);
+      // a suggestion, not a banner: it leaves when the visitor starts using the map (it used to sit on the panel)
+      const leave = () => bar.remove();
+      on('panel:open', leave);
+      on('arrivals:open', leave);
+      $('#search-input')?.addEventListener('focus', leave, { once: true });
+      setTimeout(leave, 12000);
     }, 2500);
   }
 

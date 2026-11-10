@@ -40,7 +40,8 @@
   --ocean-2: #030805;
   --fg: #d8ffe9;
   --fg-dim: #8fb9a2;
-  --fg-mute: #567563;
+  --fg-mute: #6f917f; /* 5.7:1 on the page background (was 3.9:1) */
+  --warn-text: var(--lvl2); /* warning text (stale data); the fill colour is readable on dark as it is */
   --accent: #19ff8a;
   --accent-rgb: 25, 255, 138;
   --cyan: #29e7ff;
@@ -90,7 +91,8 @@
   --ocean-2: #f3e8c2;
   --fg: #2a1f10;
   --fg-dim: #6b5634;
-  --fg-mute: #9a8562;
+  --fg-mute: #7a6646; /* 5.2:1 on cream (was 3.3:1) */
+  --warn-text: #a85400; /* the orange fill is 2.9:1 as text on cream; this is 5:1 */
   --accent: #1f8f5a;
   --accent-rgb: 31, 143, 90;
   --cyan: #0b7891;
@@ -629,7 +631,7 @@ a { color: var(--cyan); }
 .fh-stats b.small { font-size: calc(13px * var(--ts)); line-height: 1.75; }
 .fh-stats b.out { color: var(--flight-out); }
 .fh-stats b.in { color: var(--flight-in); }
-.fh-stats b.warn { color: var(--lvl2); }
+.fh-stats b.warn { color: var(--warn-text); }
 .fh-stats .is-off { opacity: .4; }
 /* route direction: arrivals only (default) / both ways */
 .fh-dir { display: inline-flex; gap: 2px; margin: 0 0 8px; padding: 2px; border: 1px solid var(--border); border-radius: 999px; }
@@ -666,7 +668,9 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 .spotlight {
   position: fixed; z-index: 12;
   right: var(--gutter); bottom: calc(var(--foot-h) + 12px);
-  width: calc(372px * var(--ts)); padding: 10px 12px 12px;
+  /* never wider than the room right of the legend column (tablets, narrow windows): the two used to overlap */
+  width: max(300px, min(calc(372px * var(--ts)), calc(100vw - var(--legend-real-w, var(--legend-w)) - var(--gutter) * 3)));
+  padding: 10px 12px 12px;
   transition: opacity .35s, transform .35s var(--ease);
 }
 .spotlight.is-hidden { opacity: 0; transform: translateY(16px); pointer-events: none; visibility: hidden; }
@@ -777,7 +781,7 @@ body.panel-open .zoom-ctrl { transform: translateX(calc(-1 * (var(--panel-w) + v
 .psec h3:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 /* today's direct flights with Taoyuan */
 .fl-note { margin: -4px 0 8px; font-size: calc(11.5px * var(--ts)); color: var(--fg-mute); }
-.fl-note .warn { color: var(--lvl2); }
+.fl-note .warn { color: var(--warn-text); }
 .fl-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .fl-row {
   display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: baseline;
@@ -1244,7 +1248,8 @@ body.arr-open .flights-canvas { opacity: .35; }
 /* update time: one short line in the kicker, next to INBOUND */
 .arr-status { margin-left: 2px; color: var(--fg-dim); letter-spacing: .04em; text-transform: none; }
 .arr-status:not(:empty)::before { content: "·"; margin-right: 6px; color: var(--fg-mute); }
-.arrivals.is-stale .arr-kicker .rec, .arr-status.is-stale { color: var(--lvl2); }
+.arrivals.is-stale .arr-kicker .rec { color: var(--lvl2); }
+.arr-status.is-stale { color: var(--warn-text); font-weight: 700; }
 .arrivals.is-stale .arr-kicker .rec { background: var(--lvl2); box-shadow: 0 0 8px var(--lvl2); }
 /* auto-scroll is on by default: the button is an icon (its title says what it does) */
 .arr-scroll span[data-i18n] { display: none; }
@@ -2005,3 +2010,39 @@ body.panel-open.panel-floating .zoom-ctrl, body.panel-open.panel-floating .wx-ba
 .panel.is-floating .panel-autobar { padding-right: 104px; } /* room for the dock button next to close */
 .panel.is-floating .panel-head { padding-right: 100px; }
 .panel.is-floating .panel-jump { margin-right: -100px; }
+
+/* ---------- touch screens wider than a phone (kiosks, wall panels, tablets) ----------
+   No hover, so no tooltips: header buttons show a short caption under their icon; and every control is finger-sized
+   (about 44 px). Phones (≤ 760 px) have their own compact layout above. */
+@media (pointer: coarse) and (min-width: 761px) {
+  .hud .toggles > .btn-icon { flex-direction: column; gap: 1px; height: auto; min-height: 48px; min-width: 50px; padding: 5px 7px 4px; }
+  .hud .toggles > .btn-icon > span[data-i18n]:not(.sr-only), .hud .toggles > .ts-toggle > .ts-val {
+    display: block !important; font: 600 calc(10px * var(--ts-hud)) var(--sans); letter-spacing: 0; line-height: 1.2; white-space: nowrap;
+  }
+  .zoom-ctrl .btn-icon { width: 44px; height: 44px; }
+  .seg-btn { height: 44px; padding: 0 14px; align-items: center; }
+  .wx-toggle { min-height: 44px; }
+  .fh-dir button { min-height: 40px; padding: 2px 14px; }
+  .lg-min { width: 44px; height: 44px; margin: -12px -12px -12px 0; }
+  .lg-filter { min-height: 44px; }
+  .spot-ctrl .btn-icon, .pa-toggle { min-width: 44px; height: 44px; }
+  .panel-close, .pm-close, .wt-close, .panel-dock { min-width: 44px; height: 44px; }
+  .pj { min-height: 44px; padding: 0 14px; }
+  .tl-range-btn { height: 40px; padding: 0 14px; }
+  .wxb-day, .wxb-play { min-height: 44px; }
+  .wxb-play { min-width: 44px; }
+  .wxb-grip { width: 24px; align-self: stretch; }
+  .arr-actions .btn-icon { min-width: 44px; height: 44px; }
+  .arr-controls select, .arr-cp-btn, .arr-q { min-height: 44px; }
+  .pm-hub-links { gap: 4px 18px; }
+  .pm-hub-links button, .pm-hub-links a { padding: 10px 2px; }
+  .area-more, .show-all-groups, .more-btn, .tl-widen, .fl-board { min-height: 44px; }
+  /* small switches (30 x 17) keep their look; the tappable area grows around them */
+  .switch { overflow: visible; }
+  .switch::before { content: ""; position: absolute; inset: -14px -10px; }
+}
+/* phones: the board's fields were 25–27 px high */
+@media (max-width: 760px) {
+  .arr-controls select, .arr-cp-btn, .arr-q { min-height: 40px; }
+  .arr-actions .btn-icon { min-width: 40px; height: 40px; }
+}
