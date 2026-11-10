@@ -11,7 +11,7 @@ import {
 } from './util.js';
 import { toast } from './toast.js';
 import { qrSvg } from './qr.js';
-import { flagParam } from './kiosk.js';
+import { flagParam } from './params.js';
 
 const PAGE = 20;
 // Epidemic timeline range in months (the data covers two years). Default 6; per-screen choice in localStorage;

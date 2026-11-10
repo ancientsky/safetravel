@@ -1302,13 +1302,13 @@ async function run(browser) {
 
   await check('extras: kiosk destination buttons, typed traveller brief with a QR code, level patterns with a menu switch, board L2 count and stale banner', async () => {
     const browser = page.context().browser();
-    // 1. kiosk: "where to?" buttons beside the search box open a country in one tap; absent on ordinary screens
+    // 1. ?ask=1: "where to?" buttons beside the search box open a country in one tap; off by default, also on kiosks
     let ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 }, hasTouch: true });
     let pk = await ctx.newPage();
     const errs = [];
     pk.on('pageerror', (e) => errs.push(e.message));
     await pk.addInitScript(() => { try { localStorage.setItem('safetravel.spotlight.autoopen', 'off'); } catch (e) { /* ignore */ } });
-    await pk.goto(new URL('?lang=zh&osk=1&qr=1', BASE_URL).href, { waitUntil: 'load' });
+    await pk.goto(new URL('?lang=zh&osk=1&ask=1&qr=1', BASE_URL).href, { waitUntil: 'load' });
     await pk.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
     await pk.waitForSelector('[data-testid="ask"] .ask-chip', { timeout: 10000 });
     const ask = await pk.evaluate(() => {
@@ -1358,6 +1358,9 @@ async function run(browser) {
     assert(brief.link === 'trip.html#JP' && brief.qr === 'https://ancientsky.github.io/safetravel/trip.html#JP', `brief link / QR address: ${brief.link} / ${brief.qr}`);
     assert(brief.modules >= 25 && brief.dark > 500 && brief.size >= 96 && /日本/.test(brief.label), `QR: ${JSON.stringify(brief)}`);
     assert(!errs.length, `page errors: ${errs.join(' | ')}`);
+    await pk.goto(new URL('?lang=zh&osk=1', BASE_URL).href, { waitUntil: 'load' });
+    await pk.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    assert(!(await pk.$('[data-testid="ask"]')), 'a kiosk without ?ask=1 shows the destination buttons');
     await ctx.close();
     ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     pk = await ctx.newPage();
@@ -1459,7 +1462,7 @@ async function run(browser) {
     const b3 = await board();
     assert(/航班資料停在 .*沒有再更新/.test(b3.stale), `stale banner: ${b3.stale}`);
     await ctx.close();
-    return `kiosk: ${ask.n} buttons, 日本 opens JP; brief ${brief.rows.length} lines; QR off by default, ?qr=1 → ${brief.modules}×${brief.modules} ${brief.qr}; patterns ${on.n} countries (${on.l3} hatched), off by menu; board L2 button ${place.w}px beside the checkpoint control → ${b1.rows} row; stale banner shown`;
+    return `?ask=1: ${ask.n} buttons, 日本 opens JP, off by default; brief ${brief.rows.length} lines; QR off by default, ?qr=1 → ${brief.modules}×${brief.modules} ${brief.qr}; patterns ${on.n} countries (${on.l3} hatched), off by menu; board L2 button ${place.w}px beside the checkpoint control → ${b1.rows} row; stale banner shown`;
   });
 
   await check('boot guard: a stale cached module (half-updated cache) is re-downloaded and the page starts by itself', async () => {

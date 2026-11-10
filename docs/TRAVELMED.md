@@ -86,8 +86,19 @@ A standalone page, not linked from the other pages and `noindex`, until Taiwan C
 - **Rules**: `web/js/malaria-calc.js`, from CDC's 「瘧疾預防用藥」 page (國內現用藥品簡介, updated 2026-02-05): the
   three drugs in use in Taiwan, their schedules (Malarone and doxycycline daily from 1–2 days before, mefloquine weekly
   from 2–3 weeks before; 7 days / 4 weeks / 4 weeks after leaving), adult and child doses, contraindications and
-  cautions. Where CDC leaves the dose to the doctor (Malarone < 40 kg — no paediatric tablet in Taiwan; doxycycline
-  2.2 mg/kg for children; mefloquine ≤ 9 kg) no tablet count is given.
+  cautions. Where CDC leaves the dose to the doctor (Malarone at 40 kg or less — no paediatric tablet in Taiwan;
+  doxycycline 2.2 mg/kg for children; mefloquine ≤ 9 kg) no tablet count is given. Two cautions come from CDC's travel
+  prescription instead of that page: interactions with HIV medicines and planning a pregnancy.
+- **Reading of the page** (checked against it again on 2026-11-10): limits written 「以下」 include the number (Malarone:
+  40 kg or less is weight-adjusted, 5 kg or less not recommended; mefloquine: at 10 kg or less a pharmacist prepares the
+  dose, so 9–10 kg shows ¼ tablet with that note). 禁忌症 → "not suitable". The two cautions worded as advice against
+  use — mefloquine with a history of arrhythmia (「不建議使用」) and doxycycline for women prone to fungal infections after
+  antibiotics (「建議選用其他預防性藥物」) — are also shown as "not suitable", with CDC's wording as the reason; other
+  cautions → "needs the doctor's attention". The page gives adult and child doses without an age; the tool treats 18
+  and over as adult.
+- **Test**: `node tests/malaria-calc.test.mjs` (no browser, 563 checks written from the page: every dose band and its
+  edges, each contraindication and caution, schedules for stays of 1–40 days, tablets to buy). The Pages deploy runs it
+  and stops when it fails.
 - **Trip**: several stops; a stop counts when its class is `drug`/`unknown` and the traveller answers that the trip
   goes (or may go) to CDC's risk areas. The risk window runs from the first such arrival to the last departure.
   Weekly doses fall on the first dose's weekday and always include 4 doses after leaving.

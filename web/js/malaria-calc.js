@@ -1,11 +1,20 @@
 // Malaria prophylaxis calculator — pure logic (no DOM), shared by malaria.html and its tests.
 //
-// Every regimen, dose, contraindication and caution below is taken from Taiwan CDC's page
+// Regimens, doses, contraindications and cautions are taken from Taiwan CDC's page
 // 「瘧疾預防用藥」(國內現用藥品簡介, last updated 2026-02-05):
 // https://www.cdc.gov.tw/Category/ListContent/YipvR33b32K-dsMI2eIrIg?uaid=ZSgu_4NoQ7NTp0zZ-HC8rg
-// Where that page leaves a decision to the doctor (Malarone for < 40 kg — Taiwan has no paediatric tablet;
+// Two cautions come from CDC's travel prescription instead (the per-country pages in data/travelmed): interactions
+// with HIV medicines (mefloquine, Malarone) and planning a pregnancy.
+// Where the page leaves a decision to the doctor (Malarone at 40 kg or less — Taiwan has no paediatric tablet;
 // doxycycline 2.2 mg/kg for children; mefloquine ≤ 9 kg compounded by a pharmacist) the calculator gives no tablet
 // count and says so. It never chooses a drug: it lists what CDC's rules allow for this traveller and trip.
+//
+// How the page's wording maps to a status (tests/malaria-calc.test.mjs holds the full table):
+//   禁忌症 (contraindication)                         → 'no'
+//   「不建議…使用」「建議選用其他預防性藥物」 (cautions) → 'no' as well: CDC advises against it, the reason quotes the wording
+//   other 應特別注意對象 (cautions)                    → 'caution' (a doctor decides)
+// Limits written 「以下」 include the number itself (40 公斤以下 = ≤ 40 kg, 5 公斤以下 = ≤ 5 kg, 10 kg 以下 = ≤ 10 kg).
+// The page gives 兒童劑量 and 成人劑量 without an age: this tool treats 18 and over as adult.
 
 export const SOURCE_URL = 'https://www.cdc.gov.tw/Category/ListContent/YipvR33b32K-dsMI2eIrIg?uaid=ZSgu_4NoQ7NTp0zZ-HC8rg';
 export const SOURCE_DATE = '2026-02-05';
@@ -103,10 +112,10 @@ export function doseFor(drug, p) {
   const adult = p.age >= 18;
   const w = p.weight;
   if (drug.id === 'atq') {
-    if (adult && !(w < 40)) return { tablets: 1, mg: null, note: null };
-    if (w >= 40) return { tablets: 1, mg: null, note: null };
+    if (adult && !(w <= 40)) return { tablets: 1, mg: null, note: null }; // also an adult who gave no weight
+    if (w > 40) return { tablets: 1, mg: null, note: null };
     if (!(w > 0)) return { tablets: null, mg: null, note: 'dose_need_weight' };
-    return { tablets: null, mg: null, note: 'dose_atq_child' };   // < 40 kg: weight-adjusted, no TW paediatric tablet
+    return { tablets: null, mg: null, note: 'dose_atq_child' };   // ≤ 40 kg: weight-adjusted, no TW paediatric tablet
   }
   if (drug.id === 'dox') {
     if (adult) return { tablets: 1, mg: 100, note: null };
@@ -118,6 +127,8 @@ export function doseFor(drug, p) {
   if (adult) return { tablets: 1, mg: 250, note: null };
   if (!(w > 0)) return { tablets: null, mg: null, note: 'dose_need_weight' };
   if (w <= 9) return { tablets: null, mg: Math.round(5 * w * 10) / 10, note: 'dose_mef_infant' };
+  // the band ">9–19 kg" says ¼ tablet, and the page adds that at 10 kg or less a pharmacist prepares the exact dose
+  if (w <= 10) return { tablets: 0.25, mg: null, note: 'dose_mef_10kg' };
   if (w <= 19) return { tablets: 0.25, mg: null, note: null };
   if (w <= 30) return { tablets: 0.5, mg: null, note: null };
   if (w <= 45) return { tablets: 0.75, mg: null, note: null };
@@ -137,24 +148,24 @@ export function assess(drug, p, win) {
     if (p.breastfeeding && p.infantUnder5) no.push('r_atq_bf');
     if (p.renal) no.push('r_atq_renal');
     if (p.allergyAtq) no.push('r_allergy');
-    if (p.weight > 0 && p.weight < 5) no.push('r_atq_5kg');
-    if (p.weight > 0 && p.weight < 40 && !no.length) caution.push('r_atq_40kg');
+    if (p.weight > 0 && p.weight <= 5) no.push('r_atq_5kg');
+    if (p.weight > 0 && p.weight <= 40 && !no.length) caution.push('r_atq_40kg');
     if (p.hiv) caution.push('r_hiv');
   } else if (drug.id === 'dox') {
     if (p.acneDox) return { status: 'covered', reasons: ['r_dox_acne'] };
     if (p.pregnant === 'yes') no.push('r_dox_pregnant');
     if (p.age < 8) no.push('r_dox_child');
     if (p.allergyDox) no.push('r_allergy');
+    if (p.yeast) no.push('r_dox_yeast'); // 建議選用其他預防性藥物
     if (p.breastfeeding) caution.push('r_dox_bf');
     if (p.liver) caution.push('r_dox_liver');
-    if (p.yeast) caution.push('r_dox_yeast');
     caution.push('r_dox_sun');
   } else {
     if (win?.mefResistant) no.push('r_mef_resistant');
     if (p.psych) no.push('r_mef_psych');
     if (p.seizure) no.push('r_mef_seizure');
     if (p.allergyMef) no.push('r_allergy');
-    if (p.arrhythmia) caution.push('r_mef_arrhythmia');
+    if (p.arrhythmia) no.push('r_mef_arrhythmia'); // 有心律不整病史者不建議使用
     if (p.bupropion) caution.push('r_mef_bupropion');
     if (p.precision) caution.push('r_mef_precision');
     if (p.hiv) caution.push('r_hiv');

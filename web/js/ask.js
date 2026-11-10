@@ -1,17 +1,17 @@
 // "要去哪裡？" beside the search box: common destinations from Taiwan as buttons — one tap opens the country, no
-// typing. For kiosk screens (?osk=1 or ?reset=N; ?ask=1 shows it on any screen, ?ask=0 never). It steps aside while
-// someone types or the on-screen keyboard is up, and only shows the buttons that fit beside the search box.
+// typing. Off by default: ?ask=1 in the address switches it on (kiosk start pages). It steps aside while someone
+// types or the on-screen keyboard is up, and only shows the buttons that fit beside the search box.
 import { POPULAR_ISO } from './places.js';
 import { t, countryName, getLang } from './i18n.js';
 import { levelOf, warnLevel, mofaMode } from './state.js';
-import { isKiosk, flagParam } from './kiosk.js';
+import { flagParam } from './params.js';
 
 const MAX = 12;
 // button text where the official short name is long (the full name stays as the tooltip and accessible name)
 const SHORT = { 'zh-Hant': { HK: '香港', MO: '澳門' }, en: { CN: 'China' } };
 const GAP = 12; // px kept free before whatever sits to the right
 
-export const askWanted = () => flagParam('ask') ?? isKiosk();
+export const askWanted = () => flagParam('ask') === true;
 
 export function createAsk({ searchRoot, onPick, has, obstacles = [] }) {
   const input = searchRoot.querySelector('input');

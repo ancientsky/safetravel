@@ -58,6 +58,8 @@ jobs:
           "$RUNNER_TEMP/node/bin/node" --version
       - name: Check the vendored d3 subset covers every d3 call
         run: node scripts/check-d3.mjs
+      - name: Malaria dose logic still matches the table written from Taiwan CDC's page
+        run: node tests/malaria-calc.test.mjs
       - name: Stamp the code version (open pages reload themselves when it changes)
         run: .github/scripts/stamp-version.sh
       - name: Only plain files are published (no symbolic links)

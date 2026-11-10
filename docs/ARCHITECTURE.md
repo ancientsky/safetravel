@@ -151,8 +151,8 @@ map). Data and refresh: `docs/TRAVELMED.md`.
   from `<meta name="safetravel-public-url">` in `index.html` (so an intranet mirror still hands out a public link; forks
   change the meta). The code is off by default and only rendered with `?qr=1`; never at 760 px and below. Without it
   the generator is not fetched.
-- **Kiosk destination buttons** (`js/ask.js`, `js/kiosk.js`): "要去哪裡？" plus `places.js` `POPULAR_ISO` beside the search
-  box on kiosk screens (`?osk=1`, `?reset=N`, or `?ask=1`; `?ask=0` off). `fit()` measures what is to the right of the
+- **Kiosk destination buttons** (`js/ask.js`): "要去哪裡？" plus `places.js` `POPULAR_ISO` beside the search
+  box, only with `?ask=1` (off by default, also on kiosks). `fit()` measures what is to the right of the
   search box (zoom buttons, panel, board, spotlight) and under it (layer switches, weather day bar) and keeps one or two
   rows of whole buttons.
 - **Level patterns** (`js/map.js` `renderPatterns`): a `g.patterns` layer above the countries repeats the paths of the two

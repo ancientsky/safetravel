@@ -447,7 +447,7 @@ async function main() {
   }
 
   search = createSearch({ root: $('#search'), onPick: (iso) => openCountry(iso) });
-  // kiosks: "where are you going?" with one-tap destinations beside the search box
+  // ?ask=1: "where are you going?" with one-tap destinations beside the search box (off by default)
   ask = askWanted()
     ? createAsk({
       searchRoot: $('#search'), onPick: (iso) => openCountry(iso), has: (iso) => !!state.data.countries?.[iso] || map.has(iso),
