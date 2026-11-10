@@ -4,10 +4,12 @@ import {
   t, isEn, getLang, nameOf, altNameOf, regionName, mofaFull, diseaseName, fmtDay,
 } from './trip-i18n.js';
 import { REGIONS, safeHref, normKey, dayAgo } from './trip-data.js';
+import { createMore } from './trip-more.js';
 
 const MOFA_BUCKETS = ['4', '3', '2', '1', '0', 'n'];
 const CDC_BUCKETS = ['3', '2', '1', '0'];
 const DEFAULT_DIR = { name: 1, region: 1, mofa: -1, cdc: -1, date: -1 };
+const PHONE_FIRST = 8; // destinations listed on a phone before "show all" (trip-more.js)
 
 const mofaBucket = (d) => (d.w ? String(d.mofa ?? 0) : 'n');
 const mofaRank = (d) => (d.w ? (d.mofa ?? 0) : -1);
@@ -27,6 +29,7 @@ export function createTable({ root, onOpen, onPrint }) {
   const countEl = root.querySelector('.t-count');
   const emptyEl = root.querySelector('.t-empty');
   const filtersEl = root.querySelector('.filters');
+  const more = createMore({ host: root.querySelector('.dest-table'), after: root.querySelector('.t-wrap'), limit: PHONE_FIRST, testid: 't-more' });
 
   tbody.addEventListener('click', (ev) => {
     const tr = ev.target.closest('tr[data-iso]');
@@ -163,6 +166,7 @@ export function createTable({ root, onOpen, onPrint }) {
       frag.append(tr);
     }
     tbody.replaceChildren(frag);
+    more.update(shown.map((d) => rows.get(d.iso)));
     emptyEl.hidden = shown.length > 0;
     countEl.textContent = t('f_count', { n: shown.length, total: model.list.length });
     updateHead();

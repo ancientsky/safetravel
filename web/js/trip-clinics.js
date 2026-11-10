@@ -6,10 +6,12 @@ import { h } from './trip-dom.js';
 import { t, isEn } from './trip-i18n.js';
 import { loadTravelmed, getJSON, telHref, webHref, mapsHref } from './trip-data.js';
 import { clean } from './util.js';
+import { createMore } from './trip-more.js';
 
 // session windows used for "open now" (CDC gives only 早 / 午 / 夜): 08:00-12:00, 13:30-17:30, 18:00-21:30
 const SLOTS = [[480, 720], [810, 1050], [1080, 1290]];
 const ZH = 'zh-Hant';
+const PHONE_FIRST = 6; // clinics listed on a phone before "show all" (trip-more.js)
 
 /** Day (0 = Monday) and minutes after midnight in Taipei. */
 export function taipeiNow(now = new Date()) {
@@ -80,6 +82,7 @@ export function createClinics({ root }) {
   const listEl = root.querySelector('.cl-list');
   const countEl = root.querySelector('.cl-count');
   const mapEl = root.querySelector('.cl-map');
+  const more = createMore({ host: listEl, after: root.querySelector('.cl-body'), limit: PHONE_FIRST, testid: 'cl-more' });
   let mapApi = null;
   let started = false;
 
@@ -184,8 +187,11 @@ export function createClinics({ root }) {
       const reset = h('button', { type: 'button', class: 'btn btn-ghost', text: t('cl_reset') });
       reset.addEventListener('click', () => { Object.assign(state, { city: '', now: false, mpox: false }); renderTools(); renderList(); });
       listEl.replaceChildren(h('li', { class: 'cl-empty' }, h('p', { text: state.now ? t('cl_empty_now') : t('cl_empty') }), reset));
+      more.update([]);
     } else {
-      listEl.replaceChildren(...list.map((c) => clinicCard(c, now)));
+      const cards = list.map((c) => clinicCard(c, now));
+      listEl.replaceChildren(...cards);
+      more.update(cards);
     }
     mapApi?.update(new Set(list.map((c) => c.id)), state.near);
   }
@@ -194,6 +200,7 @@ export function createClinics({ root }) {
     state.sel = id;
     listEl.querySelectorAll('.cl-card').forEach((el) => el.classList.toggle('is-sel', el.dataset.id === id));
     const el = listEl.querySelector(`[data-id="${CSS.escape(id)}"]`);
+    more.reveal(el); // a clinic after the first few on a narrow screen
     if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); el.focus({ preventScroll: true }); }
   }
 

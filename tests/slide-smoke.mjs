@@ -101,7 +101,7 @@ async function run(browser) {
   // ------------------------------------------------------------ basics + auto-advance
   {
     const { context, page } = await newPage(browser);
-    await check('page loads: playlist = active manifest slides, portrait by default', async () => {
+    await check('page loads: playlist = active manifest slides; the layout follows the screen by default (landscape here)', async () => {
       await load(page, { interval: 3 });
       const title = await page.title();
       assert(title.includes('衛教海報輪播'), `title "${title}"`);
@@ -109,9 +109,9 @@ async function run(browser) {
       assert(ids.length === 6 && ids.join() === ACTIVE.join(), `playlist ${ids.join()}`);
       assert(await page.locator('.slide').count() === 6, 'slide sections');
       const o = await page.evaluate(() => document.documentElement.dataset.orient);
-      assert(o === 'portrait', `orient ${o}`);
+      assert(o === 'landscape', `orient ${o} on a 1280x900 screen`);
       const [w, h] = await page.evaluate(() => [document.getElementById('stage').offsetWidth, document.getElementById('stage').offsetHeight]);
-      assert(w === 1080 && h === 1920, `canvas ${w}x${h}`);
+      assert(w === 1920 && h === 1080, `canvas ${w}x${h}`);
       const r = await page.evaluate(() => document.getElementById('stage').getBoundingClientRect().toJSON());
       assert(r.left >= -1 && r.top >= -1 && r.right <= 1281 && r.bottom <= 901, `canvas not fitted: ${JSON.stringify(r)}`);
       return `${ids.length} slides, scaled to ${Math.round(r.width)}x${Math.round(r.height)}`;
@@ -407,7 +407,7 @@ async function run(browser) {
   {
     const { context, page } = await newPage(browser, { viewport: { width: 1280, height: 900 } });
     await check('print media shows every playlist slide, one per page, final state', async () => {
-      await load(page, {});
+      await load(page, { orient: 'portrait' });
       await page.emulateMedia({ media: 'print' });
       const r = await page.$$eval('.slide', (els) => els.map((e) => {
         const c = getComputedStyle(e);

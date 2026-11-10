@@ -646,6 +646,63 @@ async function run(browser) {
     return out.join('; ');
   });
 
+  await check('details: map is one tab stop with arrow keys, menu traps Tab, whole tiles beside the panel, empty board shrinks and can widen, short phone title', async () => {
+    const browser = page.context().browser();
+    // keyboard on a desktop screen
+    let ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    let pd = await ctx.newPage();
+    await pd.goto(new URL('?lang=zh', BASE_URL).href, { waitUntil: 'load' });
+    await pd.waitForFunction((sel) => document.querySelectorAll(sel).length > 150, MAP_SELECTOR, { timeout: 30000 });
+    const stops = await pd.$$eval('path.country[tabindex="0"]', (ps) => ps.map((x) => x.dataset.iso));
+    await pd.focus(`path.country[tabindex="0"]`);
+    await pd.keyboard.press('ArrowRight');
+    const moved = await pd.evaluate(() => ({ iso: document.activeElement?.dataset?.iso, stops: document.querySelectorAll('path.country[tabindex="0"]').length }));
+    await pd.keyboard.press('Enter');
+    const opened = await pd.evaluate(() => location.hash);
+    await pd.evaluate(() => window.__safetravel.closePanel());
+    await pd.click('[data-testid="menu-toggle"]');
+    for (let i = 0; i < 40; i++) await pd.keyboard.press('Tab');
+    const trapped = await pd.evaluate(() => !!document.activeElement.closest('#phone-menu'));
+    await ctx.close();
+    // portrait wall: tiles beside the open panel, empty board
+    ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 } });
+    pd = await ctx.newPage();
+    const now = Date.now();
+    const iso = (min) => new Date(now + min * 60000 + 8 * 3600000).toISOString().slice(0, 16) + '+08:00';
+    const doc = { generated_at: iso(0), source: 'tdx', endpoint: 'test', tdx_updated: iso(0), window: { from: iso(-120), to: iso(240) }, refresh_minutes: { day: 10, night: 30 }, quota: null,
+      airports: { TPE: { name_zh: '桃園', name_en: 'Taoyuan', lat: 25.08, lon: 121.23, flights: 1, checkpoints: [] } },
+      flights: [{ id: 'x', airport: 'TPE', flight: 'BR 1', airline: 'BR', codeshares: [], from: 'NRT', from_zh: '東京成田', from_en: 'Narita', country: 'JP', lat: 35.7, lon: 140.4, terminal: '2', gate: 'C1', checkpoint: 'C', apron: '',
+        scheduled: iso(200), estimated: iso(200), actual: null, status: 'on_time', status_zh: '準時', status_en: 'ON TIME', aircraft: 'A321' }] }; // only one flight, 200 min ahead: outside ±60
+    await pd.route('**/data/arrivals.json*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(doc) }));
+    await pd.goto(new URL('?lang=zh&arr=TPE#/country/JP', BASE_URL).href, { waitUntil: 'load' });
+    await pd.waitForSelector('[data-testid="arrivals-widen"]', { timeout: 30000 });
+    await pd.waitForTimeout(600);
+    const port = await pd.evaluate(() => {
+      const panel = document.querySelector('#panel').getBoundingClientRect();
+      const tiles = [...document.querySelectorAll('#stat-tiles .tile')].map((x) => x.getBoundingClientRect()).filter((r) => r.top < panel.top + 80);
+      return { cut: tiles.filter((r) => r.right > panel.left - 1 && r.left < panel.right).length, shown: tiles.length, boardH: Math.round(document.querySelector('#arrivals').getBoundingClientRect().height) };
+    });
+    await pd.click('[data-testid="arrivals-widen"]');
+    await pd.waitForSelector('#arrivals .arr-hit', { timeout: 5000 });
+    const widened = await pd.evaluate(() => ({ rows: document.querySelectorAll('#arrivals .arr-hit').length, win: document.querySelector('#arrivals .arr-win')?.value, empty: document.querySelector('#arrivals').classList.contains('is-empty') }));
+    await ctx.close();
+    // phone title
+    ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    pd = await ctx.newPage();
+    await pd.goto(new URL('?lang=en', BASE_URL).href, { waitUntil: 'load' });
+    await pd.waitForSelector('.brand h1');
+    const title = await pd.$eval('.brand h1', (h) => ({ text: h.innerText.trim(), cut: h.scrollWidth > h.clientWidth + 1 }));
+    await ctx.close();
+    assert(stops.length === 1 && moved.stops === 1 && moved.iso && moved.iso !== stops[0], `tab stops ${stops.length} → ${JSON.stringify(moved)}`);
+    assert(opened === `#/country/${moved.iso}`, `Enter opened ${opened}`);
+    assert(trapped, 'Tab left the open menu');
+    assert(port.cut === 0 && port.shown >= 3, `tiles beside the panel ${JSON.stringify(port)}`);
+    assert(port.boardH < 400, `empty board is ${port.boardH}px tall`);
+    assert(widened.rows === 1 && !widened.empty, `after widening ${JSON.stringify(widened)}`);
+    assert(title.text === 'Health Radar' && !title.cut, `phone title ${JSON.stringify(title)}`);
+    return `1 tab stop (${stops[0]} → ${moved.iso}); menu keeps focus; ${port.shown} whole tiles; empty board ${port.boardH}px → widened; phone title “${title.text}”`;
+  });
+
   await check('kiosk stays on the site: external links, downloads and print show a notice; help / poster pages get the reset; normal visitors unaffected', async () => {
     const ctx = await page.context().browser().newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
     await ctx.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, (r) => r.abort()); // never leave the test host

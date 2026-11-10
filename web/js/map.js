@@ -276,7 +276,10 @@ export function createMap({ svgEl, onOpen, getInsets }) {
         if (ev.key === 'Enter' || ev.key === ' ') {
           ev.preventDefault();
           onOpen(d.id);
-        }
+        } else if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') { ev.preventDefault(); moveFocus(d.id, 1); }
+        else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') { ev.preventDefault(); moveFocus(d.id, -1); }
+        else if (ev.key === 'Home') { ev.preventDefault(); moveFocus(d.id, 'home'); }
+        else if (ev.key === 'End') { ev.preventDefault(); moveFocus(d.id, 'end'); }
       });
   }
 
@@ -303,8 +306,28 @@ export function createMap({ svgEl, onOpen, getInsets }) {
     bindCountries();
   }
 
+  // Keyboard: the map is ONE tab stop (it used to be 249, in front of the header controls). Tab lands on one country;
+  // the arrow keys walk the countries that have a rating (highest level first, then by name), Home / End jump to the
+  // ends, Enter / Space opens the panel.
+  const reachable = (d) => layerLevel(d.id) > 0 || warnPartial(d.id) || d.id === 'TW';
+  let rovingIso = null;
+  function keyOrder() {
+    return features.filter(reachable).sort((a, b) => layerLevel(b.id) - layerLevel(a.id)
+      || countryName(a.id).localeCompare(countryName(b.id)));
+  }
   function tabFor(d) {
-    return layerLevel(d.id) > 0 || warnPartial(d.id) || d.id === 'TW' ? 0 : -1;
+    if (!reachable(d)) return -1;
+    if (!rovingIso || !byIso.has(rovingIso) || !reachable(byIso.get(rovingIso))) rovingIso = keyOrder()[0]?.id || null;
+    return d.id === rovingIso ? 0 : -1;
+  }
+  function moveFocus(from, step) {
+    const list = keyOrder();
+    if (!list.length) return;
+    const i = list.findIndex((f) => f.id === from);
+    const next = step === 'home' ? list[0] : step === 'end' ? list[list.length - 1] : list[(Math.max(0, i) + step + list.length) % list.length];
+    rovingIso = next.id;
+    countrySel.attr('tabindex', tabFor);
+    document.getElementById(`c-${next.id}`)?.focus({ preventScroll: true });
   }
 
   /** Tooltip rows with both official ratings side by side (active layer first). */

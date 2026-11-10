@@ -181,7 +181,7 @@ python -m http.server -d web 8080         # 預覽 http://localhost:8080/slide.h
 | 設定 | 預設 | 說明 |
 |---|---|---|
 | 每張秒數 | 5 | 3–60 秒；海報自己的 `duration` 優先（例如症狀海報 10 秒）。`slides.json` 的 `interval` 可改全站預設。 |
-| 螢幕方向 | 直式 | 直式 1080×1920、橫式 1920×1080、自動（依螢幕長寬） |
+| 螢幕方向 | 自動 | 自動（依螢幕長寬）、直式 1080×1920、橫式 1920×1080 |
 | 海報語言 | 全部 | 只播中文（含雙語）或英文（含雙語） |
 | 本螢幕播放的海報 | 全勾 | 取消勾選只影響這台螢幕 |
 
@@ -192,7 +192,7 @@ python -m http.server -d web 8080         # 預覽 http://localhost:8080/slide.h
 | 網址 | 效果 |
 |---|---|
 | `slide.html?interval=8` | 每張 8 秒 |
-| `slide.html?orient=landscape` | 橫式（`portrait` / `auto`） |
+| `slide.html?orient=landscape` | 橫式（`portrait` / `auto`；未指定時為 `auto`） |
 | `slide.html?only=ebola-drc-zh,report-zh` | 只播這幾張（仍受 `active`／`from`／`until` 限制） |
 | `slide.html?lang=en` | 只播英文與雙語海報，面板也用英文（`zh` 中文、`all` 全部） |
 | `slide.html?slide=healthy-travel` | 從某一張開始 |
@@ -248,7 +248,7 @@ CHROMIUM_PATH=/opt/pw-browsers/chromium node scripts/export-slides.mjs http://lo
 - **Auto-publish folder**: drop an image into `web/slides/auto/` (GitHub web: Add file → Upload files) and it plays after the manifest's posters, ordered by file name; delete it to retire it, prefix `_` to pause it. Settings ride in the file name, words separated by `_` or spaces: `上架YYYY-MM-DD`/`fromYYYY-MM-DD`, `下架YYYY-MM-DD`/`untilYYYY-MM-DD`, `10秒`/`10s`, `直式`/`橫式` (portrait/landscape versions of one poster), `中文`/`英文`/`雙語` (zh/en/bi), `加頁尾`/`brand`; a leading number only orders. `python -m pipeline.slides_auto` writes `web/slides/auto/index.json` (generated; run by the export workflow, which fails on a bad name, and by the Pages deploy with `--lenient`, which skips the bad file).
 - **Alert routes**: `"routes": [["FIH", "CDG", "TPE"], ["FIH", "AUH", "TPE"]]` draws real connecting itineraries (1–3 routes of 2–4 airports, shown as dots, one plane per route pausing at the hub; city names and codes only with `"route_labels": true`, off by default so places are not stigmatised); airports come from `web/slides/airports.json` (add missing ones there). Without `routes` a single arc country → Taiwan is drawn. `country_en` (the line under the country name) is shown in the same red as the country.
 - **Add a poster**: quickest is the `image` template (`src_landscape` optional) — drop the file into `web/slides/assets/` and add `{ "id", "template": "image", "active", "lang", "src": "slides/assets/<file>", "alt" }` (shown whole with a slow Ken Burns zoom). Or use a template — `alert`, `symptoms`, `report`, `germs` — with the fields in section 2 (highlights are segment arrays `[{"t": "…", "hl": true}]`, never HTML).
-- **Settings** (appear on mouse move / tap, hide after 3 s; `S` pins): seconds per poster (default 5, 3–60; a poster's `duration` wins), orientation (portrait / landscape / auto), poster language, per-screen show/hide, print, downloads. Keys: ←/→, Space, F, Esc. URL parameters override stored settings: `?interval=8&orient=landscape&only=id1,id2&lang=en` (`slide=`, `play=0`, `still=1` too). Screen Wake Lock while playing.
+- **Settings** (appear on mouse move / tap, hide after 3 s; `S` pins): seconds per poster (default 5, 3–60; a poster's `duration` wins), orientation (auto — follows the screen, the default — / portrait / landscape), poster language, per-screen show/hide, print, downloads. Keys: ←/→, Space, F, Esc. URL parameters override stored settings: `?interval=8&orient=landscape&only=id1,id2&lang=en` (`slide=`, `play=0`, `still=1` too). Screen Wake Lock while playing.
 - **Print / PDF**: the browser print outputs every playlist slide, one per page, at the current orientation, final animation state, backgrounds included.
 - **PNG + PDF export**: `.github/workflows/slides.yml` runs `scripts/export-slides.mjs` (Playwright/Chromium against `slide.html?still=1`) on poster changes, commits `web/slides/export/` (PNG per slide and orientation + `index.json`, only when something changed) and dispatches `deploy-pages.yml`. PDF: the page's Print / Save as PDF (or `--pdf-dir DIR` locally); PDFs are not committed because they embed a timestamp and are large.
 - **Validation**: `python -m pipeline.validate web` (stdlib; run by the Pages deploy on every push to web/ and by the export workflow — deliberately not by the data / arrivals deploys, so a manifest typo can never stop the quarantine board) rejects unknown templates, missing or misspelt fields, duplicate ids, bad dates, missing asset files, non-boolean `hl` and HTML-looking text. Keys starting with `_` are ignored (comments).

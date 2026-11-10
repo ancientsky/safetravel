@@ -10,7 +10,7 @@
   if (lg === 'en') d.lang = 'en';
   if (q && q.get('still') === '1') d.classList.add('still'); // export / screenshot mode: final animation state
   var o = q && q.get('orient');
-  if (o !== 'landscape' && o !== 'auto') { try { o = localStorage.getItem('safetravel.slide.orient'); } catch (e) {} }
-  if (o === 'auto') o = innerWidth > innerHeight ? 'landscape' : 'portrait';
+  if (o !== 'landscape' && o !== 'auto' && o !== 'portrait') { try { o = localStorage.getItem('safetravel.slide.orient'); } catch (e) {} }
+  if (o !== 'landscape' && o !== 'portrait') o = innerWidth > innerHeight ? 'landscape' : 'portrait'; // auto, or no choice yet: follow the screen
   d.setAttribute('data-orient', o === 'landscape' ? 'landscape' : 'portrait');
 })();

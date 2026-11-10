@@ -6,10 +6,12 @@ import { t, isEn, nameOf, fmtStamp } from './trip-i18n.js';
 import { getJSON, normKey } from './trip-data.js';
 import { parseDay, storageGet, storageSet } from './util.js';
 import { normalizeWeather as normalize, WET, DATASET_URL, degree } from './wx-shared.js';
+import { createMore } from './trip-more.js';
 
 const UNIT_KEY = 'safetravel.trip.unit';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const DEFAULT_URL = DATASET_URL;
+const PHONE_FIRST = 6; // city cards listed on a phone before "show all" (trip-more.js)
 
 let dataPromise = null;
 /** weather.json, fetched once per page (retried after a failure). */
@@ -169,6 +171,7 @@ export function createWeather({ root, onOpen, onSettled, onUnit }) {
   const panel = root.querySelector('#wx-panel');
   const subEl = root.querySelector('.wx-sub');
   const unitBox = root.querySelector('.wx-unit');
+  const more = createMore({ host: panel, after: panel, limit: PHONE_FIRST, testid: 'wx-more' });
 
   input.addEventListener('input', () => { st.q = input.value; apply(); });
   input.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && input.value) { input.value = ''; st.q = ''; apply(); } });
@@ -247,6 +250,7 @@ export function createWeather({ root, onOpen, onSettled, onUnit }) {
     if (!data) return;
     const q = normKey(st.q);
     const perRegion = new Map();
+    const shownEls = [];
     let shown = 0;
     let matched = 0;
     for (const c of cards) {
@@ -254,12 +258,15 @@ export function createWeather({ root, onOpen, onSettled, onUnit }) {
       if (textOk) { matched += 1; perRegion.set(c.city.region, (perRegion.get(c.city.region) || 0) + 1); }
       const ok = textOk && (st.region === 'all' || c.city.region === st.region);
       c.el.hidden = !ok;
-      if (ok) shown += 1;
+      if (ok) { shown += 1; shownEls.push(c.el); }
     }
+    more.update(shownEls); // cards are kept in display order (region by region)
     for (const g of groups) {
       const n = perRegion.get(g.id) || 0;
       g.el.hidden = !n || (st.region !== 'all' && st.region !== g.id);
       g.n.textContent = String(n);
+      // a region whose first shown city is past the phone limit has nothing to show there: its heading goes too
+      g.el.classList.toggle('is-more', !!g.el.querySelector('.wx-city:not([hidden])')?.classList.contains('is-more'));
     }
     for (const b of tabEls) {
       const id = b.dataset.region;
@@ -286,6 +293,7 @@ export function createWeather({ root, onOpen, onSettled, onUnit }) {
       panel.removeAttribute('role');
       panel.replaceChildren(h('p', { class: 'notice wx-fail', 'data-testid': 'wx-failed' },
         h('span', { text: t('wx_failed') }), ' ', extLink(DEFAULT_URL, t('wx_failed_link'))));
+      more.update([]);
       return;
     }
     if (!data) return; // still loading: the static "loading" line is translated by applyStatic()

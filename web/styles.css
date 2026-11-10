@@ -2046,3 +2046,23 @@ body.panel-open.panel-floating .zoom-ctrl, body.panel-open.panel-floating .wx-ba
   .arr-controls select, .arr-cp-btn, .arr-q { min-height: 40px; }
   .arr-actions .btn-icon { min-width: 40px; height: 40px; }
 }
+
+/* page titles: the full name where it fits, a short one on phones (it used to be cut: "全球旅遊疫情情…", "Global Tra…") */
+.t-short { display: none; }
+@media (max-width: 760px) { .t-long { display: none; } .t-short { display: inline; } }
+h1.board-h1 { margin: 0; font-weight: inherit; }
+
+/* A docked country panel covers the right end of the stat-tile row on narrow screens (portrait walls, tablets): the row
+   then ends left of the panel and shows whole tiles only (the rest wrap out of sight) instead of half a tile with
+   its number showing through the panel's glass. */
+@media (min-width: 761px) {
+  body.panel-open:not(.panel-floating) .tiles {
+    max-width: calc(100vw - var(--panel-w) - var(--gutter) * 3); flex-wrap: wrap; overflow: hidden;
+    max-height: calc(58px * var(--ts-hud, 1) + 2px);
+  }
+}
+
+/* arrivals board with nothing to list: no empty sections, a button to widen the time window, and on a portrait
+   screen the docked board is only as tall as its content (it used to keep 800 px for three zeros) */
+.arr-widen { margin: 4px 0 8px; }
+.arrivals[data-mode="portrait"].is-empty:not(.is-floating) { height: auto; }

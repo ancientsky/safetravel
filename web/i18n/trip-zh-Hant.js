@@ -385,4 +385,8 @@ export default {
   cl_inset_kinmen: '金門',
   cl_inset_matsu: '馬祖',
   cl_map_label: '旅遊醫學門診位置圖',
+  // phones: short lists, back to top (trip-more.js, trip-nav.js)
+  more_all: '顯示全部（{n}）',
+  more_less: '收合',
+  to_top: '回到頁面頂端',
 };

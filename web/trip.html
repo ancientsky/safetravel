@@ -128,7 +128,7 @@
       </div>
 
       <dl id="stamps" class="stamps"></dl>
-      <nav class="jump" data-i18n-attr="aria-label:nav_label">
+      <nav class="jump" data-testid="jump" data-i18n-attr="aria-label:nav_label">
         <a href="#map-sec" data-i18n="nav_map">地圖</a>
         <a href="#clinics" data-i18n="nav_clinics">旅遊醫學門診</a>
         <a href="#weather" data-i18n="nav_weather">天氣預報</a>
@@ -196,7 +196,7 @@
         <p class="cl-note" data-i18n="cl_note"></p>
       </div>
       <div class="cl-body">
-        <ul class="cl-list" data-testid="cl-list"><li class="cl-empty muted" data-i18n="cl_loading">門診資料載入中…</li></ul>
+        <ul id="cl-list" class="cl-list" data-testid="cl-list"><li class="cl-empty muted" data-i18n="cl_loading">門診資料載入中…</li></ul>
         <div class="cl-map" hidden></div>
       </div>
     </section>
@@ -270,7 +270,7 @@
       <div class="filters"></div>
       <p class="t-count" role="status" aria-live="polite"></p>
       <div class="t-wrap">
-        <table class="dest-table" data-testid="dest-table" aria-labelledby="all-h">
+        <table id="dest-table" class="dest-table" data-testid="dest-table" aria-labelledby="all-h">
           <thead></thead>
           <tbody></tbody>
         </table>
@@ -293,6 +293,10 @@
       <p><a href="index.html" data-i18n="foot_radar">回到全球旅遊疫情情報板</a> · <a href="slide.html" data-i18n="foot_slides">機場檢疫站衛教海報輪播</a> · <a href="m.html" data-i18n="foot_quick">旅遊疫情快查（手機版）</a> · <a href="help.html" data-i18n="foot_help">使用說明</a></p>
     </div>
   </footer>
+  <!-- phones only (trip.css, js/trip-nav.js): shown after about 1.5 screens of scrolling -->
+  <button type="button" class="to-top" data-testid="to-top" data-i18n-attr="aria-label:to_top;title:to_top" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M6 11.5l6-6 6 6"/></svg>
+  </button>
   <noscript><p class="noscript">本頁需要啟用 JavaScript。This page needs JavaScript.</p></noscript>
 </body>
 </html>

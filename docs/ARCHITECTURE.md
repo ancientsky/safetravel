@@ -142,6 +142,17 @@ the same re-fetch first (`freshReload`), so kiosks never mix versions. New pages
 notes) and `trip-clinics.js` (section "旅遊醫學門診": city / open-now / M痘 filters, nearest-first, week grid, locator
 map). Data and refresh: `docs/TRAVELMED.md`.
 
+## `trip.html` on phones
+
+Screen widths up to 760 px only (wider screens and print keep everything):
+- `trip-more.js`: one helper that shows the first N items of a long list behind a "顯示全部（N）" button — clinics 6, weather
+  cities 6, destination table 8. Filters, search and sorting always run over the whole list; hidden items carry `.is-more`.
+- `trip-nav.js`: the header sticks with only the section-chip row visible (`--jump-top`, `--jump-h`), the chip of the section
+  in view gets `aria-current`, and a back-to-top button appears after the first screen.
+- `trip.js`: opening a destination card pushes one history entry, so Back closes the card instead of leaving the page;
+  switching destinations replaces that entry.
+- `trip-search.js` shares the main site's aliases and ranking (`places.js` `COUNTRY_ALIASES`, `popRank`, `placeRank`).
+
 ## Quick check (`m.html`, personal / phone version)
 
 Search-first page without the map, for staff's and travellers' own devices: `m.html` (CSP without inline scripts) +

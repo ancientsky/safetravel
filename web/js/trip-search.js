@@ -3,7 +3,9 @@
 import { h, mofaChip, cdcChip } from './trip-dom.js';
 import { t, nameOf, altNameOf } from './trip-i18n.js';
 import { normKey } from './trip-data.js';
-import { loadPlaces, findPlaces, placeName } from './places.js';
+import {
+  loadPlaces, findPlaces, placeName, COUNTRY_ALIASES, popRank, placeRank,
+} from './places.js';
 import { isEn } from './trip-i18n.js';
 
 const MAX = 8;
@@ -13,6 +15,9 @@ export function createSearch({ input, listEl, statusEl, onOpen }) {
   let results = [];
   let active = -1;
 
+  // names people type that are not in the data ("uk", "korea", "america"), in the destinations' key form
+  const aliasKeys = (iso) => (COUNTRY_ALIASES[iso] || []).map(normKey);
+
   function find(raw) {
     const q = normKey(raw);
     if (!q || !model) return [];
@@ -20,17 +25,19 @@ export function createSearch({ input, listEl, statusEl, onOpen }) {
     for (const d of model.dests.values()) {
       let score = Infinity;
       if (d.iso.toLowerCase() === q) score = 0;
-      for (const k of d.keys) {
+      for (const k of [...d.keys, ...aliasKeys(d.iso)]) {
         if (k === q) score = Math.min(score, 0);
         else if (k.startsWith(q)) score = Math.min(score, 1);
         else if (k.includes(q)) score = Math.min(score, 2);
       }
       if (score < Infinity) out.push([score + (d.listed ? 0 : 0.5), d]);
     }
-    out.sort((a, b) => a[0] - b[0] || nameOf(a[1]).length - nameOf(b[1]).length);
+    // equally good matches: common destinations from Taiwan first ("ind" → India, Indonesia), then the shorter name
+    out.sort((a, b) => a[0] - b[0] || popRank(a[1].iso) - popRank(b[1].iso) || nameOf(a[1]).length - nameOf(b[1]).length);
     const countries = out.slice(0, MAX).map(([score, d]) => ({ d, score }));
-    // airports / cities: the destination is their country (a country named like the query ranks first)
-    const places = findPlaces(raw, 5).map(({ place, score }) => ({ d: model.dests.get(place.iso), place, score: score + 0.5 }))
+    // airports / cities: the destination is their country; a country that fits as well comes first, and a
+    // three-letter airport code only wins when typed as a code in capitals (places.js placeRank)
+    const places = findPlaces(raw, 5).map(({ place, score }) => ({ d: model.dests.get(place.iso), place, score: placeRank(place, score, raw) }))
       .filter((r) => r.d);
     return [...countries, ...places].sort((a, b) => a.score - b.score).slice(0, MAX + 2);
   }

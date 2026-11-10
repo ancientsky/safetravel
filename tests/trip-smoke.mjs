@@ -47,6 +47,31 @@ function assert(cond, msg) {
 }
 
 const visibleRows = (page) => page.locator(`${TABLE_ROWS}:not([hidden])`).count();
+
+// ---- phone layout (screens up to 760 px): short lists with "show all", sticky section chips, back to top ----
+const PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
+const PHONE_FIRST = { cl: 6, wx: 6, t: 8 }; // items before "show all": trip-clinics.js, trip-weather.js, trip-table.js
+const LISTS = [
+  { key: 'cl', item: '[data-testid="cl-card"]', btn: '[data-testid="cl-more"]', host: '#cl-list' },
+  { key: 'wx', item: '[data-testid="wx-city"]:not([hidden])', btn: '[data-testid="wx-more"]', host: '#wx-panel' },
+  { key: 't', item: '#dest-table tbody tr:not([hidden])', btn: '[data-testid="t-more"]', host: '#dest-table' },
+];
+/** A fresh phone-sized page on trip.html (`tail` = query + hash), loaded with its clinics and weather in. */
+async function openPhone(context, tail = '', opts = {}) {
+  const ctx = await context.browser().newContext({ ...PHONE, ...opts });
+  const p = await ctx.newPage();
+  p.on('pageerror', (err) => consoleErrors.push(`pageerror: ${err.message}`));
+  p.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+  await p.goto(`${PAGE_URL.split('#')[0].split('?')[0]}${tail}`, { waitUntil: 'load' });
+  await p.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+  await p.waitForSelector('[data-testid="cl-card"]', { state: 'attached', timeout: 15000 });
+  return { ctx, p };
+}
+/** [rendered (laid out), all] elements matching `sel`. */
+const shownOf = (p, sel) => p.$$eval(sel, (els) => [els.filter((e) => e.offsetParent !== null).length, els.length]);
+const isShown = (p, sel) => p.$eval(sel, (e) => !e.hidden && getComputedStyle(e).display !== 'none');
+const scrollY = (p) => p.evaluate(() => Math.round(window.scrollY));
+const cardOpen = (p) => p.$eval('#card', (c) => !c.hidden);
 // visible city cards (a card or its region group may be hidden)
 const wxCities = (page) => page.$$eval(`${WX} [data-testid="wx-city"]`, (els) => els.filter((e) => e.offsetParent !== null).length);
 
@@ -563,6 +588,50 @@ async function run(page, context) {
     return `NRT → ${a}; 曼谷 → ${b}`;
   });
 
+  await check('search ranking: everyday names (uk, korea, america) and "jap" / "ind" list the country first; NRT still the airport', async () => {
+    const pr = await context.newPage();
+    await pr.goto(`${PAGE_URL.split('#')[0]}?lang=en`, { waitUntil: 'load' });
+    await pr.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+    const input = pr.locator('input[role="combobox"]').first();
+    await input.fill('NRT');
+    await pr.waitForFunction(() => document.querySelector('[role="listbox"] .opt-place'), null, { timeout: 8000 });
+    const first = async (q) => {
+      await input.fill(q);
+      await pr.waitForFunction(() => document.querySelector('[role="listbox"] [role="option"]'), null, { timeout: 5000 });
+      return pr.$eval('[role="listbox"] [role="option"]', (l) => ({
+        place: l.classList.contains('opt-place'), name: l.querySelector('.opt-name').textContent.trim(),
+      }));
+    };
+    const want = { uk: 'United Kingdom', korea: 'Korea', america: 'United States', jap: 'Japan', ind: 'Indonesia' };
+    const got = [];
+    for (const [q, name] of Object.entries(want)) {
+      const r = await first(q);
+      assert(!r.place && r.name.includes(name), `"${q}" → ${r.place ? 'place ' : ''}${r.name}`);
+      got.push(`${q} → ${r.name}`);
+    }
+    const nrt = await first('NRT');
+    assert(nrt.place && /Narita/.test(nrt.name), `NRT → ${nrt.name}`);
+    await pr.close();
+    return `${got.join('; ')}; NRT → ${nrt.name}`;
+  });
+
+  await check('phone 390 at the largest text: the header stays inside the screen in both languages', async () => {
+    const out = [];
+    for (const lang of ['zh', 'en']) {
+      const { ctx, p } = await openPhone(context, `?lang=${lang}&text=xl`);
+      const m = await p.evaluate(() => ({
+        doc: document.documentElement.scrollWidth, vw: window.innerWidth,
+        right: Math.round(document.querySelector('.toggles').getBoundingClientRect().right),
+        back: Math.round(document.querySelector('.back').getBoundingClientRect().width),
+      }));
+      assert(m.doc <= m.vw && m.right <= m.vw, `${lang}: page ${m.doc}px wide, buttons end at ${m.right}px on ${m.vw}px`);
+      assert(m.back >= 44, `${lang}: back link ${m.back}px`);
+      out.push(`${lang} ${m.doc}px, back link ${m.back}px`);
+      await ctx.close();
+    }
+    return out.join('; ');
+  });
+
   await check('travel prescription in the card: vaccines, traveller-group notes on demand, emergency tel links', async () => {
     const pr = await context.newPage();
     await pr.addInitScript(() => { try { localStorage.removeItem('safetravel.trip.groups'); } catch {} });
@@ -637,6 +706,383 @@ async function run(page, context) {
     assert(over <= 0, `overflow ${over}px`);
     assert(mapHidden, 'locator map should stay hidden on phones');
     return 'no overflow';
+  });
+
+  await check('phone 390: #JP page is under 25,000 px tall in both languages, without horizontal overflow', async () => {
+    const out = [];
+    for (const lang of ['zh', 'en']) {
+      const { ctx, p } = await openPhone(context, `?lang=${lang}#JP`);
+      await p.waitForSelector('[data-testid="med"]', { timeout: 15000 });
+      await p.waitForTimeout(800); // lazy parts of the card
+      const m = await p.evaluate(() => ({
+        h: document.documentElement.scrollHeight, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
+        title: document.querySelector('#card-title')?.textContent || '',
+      }));
+      await ctx.close();
+      assert(/日本|Japan/.test(m.title), `${lang}: card "${m.title}"`);
+      assert(m.h < 25000, `${lang}: page is ${m.h}px tall`);
+      assert(m.sw <= m.cw, `${lang}: scrollWidth ${m.sw} > clientWidth ${m.cw}`);
+      out.push(`${lang} ${m.h}px`);
+    }
+    return out.join(', ');
+  });
+
+  await check('phone 390: clinics, weather and destinations show their first items and a “show all (n)” button that expands and collapses', async () => {
+    const { ctx, p } = await openPhone(context, '?lang=zh');
+    const out = [];
+    for (const L of LISTS) {
+      const n = PHONE_FIRST[L.key];
+      const [shown, total] = await shownOf(p, L.item);
+      assert(total > n && shown === n, `${L.key}: ${shown} of ${total} shown, expected ${n}`);
+      const btn = p.locator(L.btn);
+      assert(await isShown(p, L.btn), `${L.key}: no button`);
+      const label = (await btn.textContent()).trim();
+      assert(label === `顯示全部（${total}）`, `${L.key}: button "${label}", ${total} items`);
+      assert(await btn.getAttribute('aria-expanded') === 'false', `${L.key}: aria-expanded before`);
+      const box = await btn.boundingBox();
+      assert(box.width >= 340 && box.height >= 44, `${L.key}: button ${Math.round(box.width)}×${Math.round(box.height)}`);
+      await btn.tap();
+      const [all] = await shownOf(p, L.item);
+      const open = (await btn.textContent()).trim();
+      assert(all === total, `${L.key}: ${all} of ${total} after “show all”`);
+      assert(open === '收合' && await btn.getAttribute('aria-expanded') === 'true', `${L.key}: expanded button "${open}"`);
+      await btn.scrollIntoViewIfNeeded();
+      await btn.tap();
+      const [back] = await shownOf(p, L.item);
+      const top = await p.$eval(L.host, (e) => Math.round(e.getBoundingClientRect().top));
+      const bar = await p.$eval('.jump', (e) => Math.round(e.getBoundingClientRect().bottom));
+      assert(back === n, `${L.key}: ${back} shown after collapsing`);
+      assert(top >= bar && top < bar + 60, `${L.key}: list top at ${top}px after collapsing (chip row ends at ${bar}px)`);
+      out.push(`${L.key} ${n}/${total}`);
+    }
+    // English label; the expanded state survives a language switch
+    await p.locator('[data-testid="wx-more"]').tap();
+    await p.evaluate(() => window.scrollTo(0, 0));
+    await p.locator('[data-testid="lang-toggle"]').tap();
+    const en = await p.evaluate(() => ['cl-more', 'wx-more', 't-more'].map((id) => document.querySelector(`[data-testid="${id}"]`).textContent.trim()));
+    const [wxAll, wxTotal] = await shownOf(p, LISTS[1].item);
+    await ctx.close();
+    assert(/^Show all \(\d+\)$/.test(en[0]) && en[1] === 'Show fewer' && en[2] === 'Show all (248)', `English labels: ${en.join(' | ')}`);
+    assert(wxAll === wxTotal, `weather collapsed again by the language switch (${wxAll}/${wxTotal})`);
+    return out.join(', ');
+  });
+
+  await check('phone 390: filters, search and sorting work on the whole list; a match after the first items stays reachable', async () => {
+    const { ctx, p } = await openPhone(context, '?lang=zh');
+    // weather: London is far beyond the first 6 cities
+    const london = `${WX} .wx-city[data-iso="GB"]`;
+    assert(!(await p.$eval(london, (e) => e.offsetParent !== null)), 'London shown before filtering');
+    const f = p.locator('[data-testid="wx-filter"]');
+    await f.fill('London');
+    assert(await p.$eval(london, (e) => e.offsetParent !== null), 'London not shown by the filter');
+    assert(!(await isShown(p, '[data-testid="wx-more"]')), 'button shown for 1 match');
+    await f.fill('美國');
+    const [us, usAll] = await shownOf(p, LISTS[1].item);
+    const usBtn = (await p.locator('[data-testid="wx-more"]').textContent()).trim();
+    assert(usAll === 9 && us === PHONE_FIRST.wx && usBtn === '顯示全部（9）', `美國: ${us}/${usAll} shown, button "${usBtn}"`);
+    await p.locator('[data-testid="wx-more"]').tap();
+    const [usOpen] = await shownOf(p, LISTS[1].item);
+    assert(usOpen === 9, `美國 expanded: ${usOpen}`);
+    await p.locator('[data-testid="wx-more"]').tap();
+    await f.fill('');
+    await p.locator('[data-testid="wx-tab-europe"]').tap();
+    const [eu, euAll] = await shownOf(p, LISTS[1].item);
+    const euBtn = (await p.locator('[data-testid="wx-more"]').textContent()).trim();
+    assert(euAll === 22 && eu === PHONE_FIRST.wx && euBtn === '顯示全部（22）', `歐洲、非洲: ${eu}/${euAll}, button "${euBtn}"`);
+
+    // destinations: Japan is not among the first 8 (sorted by warning level); name filter, preset and sort
+    const jp = '#dest-table tbody tr[data-iso="JP"]';
+    assert(!(await p.$eval(jp, (e) => e.offsetParent !== null)), 'Japan row shown before filtering');
+    await p.locator('#f-text').fill('日本');
+    assert(await p.$eval(jp, (e) => e.offsetParent !== null), 'Japan row not shown by the name filter');
+    assert(!(await isShown(p, '[data-testid="t-more"]')), 'button shown for a single destination');
+    await p.locator('#f-text').fill('');
+    await p.locator('[data-testid="preset-attention"]').tap();
+    const [att, attAll] = await shownOf(p, LISTS[2].item);
+    const attBtn = (await p.locator('[data-testid="t-more"]').textContent()).trim();
+    assert(attAll > PHONE_FIRST.t && attAll < 248 && att === PHONE_FIRST.t && attBtn === `顯示全部（${attAll}）`, `需特別注意: ${att}/${attAll}, button "${attBtn}"`);
+    await p.locator('[data-testid="preset-attention"]').tap();
+    await p.locator('#dest-table th[data-key="name"] button').tap();
+    const first = await p.$$eval('#dest-table tbody tr:not([hidden])', (els) => els.slice(0, 9).map((e) => e.offsetParent !== null).join());
+    assert(first === 'true,true,true,true,true,true,true,true,false', `after sorting by name the first rows are ${first}`);
+
+    // clinics: the last clinic in the list is hidden; filtering by its city makes it shown or one tap away
+    const last = await p.$$eval('[data-testid="cl-card"]', (els) => {
+      const e = els[els.length - 1];
+      return { id: e.dataset.id, shown: e.offsetParent !== null };
+    });
+    assert(!last.shown, 'last clinic shown before filtering');
+    const city = await p.evaluate(async (id) => {
+      const d = await (await fetch('data/travelmed.json')).json();
+      return d.clinics.find((c) => String(c.id) === id).city;
+    }, last.id);
+    await p.selectOption('[data-testid="cl-city"]', city);
+    const [cl, clAll] = await shownOf(p, LISTS[0].item);
+    const sel = `[data-testid="cl-card"][data-id="${last.id}"]`;
+    assert(cl === Math.min(clAll, PHONE_FIRST.cl), `${city}: ${cl}/${clAll} shown`);
+    assert(await isShown(p, '[data-testid="cl-more"]') === (clAll > PHONE_FIRST.cl), `${city}: button with ${clAll} clinics`);
+    if (!(await p.$eval(sel, (e) => e.offsetParent !== null))) await p.locator('[data-testid="cl-more"]').tap();
+    assert(await p.$eval(sel, (e) => e.offsetParent !== null), 'filtered clinic not reachable');
+    await ctx.close();
+    return `London 1, 美國 ${us}/${usAll}, 歐洲 ${eu}/${euAll}, 需特別注意 ${att}/${attAll}, ${city} ${cl}/${clAll}`;
+  });
+
+  await check('phone 390: section chips stay in one row at the top while scrolling; a chip jump shows the heading and marks the chip', async () => {
+    const out = [];
+    for (const lang of ['zh', 'en']) {
+      const { ctx, p } = await openPhone(context, `?lang=${lang}#JP`);
+      await p.evaluate(() => window.scrollTo(0, 3000));
+      await p.waitForTimeout(300);
+      const bar = await p.evaluate(() => {
+        const nav = document.querySelector('[data-testid="jump"]');
+        const r = nav.getBoundingClientRect();
+        const cs = getComputedStyle(nav);
+        const tops = [...nav.querySelectorAll('a')].map((a) => Math.round(a.getBoundingClientRect().top));
+        const mid = document.elementFromPoint(20, r.top + r.height / 2);
+        return {
+          top: Math.round(r.top), bottom: Math.round(r.bottom), rows: new Set(tops).size, scrolls: nav.scrollWidth > nav.clientWidth,
+          bg: cs.backgroundColor, onTop: !!mid && nav.contains(mid), sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
+          clipped: [...nav.querySelectorAll('a')].filter((a) => a.scrollWidth > a.clientWidth + 1 || a.getBoundingClientRect().height > 48).length,
+        };
+      });
+      assert(bar.top >= 0 && bar.top <= 1 && bar.bottom <= 64, `${lang}: chip row at ${bar.top}–${bar.bottom}px after scrolling`);
+      assert(bar.rows === 1 && bar.scrolls && !bar.clipped, `${lang}: ${bar.rows} row(s), scrolls ${bar.scrolls}, ${bar.clipped} clipped chip(s)`);
+      assert(/^rgb\(/.test(bar.bg) && bar.onTop, `${lang}: chip row background ${bar.bg}, on top ${bar.onTop}`);
+      assert(bar.sw <= bar.cw, `${lang}: page overflows (${bar.sw} > ${bar.cw})`);
+      for (const [id, h2] of [['changes', 'chg-h'], ['clinics', 'cl-h'], ['all', 'all-h'], ['weather', 'wx-h']]) {
+        await p.locator(`[data-testid="jump"] a[href="#${id}"]`).tap();
+        await p.waitForFunction((href) => document.querySelector('[data-testid="jump"] a[aria-current]')?.getAttribute('href') === href, `#${id}`, { timeout: 4000 });
+        const j = await p.evaluate(([hid]) => {
+          const h = document.getElementById(hid).getBoundingClientRect();
+          const nav = document.querySelector('[data-testid="jump"]');
+          const n = nav.getBoundingClientRect();
+          const cur = nav.querySelector('a[aria-current]').getBoundingClientRect();
+          const hit = document.elementFromPoint(h.left + 10, h.top + h.height / 2);
+          return {
+            top: Math.round(h.top), bar: Math.round(n.bottom), navTop: Math.round(n.top), hit: !!hit && !!hit.closest(`#${hid}`),
+            current: nav.querySelectorAll('a[aria-current]').length, chipIn: cur.left >= n.left - 1 && cur.right <= n.right + 1,
+          };
+        }, [h2]);
+        assert(j.navTop <= 1 && j.top >= j.bar && j.top < 260 && j.hit, `${lang} #${id}: heading at ${j.top}px, chip row ends at ${j.bar}px, hit ${j.hit}`);
+        assert(j.current === 1 && j.chipIn, `${lang} #${id}: ${j.current} current chip(s), inside the row ${j.chipIn}`);
+      }
+      // the card has no chip: nothing is marked while it is being read; opening it lands below the chip row
+      await p.evaluate(() => { location.hash = '#KH'; });
+      await p.waitForFunction(() => document.querySelector('#card')?.dataset.iso === 'KH', null, { timeout: 4000 });
+      await p.waitForFunction(() => {
+        const t = document.querySelector('#card-title').getBoundingClientRect().top;
+        return t > 40 && t < 200 && !document.querySelector('[data-testid="jump"] a[aria-current]');
+      }, null, { timeout: 6000 });
+      await ctx.close();
+      out.push(`${lang}: row ${bar.top}–${bar.bottom}px`);
+    }
+    return out.join(', ');
+  });
+
+  await check('phone 390: back-to-top appears after 1.5 screens, stays clear of the kiosk reset button and the footer, and returns to the top', async () => {
+    const { ctx, p } = await openPhone(context, '?osk=1&lang=en#JP');
+    await p.waitForSelector('[data-testid="kiosk-reset"]', { timeout: 10000 });
+    const btn = '[data-testid="to-top"]';
+    assert(!(await isShown(p, btn)), 'shown at the top of the page');
+    await p.evaluate(() => window.scrollTo(0, 900));
+    await p.waitForTimeout(250);
+    assert(!(await isShown(p, btn)), 'shown after about one screen');
+    await p.evaluate(() => window.scrollTo(0, 2600));
+    await p.waitForFunction((s) => !document.querySelector(s).hidden, btn, { timeout: 4000 });
+    const m = await p.evaluate((s) => {
+      const b = document.querySelector(s);
+      const r = b.getBoundingClientRect();
+      const k = document.querySelector('[data-testid="kiosk-reset"]').getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return {
+        w: r.width, h: r.height, right: Math.round(window.innerWidth - r.right), bottom: Math.round(window.innerHeight - r.bottom),
+        label: b.getAttribute('aria-label'), title: b.title, hit: hit === b || b.contains(hit),
+        apart: r.left >= k.right || r.top >= k.bottom || r.bottom <= k.top,
+      };
+    }, btn);
+    assert(m.w >= 44 && m.h >= 44, `button is ${m.w}×${m.h}px`);
+    assert(m.label === 'Back to top' && m.title === 'Back to top', `label "${m.label}", title "${m.title}"`);
+    assert(m.right >= 8 && m.right <= 24 && m.bottom >= 8 && m.bottom <= 24 && m.hit, `at right ${m.right}px / bottom ${m.bottom}px, on top ${m.hit}`);
+    assert(m.apart, 'overlaps the kiosk reset button');
+    await p.locator('[data-testid="lang-toggle"]').evaluate((b) => b.click());
+    const zh = await p.$eval(btn, (b) => `${b.getAttribute('aria-label')}|${b.title}`);
+    assert(zh === '回到頁面頂端|回到頁面頂端', `Chinese label "${zh}"`);
+    // at the end of the page the button rides above the footer
+    await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await p.waitForFunction((s) => {
+      const r = document.querySelector(s).getBoundingClientRect();
+      const f = document.querySelector('.foot').getBoundingClientRect();
+      const more = document.querySelector('[data-testid="t-more"]').getBoundingClientRect();
+      return f.top < window.innerHeight && r.bottom <= f.top && r.top >= more.bottom && r.top > 70;
+    }, btn, { timeout: 4000 });
+    await p.locator(btn).tap();
+    await p.waitForFunction(() => window.scrollY === 0, null, { timeout: 8000 });
+    await p.waitForFunction((s) => document.querySelector(s).hidden, btn, { timeout: 4000 });
+    await ctx.close();
+    // prefers-reduced-motion: no animated scroll
+    const r = await openPhone(context, '#JP', { reducedMotion: 'reduce' });
+    await r.p.evaluate(() => window.scrollTo(0, 6000));
+    await r.p.waitForFunction((s) => !document.querySelector(s).hidden, btn, { timeout: 4000 });
+    await r.p.locator(btn).tap();
+    const y = await r.p.evaluate(() => new Promise((res) => requestAnimationFrame(() => res(window.scrollY))));
+    await r.ctx.close();
+    assert(y === 0, `reduced motion: at ${y}px one frame after the tap`);
+    return `${m.w}×${m.h}px, ${m.right}px from the right, ${m.bottom}px from the bottom`;
+  });
+
+  await check('Back closes the destination card and stays on trip.html (search, table row, after a chip jump); switching destinations adds no entry', async () => {
+    const { ctx, p } = await openPhone(context, '?lang=zh');
+    const here = () => p.evaluate(() => `${location.pathname.split('/').pop()}${location.hash}`);
+    await p.evaluate(() => { window.__same = 1; });
+    const len0 = await p.evaluate(() => history.length);
+    // search → card → Back
+    await p.locator('[data-testid="search"]').fill('日本');
+    await p.locator('#q-list [role="option"]').first().waitFor({ timeout: 4000 });
+    await p.locator('#q-list [role="option"]').first().tap();
+    await p.locator(CARD).waitFor({ state: 'visible', timeout: 4000 });
+    assert(await here() === 'trip.html#JP', `after choosing: ${await here()}`);
+    assert(await p.evaluate(() => history.length) === len0 + 1, 'choosing a destination added no history entry');
+    await p.goBack();
+    await p.waitForFunction(() => document.querySelector('#card').hidden, null, { timeout: 4000 });
+    assert(await here() === 'trip.html' && await p.evaluate(() => window.__same === 1), `after Back: ${await here()}`);
+    // Forward opens it again; another destination replaces the entry; one Back closes
+    await p.goForward();
+    await p.locator(CARD).waitFor({ state: 'visible', timeout: 4000 });
+    await p.locator(`${WX} .wx-city[data-iso="KR"] .wx-open`).first().evaluate((b) => b.click());
+    await p.waitForFunction(() => location.hash === '#KR' && document.querySelector('#card').dataset.iso === 'KR', null, { timeout: 4000 });
+    assert(await p.evaluate(() => history.length) === len0 + 1, 'switching destinations added a history entry');
+    await p.goBack();
+    await p.waitForFunction(() => document.querySelector('#card').hidden, null, { timeout: 4000 });
+    assert(await here() === 'trip.html', `after Back from the second destination: ${await here()}`);
+    // chip jump, scroll on, tap a row, Back: card closed, same place in the list, still on trip.html#all
+    await p.locator('[data-testid="jump"] a[href="#all"]').tap();
+    const row = p.locator('#dest-table tbody tr:not([hidden]) .rowbtn').nth(3);
+    const iso = await row.evaluate((b) => b.closest('tr').dataset.iso);
+    await row.evaluate((b) => b.scrollIntoView({ block: 'center' }));
+    await p.waitForTimeout(400);
+    const y0 = await scrollY(p);
+    await row.tap();
+    await p.waitForFunction((want) => location.hash === `#${want}` && !document.querySelector('#card').hidden, iso, { timeout: 4000 });
+    await p.goBack();
+    await p.waitForFunction(() => document.querySelector('#card').hidden, null, { timeout: 4000 });
+    await p.waitForFunction((y) => Math.abs(window.scrollY - y) <= 2, y0, { timeout: 4000 });
+    assert(await here() === 'trip.html#all' && await p.evaluate(() => window.__same === 1), `after Back to the list: ${await here()}`);
+    // the card's own close button goes back the same way (no entries pile up), and Escape too
+    await row.tap();
+    await p.locator(CARD).waitFor({ state: 'visible', timeout: 4000 });
+    const len1 = await p.evaluate(() => history.length);
+    await p.locator(`${CARD} .card-actions button`).last().tap();
+    await p.waitForFunction(() => document.querySelector('#card').hidden && location.hash === '#all', null, { timeout: 4000 });
+    await row.tap();
+    await p.locator(CARD).waitFor({ state: 'visible', timeout: 4000 });
+    await p.keyboard.press('Escape');
+    await p.waitForFunction(() => document.querySelector('#card').hidden && location.hash === '#all', null, { timeout: 4000 });
+    assert(await p.evaluate(() => history.length) === len1, `history grew from ${len1} to ${await p.evaluate(() => history.length)} entries`);
+    await ctx.close();
+    return `search, Forward, switch, row ${iso}: Back closes the card; scroll position kept (${y0}px)`;
+  });
+
+  await check('a direct #JP load opens Japan without an extra history entry; closing clears the hash; a reload keeps the card', async () => {
+    const { ctx, p } = await openPhone(context, '?lang=zh#JP');
+    const s = await p.evaluate(() => ({ open: !document.querySelector('#card').hidden, title: document.querySelector('#card-title')?.textContent || '', len: history.length, state: history.state }));
+    assert(s.open && s.title.includes('日本'), `card "${s.title}"`);
+    assert(s.state === null, `history state ${JSON.stringify(s.state)} on a direct load`);
+    await p.locator(`${CARD} .card-actions button`).last().tap();
+    await p.waitForFunction(() => document.querySelector('#card').hidden, null, { timeout: 4000 });
+    const closed = await p.evaluate(() => `${location.pathname.split('/').pop()}${location.search}${location.hash}|${history.length}`);
+    assert(closed === `trip.html?lang=zh|${s.len}`, `after closing: ${closed} (${s.len} entries before)`);
+    // chosen in the page, then reloaded (kiosk self-reload): the card comes back, and Back still closes it
+    await p.locator('#dest-table tbody tr:not([hidden]) .rowbtn').first().evaluate((b) => b.click());
+    await p.locator(CARD).waitFor({ state: 'visible', timeout: 4000 });
+    const hash = await p.evaluate(() => location.hash);
+    await p.reload({ waitUntil: 'load' });
+    await p.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+    assert(await cardOpen(p) && await p.evaluate(() => location.hash) === hash, `after reload: card ${await cardOpen(p)}, ${await p.evaluate(() => location.hash)}`);
+    await p.goBack();
+    await p.waitForFunction(() => document.body.dataset.ready === '1' && document.querySelector('#card').hidden && !location.hash, null, { timeout: 15000 });
+    const end = await p.evaluate(() => location.pathname.split('/').pop());
+    await ctx.close();
+    assert(end === 'trip.html', `Back after the reload left the page (${end})`);
+    return `${s.title}; reload kept ${hash}`;
+  });
+
+  await check('phone 390: the new controls are legible in both themes (contrast ≥ 4.5) and at the largest text size', async () => {
+    const out = [];
+    for (const theme of ['light', 'dark']) {
+      const ctx = await context.browser().newContext(PHONE);
+      await ctx.addInitScript((th) => { try { localStorage.setItem('safetravel.trip.theme', th); } catch {} }, theme);
+      const p = await ctx.newPage();
+      p.on('pageerror', (err) => consoleErrors.push(`pageerror: ${err.message}`));
+      await p.goto(`${PAGE_URL.split('#')[0].split('?')[0]}?lang=en&text=xl#JP`, { waitUntil: 'load' });
+      await p.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+      await p.waitForSelector('[data-testid="cl-card"]', { state: 'attached', timeout: 15000 });
+      await p.locator('[data-testid="jump"] a[href="#weather"]').tap();
+      await p.waitForFunction(() => document.querySelector('[data-testid="jump"] a[aria-current]') && !document.querySelector('[data-testid="to-top"]').hidden, null, { timeout: 4000 });
+      const r = await p.evaluate(() => {
+        const lum = (c) => {
+          const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; });
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const ratio = (el) => {
+          const cs = getComputedStyle(el);
+          const [a, b] = [lum(cs.color), lum(cs.backgroundColor)].sort((x, y) => y - x);
+          const alpha = cs.backgroundColor.match(/[\d.]+/g)[3];
+          return { ratio: Math.round(((a + 0.05) / (b + 0.05)) * 10) / 10, solid: alpha === undefined || Number(alpha) === 1 };
+        };
+        const q = (s) => document.querySelector(s);
+        const more = q('[data-testid="wx-more"]');
+        const nav = q('[data-testid="jump"]');
+        return {
+          theme: document.documentElement.dataset.theme, ts: document.documentElement.dataset.ts,
+          more: ratio(more), top: ratio(q('[data-testid="to-top"]')), cur: ratio(nav.querySelector('a[aria-current]')), chip: ratio(nav.querySelector('a:not([aria-current])')),
+          moreFits: more.scrollWidth <= more.clientWidth && more.getBoundingClientRect().height < 80,
+          navTop: Math.round(nav.getBoundingClientRect().top), rows: new Set([...nav.querySelectorAll('a')].map((a) => Math.round(a.getBoundingClientRect().top))).size,
+          headTop: Math.round(q('#wx-h').getBoundingClientRect().top), barBottom: Math.round(nav.getBoundingClientRect().bottom),
+        };
+      });
+      await ctx.close();
+      assert(r.theme === theme && r.ts === 'xl', `theme ${r.theme}, text size ${r.ts}`);
+      for (const k of ['more', 'top', 'cur', 'chip']) assert(r[k].ratio >= 4.5 && r[k].solid, `${theme}: ${k} contrast ${r[k].ratio}, solid ${r[k].solid}`);
+      assert(r.moreFits && r.rows === 1 && r.navTop <= 1, `${theme}: button fits ${r.moreFits}, ${r.rows} chip row(s) at ${r.navTop}px`);
+      assert(r.headTop >= r.barBottom, `${theme}: heading at ${r.headTop}px under a chip row ending at ${r.barBottom}px`);
+      out.push(`${theme}: ${r.more.ratio} / ${r.top.ratio} / ${r.cur.ratio}`);
+    }
+    return out.join('; ');
+  });
+
+  await check('desktop 1440×900 is unchanged: every item rendered, no “show all”, no sticky chip row, no back-to-top', async () => {
+    const p = await context.newPage();
+    p.on('pageerror', (err) => consoleErrors.push(`pageerror: ${err.message}`));
+    await p.goto(`${PAGE_URL.split('#')[0]}#JP`, { waitUntil: 'load' });
+    await p.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+    await p.waitForSelector('[data-testid="cl-card"]', { timeout: 15000 });
+    const counts = {};
+    for (const L of LISTS) counts[L.key] = await shownOf(p, L.item);
+    const top = await p.evaluate(() => ({
+      more: [...document.querySelectorAll('.more-btn')].filter((b) => getComputedStyle(b).display !== 'none').length,
+      toTop: getComputedStyle(document.querySelector('[data-testid="to-top"]')).display,
+    }));
+    await p.evaluate(() => window.scrollTo(0, 4000));
+    await p.waitForTimeout(400);
+    const m = await p.evaluate(() => {
+      const nav = document.querySelector('[data-testid="jump"]');
+      return {
+        more: [...document.querySelectorAll('.more-btn')].filter((b) => getComputedStyle(b).display !== 'none').length,
+        toTop: getComputedStyle(document.querySelector('[data-testid="to-top"]')).display, toTopHidden: document.querySelector('[data-testid="to-top"]').hidden,
+        header: getComputedStyle(document.querySelector('.top')).position, navBottom: Math.round(nav.getBoundingClientRect().bottom),
+        wrap: getComputedStyle(nav).flexWrap, current: nav.querySelectorAll('[aria-current]').length,
+        pad: getComputedStyle(document.documentElement).scrollPaddingTop, vars: document.documentElement.getAttribute('style') || '',
+        y: Math.round(window.scrollY),
+      };
+    });
+    await p.close();
+    for (const [k, [shown, total]] of Object.entries(counts)) assert(shown === total && total > PHONE_FIRST[k], `${k}: ${shown} of ${total} rendered`);
+    assert(counts.wx[1] === 80 && counts.t[1] > 150 && counts.cl[1] >= 30, `counts ${JSON.stringify(counts)}`);
+    assert(top.more === 0 && top.toTop === 'none', `at the top: ${top.more} “show all” button(s), back-to-top display ${top.toTop}`);
+    assert(m.y > 3000 && m.more === 0 && m.toTop === 'none' && m.toTopHidden, `after scrolling to ${m.y}px: ${m.more} button(s), back-to-top ${m.toTop}`);
+    assert(m.header === 'static' && m.navBottom < 0 && m.wrap === 'wrap', `header ${m.header}, chip row bottom at ${m.navBottom}px, flex-wrap ${m.wrap}`);
+    assert(m.current === 0 && m.pad === '12px' && !m.vars.includes('--jump'), `aria-current ${m.current}, scroll-padding ${m.pad}, style "${m.vars}"`);
+    return `clinics ${counts.cl[1]}, cities ${counts.wx[1]}, destinations ${counts.t[1]}`;
   });
 
   await check('no console errors during the run', async () => {

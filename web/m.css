@@ -221,3 +221,8 @@ button { font: inherit; color: inherit; }
 .seg button { min-height: 42px; }
 .f-tools select, .f-risk { min-height: 44px; }
 .c-back .m-link-btn, .m-link-btn.more { display: inline-block; padding: 10px 4px; }
+
+/* the page title is a real heading; phones get the short form when a role button shares the row */
+.m-h1 { margin: 0; font-size: calc(17px * var(--ts)); font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-short { display: none; }
+@media (max-width: 480px) { .m-h1 .t-long { display: none; } .m-h1 .t-short { display: inline; } }

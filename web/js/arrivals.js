@@ -389,11 +389,14 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
       </section>`;
     const empty = !up.length && !past.length;
     const q = query.trim();
+    root.classList.toggle('is-empty', empty); // a docked board with nothing to list shrinks to its content
+    // nothing in this time window: one tap widens it to everything published (2 h back … 4 h ahead)
+    const widen = empty && !q && cfg.win ? `<button type="button" class="btn arr-widen" data-widen data-testid="arrivals-widen">${esc(t('arr_widen'))}</button>` : '';
     body.innerHTML = `${q ? `<p class="arr-found mono">${esc(t('arr_find_count', { q, n: up.length + past.length }))}</p>` : ''}<p class="arr-summary"><span>${esc(t('arr_count', { up: up.length, past: past.length }))}</span>${
       risky || cfg.risk ? `<button type="button" class="arr-risk" data-risk aria-pressed="${!!cfg.risk}" title="${esc(t('arr_risk_title'))}">${
         esc(cfg.risk ? t('arr_risk_on', { n: risky }) : t('arr_risk', { n: risky }))}</button>` : ''}</p>${
-      empty ? `<p class="arr-empty">${esc(q ? t('arr_find_none') : cfg.risk ? t('arr_empty_risk') : cfg.cps.length ? t('arr_empty_cp') : t('arr_empty'))}</p>` : ''}${
-      section('upcoming', 'next', up)}${section('arrived', 'past', past)}`;
+      empty ? `<p class="arr-empty">${esc(q ? t('arr_find_none') : cfg.risk ? t('arr_empty_risk') : cfg.cps.length ? t('arr_empty_cp') : t('arr_empty'))}</p>${widen}` : ''}${
+      empty ? '' : section('upcoming', 'next', up) + section('arrived', 'past', past)}`;
     layer.update([...up, ...past]);
   }
 
@@ -582,6 +585,7 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
       body.querySelector('[data-risk]')?.focus();
       return;
     }
+    if (e.target.closest('[data-widen]')) { cfg.win = 0; saveCfg(); render(); toTop(); return; }
     const b = e.target.closest('.arr-hit[data-iso]');
     if (b) openCountry(b.dataset.iso);
   });

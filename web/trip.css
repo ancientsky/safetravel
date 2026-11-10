@@ -967,6 +967,43 @@ button.chg:hover { background: var(--surface-2); border-color: var(--border); }
   .t-tools .btn { flex: 1; }
 }
 
+/* ---------- phones: short lists, sticky section chips, back to top (js/trip-more.js, js/trip-nav.js) ----------
+   Screen only, so wider screens and print keep every item and none of these controls. */
+.more-btn, .to-top { display: none; }
+@media screen and (max-width: 760px) {
+  /* anchors, the opened card and focused controls land below the stuck chip row */
+  html { scroll-padding-top: calc(var(--jump-h, 56px) + 8px); }
+
+  /* the first few items of a long list; the rest wait behind "show all" */
+  .clip:not(.is-all) .is-more { display: none !important; }
+  .more-btn { display: flex; width: 100%; min-height: 48px; margin-top: 12px; font-size: calc(16px * var(--ts)); }
+  .more-btn::after { content: "▾"; color: var(--fg-mute); }
+  .more-btn[aria-expanded="true"]::after { content: "▴"; }
+
+  /* the header sticks with everything above the chip row scrolled away (--jump-top: minus that height) */
+  .top { position: sticky; top: var(--jump-top, auto); z-index: 40; }
+  .top.is-stuck { box-shadow: 0 8px 14px -10px rgba(0, 0, 0, .5); }
+  .hero { padding-bottom: 0; }
+  .jump {
+    flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+    margin: 14px calc(-1 * var(--gutter)) 0; padding: 8px var(--gutter);
+    background: var(--bg); border-top: 1px solid var(--border);
+  }
+  .jump::-webkit-scrollbar { display: none; }
+  .jump a { flex: none; white-space: nowrap; }
+  .jump a[aria-current] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+
+  .to-top {
+    position: fixed; z-index: 35; right: calc(12px + env(safe-area-inset-right, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px) + var(--lift, 0px));
+    display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border-radius: 50%; cursor: pointer;
+    background: var(--surface); color: var(--fg); border: 1.5px solid var(--border-strong); box-shadow: var(--shadow);
+  }
+  .to-top svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .osk-open .to-top { display: none; } /* on-screen keyboard (osk.js) is up */
+  .foot { margin-top: 72px; } /* room for that button between the last list and the footer */
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
@@ -1017,7 +1054,9 @@ button.chg:hover { background: var(--surface-2); border-color: var(--border); }
 .ts-a small { font-size: .7em; font-weight: 700; }
 @media (max-width: 560px) { .ts-toggle .ts-val { display: none; } } /* phones: "Aa" only (size in its title / aria-label) */
 @media (max-width: 560px) { /* phones at 112 % text: header buttons and the back link share one row */
-  .toggles { gap: 6px; }
+  .toggles { gap: 6px; flex: none; }
   .btn-tg { padding: 6px 8px; }
-  .back span { max-width: 8em; }
+  /* the back link takes what the buttons leave (its label ends in "…"), so large text never widens the page */
+  .back { flex: 0 1 auto; min-width: 0; }
+  .back span { max-width: none; min-width: 0; flex: 0 1 auto; }
 }

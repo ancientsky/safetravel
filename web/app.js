@@ -633,6 +633,16 @@ async function main() {
     if (v) { pmRefresh(); pm.querySelector('.pm-item')?.focus(); } else pmBtn.focus();
   }
   pmBtn.addEventListener('click', () => pmOpen(true));
+  // aria-modal: Tab stays inside the open menu (it used to walk on to the legend and zoom buttons behind it)
+  pm.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const items = [...pm.querySelectorAll('a[href], button:not([disabled]):not([aria-disabled="true"])')].filter((el) => el.getClientRects().length);
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
   pm.querySelector('.pm-close').addEventListener('click', () => pmOpen(false));
   pm.addEventListener('click', (e) => {
     if (e.target === pm) { pmOpen(false); return; } // tap outside the sheet

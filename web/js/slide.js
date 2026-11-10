@@ -68,7 +68,7 @@ const st = {
   idx: 0,
   playing: !STILL && params.get('play') !== '0',
   interval: 5,
-  orient: 'portrait', // setting: portrait | landscape | auto
+  orient: 'auto', // setting: portrait | landscape | auto (default: follow the screen)
   only: null,        // Set of ids from ?only=
   posterLang: 'all', // all | zh | en
   hidden: new Set(),
@@ -83,7 +83,7 @@ function readSettings(manifest) {
   const urlInterval = clampInt(params.get('interval') ?? '', 3, 60);
   st.interval = urlInterval ?? clampInt(store.get('interval') ?? '', 3, 60) ?? clampInt(manifest?.interval ?? '', 3, 60) ?? 5;
   const o = params.get('orient') || store.get('orient');
-  st.orient = ['portrait', 'landscape', 'auto'].includes(o) ? o : 'portrait';
+  st.orient = ['portrait', 'landscape', 'auto'].includes(o) ? o : 'auto'; // no choice yet: follow the screen
   const only = (params.get('only') || '').split(',').map((x) => x.trim()).filter(Boolean);
   st.only = only.length ? new Set(only) : null;
   const pl = { zh: 'zh', en: 'en', all: 'all' }[params.get('lang')] || store.get('lang');

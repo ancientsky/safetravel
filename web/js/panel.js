@@ -324,7 +324,7 @@ export function createPanel({ root, map }) {
         <li class="adv lvl-${levelNum(g.level)}${gi >= GROUPS_SHOWN && !showAllGroups ? ' is-extra' : ''}">
           <div class="adv-top">${badge(g.level)}<span class="adv-age mono">${esc(fmtAge(g.effective))}</span></div>
           <div class="adv-disease">${esc(diseaseName(g.disease))}${lone ? `<span class="adv-area">${esc(areaLabel(lone))}${lone.iso_sub ? ` <span class="mono">${esc(lone.iso_sub)}</span>` : ''}</span>` : ''}${showChips ? `<span class="adv-count mono">${esc(t('panel_areas', { n: g.areas.length }))}</span>` : ''}</div>
-          <div class="adv-foot"><span class="adv-instr">${esc(levelInstruction(g.level))}</span><span class="adv-meta">${esc(t('panel_effective'))} <time class="mono" datetime="${esc(g.effective)}">${esc(fmtDay(g.effective))}</time></span></div>
+          <div class="adv-foot"><span class="adv-instr">${esc(levelInstruction(g.level))}</span><span class="adv-meta">${esc(t('panel_effective'))} <time class="mono" datetime="${esc(g.effective)}">${esc(fmtDay(g.effective, 'short'))}</time></span></div>
           ${chips}
         </li>`;
   }
@@ -341,7 +341,7 @@ export function createPanel({ root, map }) {
     const globalNote = globals.length
       ? `<p class="global-note"><i aria-hidden="true">ⓘ</i>${esc(t('panel_global_note', {
         items: globals.map((g) => t('panel_global_item', {
-          disease: diseaseName(g.disease), level: levelFull(g.level), date: fmtDay(g.effective), n: fmtNum(g.countries),
+          disease: diseaseName(g.disease), level: levelFull(g.level), date: fmtDay(g.effective, 'short'), n: fmtNum(g.countries),
         })).join(isEn() ? '; ' : '；'),
       }))}</p>`
       : '';
@@ -423,7 +423,7 @@ export function createPanel({ root, map }) {
         // and the sections below do not move while it types (a jump from the section bar stays put)
         const full = clean(isEn() ? ov.en || ov.zh : ov.zh || ov.en);
         inner = `<p class="ai-text"><span class="tw-ghost" aria-hidden="true">${esc(full)}<span class="caret-ghost"></span></span><span class="tw-live"><span class="tw" data-full=""></span><span class="caret" aria-hidden="true"></span></span></p>
-          ${ov.updated ? `<p class="ai-meta">${esc(t('panel_ai_meta', { date: fmtDay(ov.updated), n: fmtNum(ov.items ?? 0) }))}</p>` : ''}`;
+          ${ov.updated ? `<p class="ai-meta">${esc(t('panel_ai_meta', { date: fmtDay(ov.updated, 'short'), n: fmtNum(ov.items ?? 0) }))}</p>` : ''}`;
       } else {
         inner = `<p class="empty">${esc(t('panel_ai_none'))}</p>`;
       }

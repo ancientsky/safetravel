@@ -385,4 +385,8 @@ export default {
   cl_inset_kinmen: 'Kinmen',
   cl_inset_matsu: 'Matsu',
   cl_map_label: 'Map of travel medicine clinics',
+  // phones: short lists, back to top (trip-more.js, trip-nav.js)
+  more_all: 'Show all ({n})',
+  more_less: 'Show fewer',
+  to_top: 'Back to top',
 };
