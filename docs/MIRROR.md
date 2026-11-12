@@ -76,7 +76,7 @@ nginx 送靜態檔案每秒可處理上萬個請求，這個網站的負載對�
 ## 3. 安裝
 
 ```bash
-git clone https://github.com/ancientsky/safetravel.git /opt/safetravel-src
+sudo git clone https://github.com/ancientsky/safetravel.git /opt/safetravel-src
 sudo bash /opt/safetravel-src/scripts/mirror/install.sh
 ```
 
@@ -196,7 +196,7 @@ MIME 類型：網站需要 `.json`（`application/json`）、`.js`（`applicatio
 | 回到上一版 | `sudo -u safetravel /opt/safetravel/safetravel-sync.sh --rollback` |
 | 暫停同步（固定在目前版本） | `sudo systemctl stop safetravel-sync.timer`（恢復：`start`） |
 | 重新取得 git 資料（例如磁碟出錯） | `sudo rm -rf /srv/safetravel/repo && sudo systemctl start safetravel-sync.service` |
-| 更新同步程式本身 | `cd /opt/safetravel-src && git pull && sudo bash scripts/mirror/install.sh` |
+| 更新同步程式本身 | `cd /opt/safetravel-src && sudo git pull && sudo bash scripts/mirror/install.sh`（這個資料夾是用 `sudo` 複製的、擁有者為 root，所以 `git pull` 也要加 `sudo`；不加會出現 `detected dubious ownership`） |
 
 `status.json` 範例：
 
