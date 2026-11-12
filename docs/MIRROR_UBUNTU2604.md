@@ -516,27 +516,30 @@ EOF
 把執行時間固定在凌晨（預設是早上 6 點與下午 6 點前後的隨機時間）：
 
 ```bash
-sudo systemctl edit apt-daily.timer             # 下載
-```
-```ini
+sudo install -d -m 755 /etc/systemd/system/apt-daily.timer.d /etc/systemd/system/apt-daily-upgrade.timer.d
+
+sudo tee /etc/systemd/system/apt-daily.timer.d/override.conf >/dev/null <<'EOF'
 [Timer]
 OnCalendar=
 OnCalendar=*-*-* 02:00
 RandomizedDelaySec=30m
-```
-```bash
-sudo systemctl edit apt-daily-upgrade.timer     # 安裝
-```
-```ini
+EOF
+
+sudo tee /etc/systemd/system/apt-daily-upgrade.timer.d/override.conf >/dev/null <<'EOF'
 [Timer]
 OnCalendar=
 OnCalendar=*-*-* 03:00
 RandomizedDelaySec=15m
-```
-```bash
+EOF
+
+sudo systemctl daemon-reload
 sudo systemctl restart apt-daily.timer apt-daily-upgrade.timer
-systemctl list-timers 'apt-daily*'
+systemctl cat apt-daily.timer apt-daily-upgrade.timer | grep -A4 override.conf    # 看到剛寫入的內容
+systemctl list-timers 'apt-daily*'                                                # 下次執行時間在凌晨 2 點與 3 點之後
 ```
+
+- 第一行空的 `OnCalendar=` 是清掉預設時間，不能省；少了它會變成「預設時間＋新時間」都執行。
+- 這兩個檔案就是 `sudo systemctl edit apt-daily.timer` 會寫的位置。用 `systemctl edit` 也可以，但內容必須打在編輯器裡兩行 `###` 註解**之間**；沒打字、或打在下方那段註解之後就存檔，會出現 `after editing, new contents are empty, not writing file`，表示什麼都沒寫入。
 
 檢查：
 
