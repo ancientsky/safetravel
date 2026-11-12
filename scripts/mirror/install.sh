@@ -41,6 +41,13 @@ fi
 
 if [ -d /etc/nginx/conf.d ] && [ ! -e /etc/nginx/conf.d/safetravel.conf ]; then
   install -m 644 "$HERE/nginx-safetravel.conf" /etc/nginx/conf.d/safetravel.conf.disabled
+  # nginx 1.25.1 and later (Ubuntu 26.04 has 1.28) want "http2 on;" instead of "listen … http2" (deprecated there)
+  nv=$(nginx -v 2>&1 | sed -n 's|.*nginx/\([0-9][0-9.]*\).*|\1|p')
+  if [ -n "$nv" ] && python3 -c 'import sys; sys.exit(0 if tuple(int(x) for x in sys.argv[1].split(".")[:3]) >= (1, 25, 1) else 1)' "$nv"; then
+    sed -i -e 's/^\( *\)listen 443 ssl http2;.*/\1listen 443 ssl;\n\1http2 on;/' \
+           -e 's/^\( *\)listen \[::\]:443 ssl http2;/\1listen [::]:443 ssl;/' /etc/nginx/conf.d/safetravel.conf.disabled
+    echo "nginx $nv: template uses \"http2 on;\""
+  fi
   echo "nginx: template at /etc/nginx/conf.d/safetravel.conf.disabled — edit host name + certificate, rename to .conf, nginx -t && systemctl reload nginx"
 fi
 
@@ -49,4 +56,5 @@ echo "first sync (downloads about 20 MB from GitHub)…"
 systemctl start safetravel-sync.service
 systemctl enable --now safetravel-sync.timer
 /opt/safetravel/safetravel-sync.sh --check || true
+echo "host check: sudo -u safetravel /opt/safetravel/safetravel-sync.sh --selftest"
 echo "done. Status: systemctl list-timers safetravel-sync.timer; journalctl -u safetravel-sync.service"

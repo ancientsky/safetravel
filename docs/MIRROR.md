@@ -57,14 +57,14 @@ nginx 送靜態檔案每秒可處理上萬個請求，這個網站的負載對�
 | 記憶體 | 1 GB | 2–4 GB |
 | 磁碟 | 10 GB | 40 GB（作業系統＋日誌；鏡像本身含 12 個版本約 50 MB） |
 | 網路 | 100 Mbps | 1 Gbps |
-| 作業系統 | Ubuntu 22.04／24.04 LTS，或 RHEL／Rocky／AlmaLinux 8、9 | 同左（有安全更新的 LTS 版本） |
+| 作業系統 | Ubuntu 22.04／24.04／26.04 LTS，或 RHEL／Rocky／AlmaLinux 8、9 | 同左（有安全更新的 LTS 版本）。**Ubuntu 26.04 的逐步步驟**（憑證、自動更新、防火牆申請清單）：[`MIRROR_UBUNTU2604.md`](MIRROR_UBUNTU2604.md) |
 | 形式 | 一台 VM 即可 | 要求不中斷時：兩台 VM ＋ 負載平衡器或 keepalived 虛擬 IP，**兩台各自執行同步**（各自從 GitHub 拉，不需要共用儲存） |
 
 存取日誌估計：平時約每分鐘 80 筆，一天約 12 萬筆（約 25 MB），交給系統的 logrotate 每日輪替、保留 14 天即可。
 
 ### 前置需求
 
-- 套件：`nginx`（1.18 以上）、`git`（2.27 以上，需支援 sparse-checkout 與 partial clone）、`curl`、`rsync`、`python3`（任何 3.x，只用來檢查 JSON）、`util-linux`（`flock`）。
+- 套件：`nginx`（1.18 以上）、`git`（2.27 以上，需支援 sparse-checkout 與 partial clone）、`curl`、`rsync`、`python3`（3.7 以上：檢查 JSON、原子切換、日期計算）、`util-linux`（`flock`）、GNU `findutils`。coreutils 用 GNU 版或 Ubuntu 26.04 預設的 Rust 版都可以。
   - Ubuntu：`sudo apt install nginx git curl rsync python3`
   - RHEL 系列：`sudo dnf install nginx git curl rsync python3 policycoreutils-python-utils`
 - 對外連線（TCP 443）：`github.com`、`ancientsky.github.io`。若署內經由 proxy 上網，在 `/etc/safetravel/mirror.env` 設 `HTTPS_PROXY`；若 proxy 會解開 TLS 檢查，請把 proxy 的 CA 加入系統信任（Ubuntu `update-ca-certificates`、RHEL `update-ca-trust`）。
@@ -88,6 +88,8 @@ sudo bash /opt/safetravel-src/scripts/mirror/install.sh
 4. 把 nginx 範本放到 `/etc/nginx/conf.d/safetravel.conf.disabled`（**不會自動啟用**）。
 5. 立即同步一次，並啟用每 5 分鐘的 timer，最後印出 `--check` 結果。
 
+裝好後建議跑一次主機自我檢查：`sudo -u safetravel /opt/safetravel/safetravel-sync.sh --selftest`。它在暫存目錄裡檢查必要工具、原子切換、硬連結、拒絕符號連結、舊版本清理、狀態檔，以及能不能連到 `github.com` 與 `ancientsky.github.io`；每行應為 `PASS`。
+
 接著設定 nginx（第 4 節）：
 
 ```bash
@@ -103,7 +105,7 @@ curl -I https://<署內主機>/safetravel/                  # 應回 200
 
 | 檔案（repo 內） | 安裝位置 | 用途 |
 |---|---|---|
-| `scripts/mirror/safetravel-sync.sh` | `/opt/safetravel/safetravel-sync.sh` | 同步程式（也提供 `--check`、`--rollback`） |
+| `scripts/mirror/safetravel-sync.sh` | `/opt/safetravel/safetravel-sync.sh` | 同步程式（也提供 `--check`、`--rollback`、`--selftest`） |
 | `scripts/mirror/mirror.env.example` | `/etc/safetravel/mirror.env` | 設定（來源網址、proxy、保留版本數、監控門檻） |
 | `scripts/mirror/safetravel-sync.service` | `/etc/systemd/system/` | 執行一次同步（以 `safetravel` 帳號、唯讀系統、只能寫 `/srv/safetravel`） |
 | `scripts/mirror/safetravel-sync.timer` | `/etc/systemd/system/` | 開機 2 分鐘後首次執行，之後每 5 分鐘 |
@@ -155,7 +157,7 @@ tmp/                       建置中的版本（與 releases 同一檔案系統�
 確認：`curl -skI https://<主機>/safetravel/ | grep -i -E 'frame|content-security'` 應看到 `X-Frame-Options: SAMEORIGIN` 與 `Content-Security-Policy: frame-ancestors 'self'`。所有 kiosk 都只用 HTTPS 連線後，可再加一行 `add_header Strict-Transport-Security "max-age=31536000" always;`。
 
 **只發布一般檔案**：同步腳本在建立新版本前會檢查 `web/` 裡只有一般檔案與目錄；若出現符號連結（symbolic link）或子模組就拒絕發布、繼續提供目前版本，並在 `status.json` 與 journal 記錄原因（nginx 會跟隨符號連結，連結若指向主機上的其他檔案就會被讀到）。`/etc/safetravel/mirror.env` 的權限為 `640 root:safetravel`（可能含 proxy 帳密）；重新執行 `sudo bash scripts/mirror/install.sh` 會把舊安裝的權限一併收緊。若監控帳號要用非預設設定執行 `safetravel-sync.sh --check`，請把它加入 `safetravel` 群組。
-| `listen 443 ssl http2;` | nginx 1.25.1 以上也可改成 `listen 443 ssl;` ＋ `http2 on;`。主機停用 IPv6 時刪除 `listen [::]:…` 兩行。 |
+| `listen 443 ssl http2;` | nginx 1.25.1 以上（Ubuntu 26.04 為 1.28）這個寫法已淘汰，要用 `listen 443 ssl;` ＋ `http2 on;`；`install.sh` 偵測到新版 nginx 時會自動改好範本。主機停用 IPv6 時刪除 `listen [::]:…` 兩行。 |
 
 MIME 類型：網站需要 `.json`（`application/json`）、`.js`（`application/javascript` 或 `text/javascript`；網頁以 ES 模組載入，類型錯誤會載不到）、`.webp`、`.svg`；若日後上架 AVIF 圖片則需 `.avif`。確認方式：`grep -E 'json|javascript|webp|avif|svg' /etc/nginx/mime.types`，缺少的請在該檔加上（例如 `image/avif avif;`）。
 
@@ -242,7 +244,7 @@ CRITICAL - SafeTravel mirror: last successful sync 180 min ago …
 |---|---|
 | nginx 回 403（RHEL 系列） | SELinux 標籤：`ls -Z /srv/safetravel/www`，應為 `httpd_sys_content_t`；重新執行 `install.sh` 或 `restorecon -R /srv/safetravel`。 |
 | 網頁空白、主控台出現 module／MIME 錯誤 | `.js` 的 Content-Type 必須是 JavaScript 類型；檢查 `mime.types`（第 4 節）。 |
-| `git` 連不上 | `sudo -u safetravel HTTPS_PROXY=… git ls-remote https://github.com/ancientsky/safetravel.git`；proxy 設在 `mirror.env`；TLS 檢查型 proxy 需匯入其 CA。 |
+| `git` 連不上 | `sudo -u safetravel /opt/safetravel/safetravel-sync.sh --selftest` 的最後兩行會指出哪個目的地不通；或 `sudo -u safetravel env HTTPS_PROXY=… git ls-remote https://github.com/ancientsky/safetravel.git`；proxy 設在 `mirror.env`；TLS 檢查型 proxy 需匯入其 CA。 |
 | `arrivals.json not refreshed` 警告偶爾出現 | GitHub Pages 偶發延遲，保留上一份即可；長時間持續請檢查到 `ancientsky.github.io` 的連線。 |
 | 海報輪播螢幕會休眠 | 使用 HTTPS（Wake Lock），或把 kiosk 的螢幕休眠設為永不。 |
 | 署內版與 GitHub Pages 不一樣 | 看 `status.json` 的 `commit` 與 `last_success`；`systemctl start safetravel-sync.service` 立即同步。 |
@@ -255,5 +257,5 @@ An intranet mirror that serves the whole site from a Linux host with nginx **wit
 
 - `scripts/mirror/safetravel-sync.sh` (systemd timer, every 5 min, user `safetravel`): shallow, sparse, blob-less `git fetch` of `web/` on `main`, plus `data/arrivals.json` from GitHub Pages (the only file not in git). Nothing new → no-op. Otherwise it builds `releases/<UTC time>-<commit>` with `rsync --link-dest` (unchanged files hard-linked), refuses symbolic links and submodules (plain files only), checks required files and that every JSON parses, then switches `www/safetravel` with an atomic rename (600/600 requests returned 200 during 600 switches). A failed check keeps the current release. Keeps 12 releases; `--rollback` serves the previous one; `--check` is a Nagios/Zabbix-style probe (sync age, upstream data age); `state/status.json` is also served at `/safetravel/_mirror/status.json`.
 - `scripts/mirror/nginx-safetravel.conf`: HTTPS (80 → 443), `/safetravel/` sub-path like GitHub Pages, `Cache-Control: no-cache` for text (cheap 304s, as file names are not fingerprinted) and 1 h for images, gzip, basic security headers, no CSP header (the pages carry their own CSP meta with a script hash), hidden files denied, no `open_file_cache`.
-- `scripts/mirror/install.sh`: user, directories, units, SELinux labels, nginx template (not enabled automatically), first sync.
+- `scripts/mirror/install.sh`: user, directories, units, SELinux labels, nginx template (not enabled automatically; written with `http2 on;` when nginx is 1.25.1 or newer), first sync. `safetravel-sync.sh --selftest` checks a host in a temporary directory (tools, atomic switch, hard links, symlink refusal, pruning, status file, reachability of GitHub); the switch and the date arithmetic run in python3, so GNU coreutils and the Rust coreutils of Ubuntu 26.04 both work. Step-by-step for Ubuntu 26.04, including TLS, unattended upgrades and the firewall request: `MIRROR_UBUNTU2604.md`.
 - Sizing for 30–50 kiosks: steady state ≈ 80 requests/min and well under 1 Mbps; the twice-daily data reload peaks at a few hundred MB over 1–3 minutes in the worst case. 1 vCPU / 1 GB / 10 GB is enough; 2 vCPU / 2–4 GB / 40 GB recommended; for high availability run two VMs behind a load balancer or keepalived VIP, each syncing on its own. Outbound HTTPS to `github.com` and `ancientsky.github.io` only; set `HTTPS_PROXY` in `/etc/safetravel/mirror.env` if needed. Serve kiosks over HTTPS (Screen Wake Lock needs a secure context) and keep kiosk clocks on NTP. The sync also writes `version.json` (hash of the site's code files, identical to the GitHub deploys' `.github/scripts/stamp-version.sh`); the map, trip and poster pages poll it and reload themselves at a quiet moment, so kiosks never need a manual refresh.
