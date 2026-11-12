@@ -29,14 +29,58 @@ sudo apt update && sudo apt full-upgrade -y      # 先更新到最新，之後�
 
 ### 系統更新來源改用臺灣鏡像站
 
-26.04 的套件來源寫在 `/etc/apt/sources.list.d/ubuntu.sources`。建議把主要套件庫指到 **`tw.archive.ubuntu.com`**（Ubuntu 官方的臺灣入口），安全性更新維持 `security.ubuntu.com`：
+26.04 的套件來源寫在 `/etc/apt/sources.list.d/ubuntu.sources`（舊版 Ubuntu 是 `/etc/apt/sources.list`）。兩種做法擇一。
+
+#### 做法一：全部指向同一個臺灣鏡像站（防火牆只需開一個更新來源）
+
+以 root 執行（`sudo -i` 之後貼上，或放進自己的安裝腳本）。`APT_MIRROR` 可在執行前指定別的鏡像站；設成空字串則不改來源、只做更新。
 
 ```bash
-grep -n URIs /etc/apt/sources.list.d/ubuntu.sources                     # 先看目前指到哪裡
-sudo cp /etc/apt/sources.list.d/ubuntu.sources /root/ubuntu.sources.bak   # 備份放在別的資料夾
+APT_MIRROR="${APT_MIRROR:-http://free.nchc.org.tw/ubuntu/}"
+# 所有 Ubuntu 套件來源（含 security）統一指向台灣鏡像站 → 防火牆只需開一個更新來源
+if [[ -n "$APT_MIRROR" ]]; then
+  if [[ -f /etc/apt/sources.list.d/ubuntu.sources ]]; then
+    [[ -f /etc/apt/sources.list.d/ubuntu.sources.orig ]] || cp /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources.orig
+    sed -i -E "s|^URIs:.*|URIs: ${APT_MIRROR}|" /etc/apt/sources.list.d/ubuntu.sources
+  elif [[ -f /etc/apt/sources.list ]]; then
+    [[ -f /etc/apt/sources.list.orig ]] || cp /etc/apt/sources.list /etc/apt/sources.list.orig
+    sed -i -E "s#https?://[^ ]*(archive|security)\.ubuntu\.com/ubuntu/?#${APT_MIRROR}#g" /etc/apt/sources.list
+  fi
+fi
+apt-get update
+apt-get -y full-upgrade
+```
+
+這段做的事：
+
+- 第一次執行時把原檔備份成 `.orig`（之後重跑不會蓋掉備份）；apt 會自動略過 `.orig` 檔，放在同一個資料夾沒有問題。
+- 新格式（`ubuntu.sources`）：把每一行 `URIs:` 都換成鏡像站，包含 `resolute-security` 那一段；以 `#` 開頭的註解行不動。
+- 舊格式（`sources.list`）：只換 `archive.ubuntu.com`、`security.ubuntu.com`（含 `tw.archive…` 這類國別入口），PPA 等第三方來源不動。
+- 可重複執行；換鏡像站就改 `APT_MIRROR` 再跑一次。還原：把 `.orig` 複製回原檔名後 `apt-get update`。
+
+確認：
+
+```bash
+grep -n '^URIs' /etc/apt/sources.list.d/ubuntu.sources      # 兩行都是鏡像站
+apt-get update 2>&1 | grep -c -i 'ubuntu\.com'              # 應為 0：已不再連 ubuntu.com
+apt-cache policy | grep -m1 resolute-security               # 安全性更新也來自鏡像站
+```
+
+要知道的三件事：
+
+- **安全性更新會晚一點**：鏡像站定期向主站同步，修補發布後要等下一次同步才拿得到（通常幾小時內）。Ubuntu 預設讓安全性更新直接連 `security.ubuntu.com` 就是為了避開這段延遲；這裡用它換「防火牆少開一個目的地」。
+- **`free.nchc.org.tw`（國家高速網路與計算中心）在 Ubuntu 官方鏡像清單上只列 HTTP**，所以防火牆要開 **TCP 80**。套件與套件清單都有簽章驗證，走 HTTP 不會被竄改。若資訊室只允許 443，改用有 HTTPS 的站，例如 `APT_MIRROR=https://tw.archive.ubuntu.com/ubuntu/`。
+- **鏡像站停擺時**更新會失敗（網站本身不受影響）；`/var/log/unattended-upgrades/` 會有錯誤紀錄，把 `APT_MIRROR` 換成另一個站重跑即可。
+
+撰寫時這段指令在兩種格式的範例檔上測過（替換結果、註解行、第三方來源、重複執行）；`free.nchc.org.tw` 本身無法從撰寫環境連線，「待現場確認」`apt-get update` 成功。
+
+#### 做法二：主要套件庫用臺灣鏡像站，安全性更新維持官方主站
+
+```bash
+sudo cp /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources.orig
 sudo sed -i -E 's#https?://([a-z]{2}\.)?archive\.ubuntu\.com/ubuntu/?#https://tw.archive.ubuntu.com/ubuntu/#' \
   /etc/apt/sources.list.d/ubuntu.sources
-grep -n URIs /etc/apt/sources.list.d/ubuntu.sources
+grep -n '^URIs' /etc/apt/sources.list.d/ubuntu.sources
 sudo apt update
 ```
 
@@ -47,20 +91,20 @@ URIs: https://tw.archive.ubuntu.com/ubuntu/      ← resolute、resolute-updates
 URIs: http://security.ubuntu.com/ubuntu/         ← resolute-security（不動）
 ```
 
-- 撰寫時查證：`tw.archive.ubuntu.com` 有 26.04（resolute）、更新時間與主站相同、HTTP 與 HTTPS 都可連。
-- 安全性更新留在 `security.ubuntu.com` 是 Ubuntu 的預設做法：不經過鏡像站，修補一發布就拿得到。想少申請一條防火牆規則時，也可以把那一行一起改成臺灣鏡像站（該站同樣有 `resolute-security`），代價是偶爾會晚幾個小時。
-- 要全程走 443，把 `security.ubuntu.com` 那行的 `http://` 也改成 `https://`。套件本身有簽章驗證，用 HTTP 也不會被竄改；差別只在防火牆開哪個埠。
-- 自動更新（第 8 節）依套件庫的名稱判斷，不看網址，換鏡像站不用改設定。
+安全性更新一發布就拿得到，但防火牆要開兩個目的地。撰寫時查證：`tw.archive.ubuntu.com`（Ubuntu 官方的臺灣入口）有 26.04（resolute）、更新時間與主站相同、HTTP 與 HTTPS 都可連。
 
-其他臺灣鏡像站（Ubuntu 官方鏡像清單 <https://launchpad.net/ubuntu/+archivemirrors> 列為「Up to date」者；撰寫時只實際連線測過上面那一個）：
+#### 臺灣的鏡像站
 
-| 鏡像站 | 網址 | 頻寬 | HTTPS |
+Ubuntu 官方鏡像清單 <https://launchpad.net/ubuntu/+archivemirrors> 列為「Up to date」者（撰寫時只實際連線測過第一個）：
+
+| 鏡像站 | `APT_MIRROR` | 頻寬 | HTTPS |
 |---|---|---|---|
-| Taiwan Digital Streaming | `mirror.twds.com.tw/ubuntu/` | 100 Gbps | 有 |
-| 國家高速網路與計算中心（NCHC） | `free.nchc.org.tw/ubuntu/` | 20 Gbps | 清單只列 HTTP |
-| Ubuntu-TW | `ftp.ubuntu-tw.net/ubuntu/` | 4 Gbps | 有 |
+| Ubuntu 官方臺灣入口 | `https://tw.archive.ubuntu.com/ubuntu/` | — | 有 |
+| Taiwan Digital Streaming | `https://mirror.twds.com.tw/ubuntu/` | 100 Gbps | 有 |
+| 國家高速網路與計算中心（NCHC） | `http://free.nchc.org.tw/ubuntu/` | 20 Gbps | 清單只列 HTTP |
+| Ubuntu-TW | `https://ftp.ubuntu-tw.net/ubuntu/` | 4 Gbps | 有 |
 
-防火牆只放行單一主機時，選一個固定的站並把它寫進申請單（第 9 節）；之後換站要重新申請。
+自動更新（第 8 節）依套件庫的名稱判斷，不看網址，換鏡像站不用改設定。防火牆放行單一主機時，選定一個站並寫進申請單（第 9 節）；之後換站要重新申請。
 
 ### 校時（chrony）
 
@@ -406,14 +450,14 @@ cat /var/run/reboot-required 2>/dev/null                          # 有這個檔
 |---|---|---|---|
 | 同步網站程式與資料（git） | `github.com` | TCP 443 | **必要** |
 | 下載入境航班檔 `arrivals.json` | `ancientsky.github.io` | TCP 443 | **必要** |
-| 系統更新 | `tw.archive.ubuntu.com`（第 1 節改用臺灣鏡像站後；未改則是 `archive.ubuntu.com`）、`security.ubuntu.com` | TCP 443；`security.ubuntu.com` 預設為 TCP 80 | 自動更新需要；署內若有 apt 鏡像或 proxy 則改連署內 |
+| 系統更新 | 第 1 節做法一：只有 `free.nchc.org.tw`（或你選的那一個鏡像站）。做法二：`tw.archive.ubuntu.com` 與 `security.ubuntu.com`。都沒改：`archive.ubuntu.com` 與 `security.ubuntu.com` | `free.nchc.org.tw`、`security.ubuntu.com` 為 TCP 80；網址是 `https://` 的為 TCP 443 | 自動更新需要；署內若有 apt 鏡像或 proxy 則改連署內 |
 | 校時 | 署內 NTP 伺服器 | UDP 123 | **必要**（建議用署內） |
 | 名稱解析 | 署內 DNS 伺服器 | UDP／TCP 53 | **必要**（要能解析上面的網域名稱） |
 | Ubuntu Pro／ESM（有訂閱才需要） | `esm.ubuntu.com`、`contracts.canonical.com` | TCP 443 | 選用 |
 
 不需要開放：疾管署、外交部、TDX、氣象署等資料來源（這台主機從不連過去），以及任何由外向內的連線。
 
-確認 apt 實際連哪些主機：`grep -h URIs /etc/apt/sources.list.d/*.sources`。資訊室要求只開 443 時，可把該檔的 `http://` 改成 `https://` 後 `sudo apt update` 驗證。
+確認 apt 實際連哪些主機：`grep -h '^URIs' /etc/apt/sources.list.d/*.sources`。資訊室要求只開 443 時，選用網址為 `https://` 的鏡像站（第 1 節的表格），改完 `sudo apt update` 驗證。
 
 ### 進入這台 VM
 
@@ -438,7 +482,7 @@ GitHub 的 IP 會變動，官方做法是公布一份隨時更新的清單，**�
        print(k + ":", *sorted({c for c in d[k] if ":" not in c}), sep="\n  ")'
    ```
 
-3. Ubuntu 套件庫：`nslookup tw.archive.ubuntu.com`、`nslookup security.ubuntu.com` 列出的位址。
+3. Ubuntu 套件庫：對 `grep -h '^URIs' /etc/apt/sources.list.d/ubuntu.sources` 列出的主機逐一 `nslookup`（例如 `nslookup free.nchc.org.tw`）。
 
 撰寫本文時無法即時取得該清單。GitHub 長期使用的網段有 `140.82.112.0/20`、`143.55.64.0/20`、`192.30.252.0/22`（`github.com`）與 `185.199.108.0/22`（GitHub Pages），另外 `github.com` 在各地區還有架在 Azure 上的單一位址（`20.x.x.x/32`，從臺灣連線通常會解析到其中之一）——**這些僅供對照，申請時請以上述清單的實際內容為準**，並請資訊室每半年核對一次。
 
