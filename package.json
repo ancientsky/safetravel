@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Taiwan CDC travel-health advisory map with animated TPE flights (GitHub Pages)",
   "engines": {
-    "node": ">=24"
+    "node": ">=26"
   },
   "scripts": {
     "vendor": "node scripts/vendor.mjs",

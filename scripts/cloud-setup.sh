@@ -1,30 +1,30 @@
 #!/usr/bin/env bash
-# Cloud environment setup for SafeTravel TW: Node.js 24 and Python 3.14, the versions in .nvmrc /
+# Cloud environment setup for SafeTravel TW: Node.js 26 and Python 3.14, the versions in .nvmrc /
 # .python-version and GitHub Actions. Paste this into the cloud environment's "Setup script"
 # (environment menu in the session title bar → Edit); it runs at the start of every new session.
 # Idempotent: a second run only re-checks the versions.
 set -euo pipefail
 
-NODE_VERSION=v24.22.3
-NODE_SHA256=4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb   # nodejs.org SHASUMS256.txt
+NODE_VERSION=v26.13.1
+NODE_SHA256=5c063e46bab0fbc1c17cc445d7ff129cbdcd0471be6ed83b6ab864f8143bc864   # nodejs.org SHASUMS256.txt
 PY_VERSION=3.14.9
 UV_VERSION=0.13.5
 BIN="${HOME:-/root}/.local/bin"   # first on PATH in this image, ahead of /opt/node22/bin and /usr/bin
 mkdir -p "$BIN"
 
-# ---- Node.js 24: official build, checksum-verified
-if [ "$(/opt/node24/bin/node --version 2>/dev/null)" != "$NODE_VERSION" ]; then
+# ---- Node.js 26: official build, checksum-verified
+if [ "$(/opt/node26/bin/node --version 2>/dev/null)" != "$NODE_VERSION" ]; then
   tmp="$(mktemp -d)"
   curl -fsSLo "$tmp/node.tar.xz" "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz"
   echo "${NODE_SHA256}  $tmp/node.tar.xz" | sha256sum -c -
-  rm -rf /opt/node24 && mkdir -p /opt/node24
-  tar -xJf "$tmp/node.tar.xz" -C /opt/node24 --strip-components=1
+  rm -rf /opt/node26 && mkdir -p /opt/node26
+  tar -xJf "$tmp/node.tar.xz" -C /opt/node26 --strip-components=1
   rm -rf "$tmp"
 fi
-echo 'export PATH=/opt/node24/bin:$PATH' > /etc/profile.d/nodejs.sh
-for b in node npm npx corepack; do
-  ln -sf "/opt/node24/bin/$b" "/usr/local/bin/$b"
-  ln -sf "/opt/node24/bin/$b" "$BIN/$b"
+echo 'export PATH=/opt/node26/bin:$PATH' > /etc/profile.d/nodejs.sh
+for b in node npm npx; do   # Node.js 25 and later no longer ship corepack
+  ln -sf "/opt/node26/bin/$b" "/usr/local/bin/$b"
+  ln -sf "/opt/node26/bin/$b" "$BIN/$b"
 done
 
 # ---- Python 3.14: uv-managed CPython in a venv (so `python -m pip` works); the system python3 is left alone
