@@ -203,7 +203,7 @@ flowchart LR
 
 ### 本機開發
 
-需要 **Python 3.14**（`.python-version`）與 **Node.js 24**（`.nvmrc`，目前 24.22.1）；GitHub Actions 使用相同版本。
+需要 **Python 3.14**（`.python-version`）與 **Node.js 24**（`.nvmrc`，目前 24.22.3）；GitHub Actions 使用相同版本。
 
 ```bash
 python -m pip install -r pipeline/requirements.txt
@@ -325,7 +325,7 @@ TCDC travel advisory levels (`CountryEpidLevel/ExportCSV`) and international epi
 
 ### Local development
 
-Requires **Python 3.14** (`.python-version`) and **Node.js 24** (`.nvmrc`, currently 24.22.1); GitHub Actions uses the same versions.
+Requires **Python 3.14** (`.python-version`) and **Node.js 24** (`.nvmrc`, currently 24.22.3); GitHub Actions uses the same versions.
 
 ```bash
 python -m pip install -r pipeline/requirements.txt

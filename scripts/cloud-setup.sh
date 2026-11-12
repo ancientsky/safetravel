@@ -5,8 +5,8 @@
 # Idempotent: a second run only re-checks the versions.
 set -euo pipefail
 
-NODE_VERSION=v24.22.1
-NODE_SHA256=6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6   # nodejs.org SHASUMS256.txt
+NODE_VERSION=v24.22.3
+NODE_SHA256=4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb   # nodejs.org SHASUMS256.txt
 PY_VERSION=3.14.9
 UV_VERSION=0.13.5
 BIN="${HOME:-/root}/.local/bin"   # first on PATH in this image, ahead of /opt/node22/bin and /usr/bin
