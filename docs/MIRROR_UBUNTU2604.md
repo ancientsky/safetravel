@@ -27,6 +27,41 @@ sudo hostnamectl set-hostname safetravel
 sudo apt update && sudo apt full-upgrade -y      # 先更新到最新，之後交給自動更新（第 8 節）
 ```
 
+### 系統更新來源改用臺灣鏡像站
+
+26.04 的套件來源寫在 `/etc/apt/sources.list.d/ubuntu.sources`。建議把主要套件庫指到 **`tw.archive.ubuntu.com`**（Ubuntu 官方的臺灣入口），安全性更新維持 `security.ubuntu.com`：
+
+```bash
+grep -n URIs /etc/apt/sources.list.d/ubuntu.sources                     # 先看目前指到哪裡
+sudo cp /etc/apt/sources.list.d/ubuntu.sources /root/ubuntu.sources.bak   # 備份放在別的資料夾
+sudo sed -i -E 's#https?://([a-z]{2}\.)?archive\.ubuntu\.com/ubuntu/?#https://tw.archive.ubuntu.com/ubuntu/#' \
+  /etc/apt/sources.list.d/ubuntu.sources
+grep -n URIs /etc/apt/sources.list.d/ubuntu.sources
+sudo apt update
+```
+
+改完應該是：
+
+```
+URIs: https://tw.archive.ubuntu.com/ubuntu/      ← resolute、resolute-updates、resolute-backports
+URIs: http://security.ubuntu.com/ubuntu/         ← resolute-security（不動）
+```
+
+- 撰寫時查證：`tw.archive.ubuntu.com` 有 26.04（resolute）、更新時間與主站相同、HTTP 與 HTTPS 都可連。
+- 安全性更新留在 `security.ubuntu.com` 是 Ubuntu 的預設做法：不經過鏡像站，修補一發布就拿得到。想少申請一條防火牆規則時，也可以把那一行一起改成臺灣鏡像站（該站同樣有 `resolute-security`），代價是偶爾會晚幾個小時。
+- 要全程走 443，把 `security.ubuntu.com` 那行的 `http://` 也改成 `https://`。套件本身有簽章驗證，用 HTTP 也不會被竄改；差別只在防火牆開哪個埠。
+- 自動更新（第 8 節）依套件庫的名稱判斷，不看網址，換鏡像站不用改設定。
+
+其他臺灣鏡像站（Ubuntu 官方鏡像清單 <https://launchpad.net/ubuntu/+archivemirrors> 列為「Up to date」者；撰寫時只實際連線測過上面那一個）：
+
+| 鏡像站 | 網址 | 頻寬 | HTTPS |
+|---|---|---|---|
+| Taiwan Digital Streaming | `mirror.twds.com.tw/ubuntu/` | 100 Gbps | 有 |
+| 國家高速網路與計算中心（NCHC） | `free.nchc.org.tw/ubuntu/` | 20 Gbps | 清單只列 HTTP |
+| Ubuntu-TW | `ftp.ubuntu-tw.net/ubuntu/` | 4 Gbps | 有 |
+
+防火牆只放行單一主機時，選一個固定的站並把它寫進申請單（第 9 節）；之後換站要重新申請。
+
 ### 校時（chrony）
 
 26.04 預設用 `chrony`。改成署內 NTP：
@@ -371,7 +406,7 @@ cat /var/run/reboot-required 2>/dev/null                          # 有這個檔
 |---|---|---|---|
 | 同步網站程式與資料（git） | `github.com` | TCP 443 | **必要** |
 | 下載入境航班檔 `arrivals.json` | `ancientsky.github.io` | TCP 443 | **必要** |
-| 系統更新 | `archive.ubuntu.com`、`security.ubuntu.com`（安裝時若選臺灣鏡像則另有 `tw.archive.ubuntu.com`） | TCP 80（預設）或 443 | 自動更新需要；署內若有 apt 鏡像或 proxy 則改連署內 |
+| 系統更新 | `tw.archive.ubuntu.com`（第 1 節改用臺灣鏡像站後；未改則是 `archive.ubuntu.com`）、`security.ubuntu.com` | TCP 443；`security.ubuntu.com` 預設為 TCP 80 | 自動更新需要；署內若有 apt 鏡像或 proxy 則改連署內 |
 | 校時 | 署內 NTP 伺服器 | UDP 123 | **必要**（建議用署內） |
 | 名稱解析 | 署內 DNS 伺服器 | UDP／TCP 53 | **必要**（要能解析上面的網域名稱） |
 | Ubuntu Pro／ESM（有訂閱才需要） | `esm.ubuntu.com`、`contracts.canonical.com` | TCP 443 | 選用 |
@@ -403,7 +438,7 @@ GitHub 的 IP 會變動，官方做法是公布一份隨時更新的清單，**�
        print(k + ":", *sorted({c for c in d[k] if ":" not in c}), sep="\n  ")'
    ```
 
-3. Ubuntu 套件庫：`nslookup archive.ubuntu.com`、`nslookup security.ubuntu.com` 列出的位址。
+3. Ubuntu 套件庫：`nslookup tw.archive.ubuntu.com`、`nslookup security.ubuntu.com` 列出的位址。
 
 撰寫本文時無法即時取得該清單。GitHub 長期使用的網段有 `140.82.112.0/20`、`143.55.64.0/20`、`192.30.252.0/22`（`github.com`）與 `185.199.108.0/22`（GitHub Pages），另外 `github.com` 在各地區還有架在 Azure 上的單一位址（`20.x.x.x/32`，從臺灣連線通常會解析到其中之一）——**這些僅供對照，申請時請以上述清單的實際內容為準**，並請資訊室每半年核對一次。
 
