@@ -23,6 +23,9 @@ umask 022
 CONF=${SAFETRAVEL_CONF:-/etc/safetravel/mirror.env}
 # shellcheck source=/dev/null
 if [ -r "$CONF" ]; then set -a; . "$CONF"; set +a; fi   # exported, so HTTPS_PROXY etc. reach git and curl
+# Every path below is absolute. Started with "sudo -u safetravel" from an admin's home directory, the working
+# directory is one this user cannot enter, and find then complains that it cannot return to it: work from /.
+cd / 2>/dev/null || true
 
 REPO_URL=${REPO_URL:-https://github.com/ancientsky/safetravel.git}
 BRANCH=${BRANCH:-main}
@@ -336,7 +339,8 @@ do_selftest() {
     && ok "atomic switch of the served directory" || no "atomic switch of the served directory"
   # unchanged files of a new release are hard links to the previous one; links in the source are not copied
   mkdir -p "$TMP/src"; echo same > "$TMP/src/keep.txt"; ln -s /etc/hostname "$TMP/src/link"
-  rsync -a --no-links "$TMP/src/" "$RELEASES/r1/" 2>/dev/null && rsync -a --no-links --link-dest="$RELEASES/r1" "$TMP/src/" "$RELEASES/r2/" 2>/dev/null
+  # rsync mentions the link it leaves out ("skipping non-regular file"): expected here, so not shown
+  rsync -a --no-links "$TMP/src/" "$RELEASES/r1/" >/dev/null 2>&1 && rsync -a --no-links --link-dest="$RELEASES/r1" "$TMP/src/" "$RELEASES/r2/" >/dev/null 2>&1
   n=$(python3 -c 'import os, sys; print(os.stat(sys.argv[1]).st_nlink)' "$RELEASES/r2/keep.txt" 2>/dev/null)
   [ "$n" = 2 ] && [ ! -e "$RELEASES/r2/link" ] && ok "rsync: hard links to the previous release, symbolic links left out" || no "rsync --link-dest / --no-links (nlink=$n)"
   only_plain_files "$TMP/src" 2>/dev/null && no "a symbolic link was not noticed" || ok "a symbolic link in the checkout is refused"

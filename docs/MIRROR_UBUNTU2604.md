@@ -189,7 +189,11 @@ sudo -u safetravel /opt/safetravel/safetravel-sync.sh --selftest
 - `network:` 兩行 `FAIL` → 防火牆或 proxy 還沒通，回到第 9 節。
 - 其他行 `FAIL` → 請把整段輸出回報給網站維護者。
 
-> 為什麼要這一步：Ubuntu 26.04 預設的 `coreutils` 改成 Rust 版（uutils），與過去的 GNU 版在少數行為上可能不同。同步程式已把關鍵步驟（原子切換、日期計算）改用 python3 執行，不依賴 coreutils 的版本；但撰寫時無法在 26.04 實機驗證，所以用這個檢查在你的 VM 上確認。
+> 為什麼要這一步：Ubuntu 26.04 預設的 `coreutils` 改成 Rust 版（uutils），與過去的 GNU 版在少數行為上可能不同。同步程式已把關鍵步驟（原子切換、日期計算）改用 python3 執行，不依賴 coreutils 的版本，這個檢查用來在你的 VM 上確認。
+>
+> 2026-11-12 已在一台 Ubuntu 26.04 實機上全部 `PASS`（uutils coreutils 0.10.0、git 2.53.0、rsync 3.4.1、python 3.14.4）。
+>
+> 判斷只看每行開頭的 `PASS`／`FAIL` 與最後一行。舊版腳本從自己的家目錄執行時，中間會夾雜 `find: Failed to restore initial working directory … Permission denied` 與 `skipping non-regular file "link"`，那是工具的提示訊息、不是檢查失敗；更新同步程式後不再出現。
 
 確認第一次同步成功：
 
@@ -504,7 +508,7 @@ IP 清單過期時的表現：同步失敗，鏡像站繼續提供最後一個�
 | 差異 | 影響 | 處理 |
 |---|---|---|
 | nginx 1.28：`listen … http2` 已淘汰 | `nginx -t` 出現警告 | `install.sh` 自動改成 `http2 on;` |
-| `coreutils` 預設為 Rust 版（uutils） | `mv -T`、`date -d` 等行為可能不同 | 同步程式改用 python3 做原子切換與日期計算；`--selftest` 在實機確認 |
+| `coreutils` 預設為 Rust 版（uutils） | `mv -T`、`date -d` 等行為可能不同 | 同步程式改用 python3 做原子切換與日期計算；`--selftest` 已在 26.04 實機（uutils 0.10.0）全部通過 |
 | `sudo` 預設為 Rust 版（sudo-rs） | 指令列上直接寫 `VAR=值` 可能不被接受 | 文件裡的指令改用 `sudo env VAR=值 指令` |
 | 校時改用 `chrony` | 設定檔位置不同於 `systemd-timesyncd` | 見第 1 節 |
 | python3 為 3.14、git 為 2.53 | 無 | 同步程式需要 python 3.7 以上、git 2.27 以上 |
