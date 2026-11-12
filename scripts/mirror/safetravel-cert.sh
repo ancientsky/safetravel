@@ -35,7 +35,8 @@ site_host() {  # first server_name of the site file (enabled or still .disabled)
   done
 }
 
-fingerprint() { openssl x509 -noout -fingerprint -sha256 "$@" 2>/dev/null | sed 's/.*=//'; }
+# empty when there is no certificate to read (nothing listening on 443): the callers report that, so no failure here
+fingerprint() { { openssl x509 -noout -fingerprint -sha256 "$@" 2>/dev/null || true; } | sed 's/.*=//'; }
 
 served_fingerprint() {  # what nginx on this machine hands out for $1
   # s_client exits non-zero for a certificate it cannot verify; only the certificate it printed matters here
