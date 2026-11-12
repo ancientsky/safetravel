@@ -36,7 +36,7 @@ sudo apt update && sudo apt full-upgrade -y      # 先更新到最新，之後�
 以 root 執行（`sudo -i` 之後貼上，或放進自己的安裝腳本）。`APT_MIRROR` 可在執行前指定別的鏡像站；設成空字串則不改來源、只做更新。
 
 ```bash
-APT_MIRROR="${APT_MIRROR:-http://free.nchc.org.tw/ubuntu/}"
+APT_MIRROR="${APT_MIRROR:-https://free.nchc.org.tw/ubuntu/}"
 # 所有 Ubuntu 套件來源（含 security）統一指向台灣鏡像站 → 防火牆只需開一個更新來源
 if [[ -n "$APT_MIRROR" ]]; then
   if [[ -f /etc/apt/sources.list.d/ubuntu.sources ]]; then
@@ -69,10 +69,10 @@ apt-cache policy | grep -m1 resolute-security               # 安全性更新也
 要知道的三件事：
 
 - **安全性更新會晚一點**：鏡像站定期向主站同步，修補發布後要等下一次同步才拿得到（通常幾小時內）。Ubuntu 預設讓安全性更新直接連 `security.ubuntu.com` 就是為了避開這段延遲；這裡用它換「防火牆少開一個目的地」。
-- **`free.nchc.org.tw`（國家高速網路與計算中心）在 Ubuntu 官方鏡像清單上只列 HTTP**，所以防火牆要開 **TCP 80**。套件與套件清單都有簽章驗證，走 HTTP 不會被竄改。若資訊室只允許 443，改用有 HTTPS 的站，例如 `APT_MIRROR=https://tw.archive.ubuntu.com/ubuntu/`。
+- **走 HTTPS，防火牆只開 TCP 443**：`free.nchc.org.tw`（國家高速網路與計算中心）在 Ubuntu 官方鏡像清單上只列 HTTP，但實測 `https://free.nchc.org.tw/ubuntu/` 可以連，所以預設值用 `https://`，不需要開 80。HTTPS 若日後失效（憑證過期等），`apt-get update` 會報憑證錯誤；屆時改用 `APT_MIRROR=https://tw.archive.ubuntu.com/ubuntu/`，或暫時改回 `http://` 並加開 TCP 80（套件有簽章驗證，走 HTTP 也不會被竄改）。
 - **鏡像站停擺時**更新會失敗（網站本身不受影響）；`/var/log/unattended-upgrades/` 會有錯誤紀錄，把 `APT_MIRROR` 換成另一個站重跑即可。
 
-撰寫時這段指令在兩種格式的範例檔上測過（替換結果、註解行、第三方來源、重複執行）；`free.nchc.org.tw` 本身無法從撰寫環境連線，「待現場確認」`apt-get update` 成功。
+撰寫時這段指令在兩種格式的範例檔上測過（替換結果、註解行、第三方來源、重複執行）；`free.nchc.org.tw` 無法從撰寫環境連線，HTTPS 可用是站台維護者在現場確認的。請在 VM 上確認 `apt-get update` 成功，且輸出裡每一行來源都是 `https://free.nchc.org.tw`。
 
 #### 做法二：主要套件庫用臺灣鏡像站，安全性更新維持官方主站
 
@@ -101,7 +101,7 @@ Ubuntu 官方鏡像清單 <https://launchpad.net/ubuntu/+archivemirrors> 列為�
 |---|---|---|---|
 | Ubuntu 官方臺灣入口 | `https://tw.archive.ubuntu.com/ubuntu/` | — | 有 |
 | Taiwan Digital Streaming | `https://mirror.twds.com.tw/ubuntu/` | 100 Gbps | 有 |
-| 國家高速網路與計算中心（NCHC） | `http://free.nchc.org.tw/ubuntu/` | 20 Gbps | 清單只列 HTTP |
+| 國家高速網路與計算中心（NCHC） | `https://free.nchc.org.tw/ubuntu/` | 20 Gbps | 有（官方清單只列 HTTP，現場實測可連） |
 | Ubuntu-TW | `https://ftp.ubuntu-tw.net/ubuntu/` | 4 Gbps | 有 |
 
 自動更新（第 8 節）依套件庫的名稱判斷，不看網址，換鏡像站不用改設定。防火牆放行單一主機時，選定一個站並寫進申請單（第 9 節）；之後換站要重新申請。
@@ -450,7 +450,7 @@ cat /var/run/reboot-required 2>/dev/null                          # 有這個檔
 |---|---|---|---|
 | 同步網站程式與資料（git） | `github.com` | TCP 443 | **必要** |
 | 下載入境航班檔 `arrivals.json` | `ancientsky.github.io` | TCP 443 | **必要** |
-| 系統更新 | 第 1 節做法一：只有 `free.nchc.org.tw`（或你選的那一個鏡像站）。做法二：`tw.archive.ubuntu.com` 與 `security.ubuntu.com`。都沒改：`archive.ubuntu.com` 與 `security.ubuntu.com` | `free.nchc.org.tw`、`security.ubuntu.com` 為 TCP 80；網址是 `https://` 的為 TCP 443 | 自動更新需要；署內若有 apt 鏡像或 proxy 則改連署內 |
+| 系統更新 | 第 1 節做法一：只有 `free.nchc.org.tw`（或你選的那一個鏡像站）。做法二：`tw.archive.ubuntu.com` 與 `security.ubuntu.com`。都沒改：`archive.ubuntu.com` 與 `security.ubuntu.com` | 網址是 `https://` 的為 TCP 443（做法一預設即是）；`security.ubuntu.com` 預設為 TCP 80 | 自動更新需要；署內若有 apt 鏡像或 proxy 則改連署內 |
 | 校時 | 署內 NTP 伺服器 | UDP 123 | **必要**（建議用署內） |
 | 名稱解析 | 署內 DNS 伺服器 | UDP／TCP 53 | **必要**（要能解析上面的網域名稱） |
 | Ubuntu Pro／ESM（有訂閱才需要） | `esm.ubuntu.com`、`contracts.canonical.com` | TCP 443 | 選用 |
