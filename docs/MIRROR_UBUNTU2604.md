@@ -11,9 +11,9 @@
 
 | 項目 | 內容 |
 |---|---|
-| 固定 IP 與 DNS 名稱 | 例如 `safetravel.cdc.internal` 指向這台 VM；kiosk 一律用名稱連線（憑證綁名稱） |
+| 固定 IP 與 DNS 名稱 | 例如 `safetravel.cdc.internal` 指向這台 VM；kiosk 一律用名稱連線（憑證綁名稱）。使用機關的萬用字元憑證時，名稱必須在該網域下一層，例如 `safetravel.cdc.gov.tw` |
 | 對外連線（防火牆） | 見[第 9 節](#9-防火牆申請清單)的表格 |
-| TLS 憑證 | 由署內 CA 或機關使用的憑證機構簽發；第 5 節會產生申請檔（CSR） |
+| TLS 憑證 | 機關已有萬用字元憑證（如 `*.cdc.gov.tw`）時直接取得憑證檔（第 5.0 節）；否則由署內 CA 或機關使用的憑證機構簽發，第 5.1 節會產生申請檔（CSR） |
 | 校時來源 | 署內 NTP 伺服器的位址（建議用署內的，不要對外） |
 | 是否經由 proxy 上網 | 若是，需要 proxy 位址；若 proxy 會解開 TLS，還需要它的 CA 憑證 |
 
@@ -209,6 +209,96 @@ systemctl list-timers safetravel-sync.timer       # 下次執行時間
 
 kiosk 必須用 HTTPS：海報輪播防止螢幕休眠的功能只在安全連線下可用。
 
+依手上有什麼選一條路：**已經拿到現成的憑證檔**（例如機關的萬用字元憑證 `*.cdc.gov.tw`）→ 5.0；**要自己申請** → 5.1、5.2。5.3、5.4 兩者都適用。
+
+### 5.0 已經拿到憑證檔（fullchain.pem／privkey.pem）
+
+拿到的是一整包時，nginx 只需要其中兩個檔：
+
+| 檔案 | 內容 | 用途 |
+|---|---|---|
+| `fullchain.pem` | 伺服器憑證＋中繼憑證 | **nginx 的 `ssl_certificate`** |
+| `privkey.pem` | 私鑰 | **nginx 的 `ssl_certificate_key`** |
+| `cert.pem` | 只有伺服器憑證 | 檢查用 |
+| `chain.pem` | 只有中繼憑證 | 檢查用 |
+| `.pfx`、`.jks` | 同一組憑證與私鑰，Windows（IIS）與 Java 用的格式 | 不需要，**不要放到這台主機** |
+| `cert.meta` | 憑證的附帶資訊（內容依簽發工具而定） | nginx 用不到 |
+
+**主機名稱要配合憑證**：`*.cdc.gov.tw` 只涵蓋「一層」的名稱。`safetravel.cdc.gov.tw` 可以；`a.b.cdc.gov.tw`、`safetravel.cdc.internal`、直接用 IP 都不行（瀏覽器會出現憑證錯誤）。請資訊室在署內 DNS 加一筆記錄把選定的名稱指到這台 VM，kiosk 一律用這個名稱連線。
+
+**1. 把檔案傳到 VM**（只傳四個 `.pem`；例如從自己的電腦 `scp cert.pem chain.pem fullchain.pem privkey.pem 帳號@VM:~/tls-in/`），然後在該資料夾裡檢查：
+
+```bash
+cd ~/tls-in && chmod 700 . && chmod 600 privkey.pem
+H=safetravel.cdc.gov.tw                                             # 你選定的主機名稱
+
+openssl x509 -in cert.pem -noout -subject -issuer -dates -ext subjectAltName   # 簽給誰、誰簽的、有效期、涵蓋的名稱
+openssl x509 -in cert.pem -noout -checkhost "$H"                    # 應為 does match certificate
+openssl x509 -in fullchain.pem -noout -pubkey | sha256sum           # ┐ 兩行輸出要相同：
+openssl pkey -in privkey.pem -pubout | sha256sum                    # ┘ 憑證與私鑰是一對
+head -n 1 privkey.pem                                               # 應為 -----BEGIN PRIVATE KEY-----
+openssl crl2pkcs7 -nocrl -certfile fullchain.pem | openssl pkcs7 -print_certs -noout | grep subject
+                                                                    # 第一行是 *.cdc.gov.tw，之後才是中繼憑證
+openssl verify -untrusted chain.pem cert.pem                        # cert.pem: OK
+```
+
+- `head` 那行若是 `BEGIN ENCRYPTED PRIVATE KEY`，表示私鑰有密碼，nginx 開機時讀不了。請資訊室提供密碼後先解開：`openssl pkey -in privkey.pem -out privkey.pem`（會詢問密碼）。
+- `openssl verify` 顯示 `OK`，表示這張憑證由 Ubuntu 內建信任的公開憑證機構簽發，kiosk 通常不必另外匯入根憑證（仍請在一台 kiosk 上實際開一次確認）。顯示 `unable to get local issuer certificate` 則是署內 CA 或少見的憑證機構：伺服器端照樣可以用，但 kiosk 要照 5.4 匯入根憑證。
+- `notAfter` 就是到期日，請記到行事曆；並問清楚**到期前由誰提供新檔案**（見本節最後）。
+
+**2. 安裝**（檔名改成 nginx 範本預設的名稱，之後不用改範本裡的路徑）：
+
+```bash
+sudo install -d -m 750 -o root -g root /etc/nginx/tls
+sudo install -m 644 -o root -g root fullchain.pem /etc/nginx/tls/safetravel.crt
+sudo install -m 600 -o root -g root privkey.pem   /etc/nginx/tls/safetravel.key
+sudo ls -l /etc/nginx/tls/          # safetravel.crt 644 root、safetravel.key 600 root
+```
+
+**3. 清掉傳上來的副本**：
+
+```bash
+cd ~ && shred -u ~/tls-in/privkey.pem && rm -rf ~/tls-in
+```
+
+**4. 接著做第 6 節**（啟用 nginx 站台）：`server_name` 兩處填上面選定的名稱，憑證路徑不用改。完成後用**不加 `-k`** 的方式驗證，這樣才會真的檢查憑證與名稱：
+
+```bash
+H=safetravel.cdc.gov.tw
+curl -sSI https://$H/safetravel/ | head -n 1                         # HTTP/2 200
+#   署內 DNS 還沒加記錄時，先在 VM 上這樣測：
+curl -sSI --resolve $H:443:127.0.0.1 https://$H/safetravel/ | head -n 1
+echo | openssl s_client -connect 127.0.0.1:443 -servername $H 2>/dev/null | grep -E "^ *[0-9] s:|^ *Verify return code" | sort -u
+#   應列出兩張憑證（0 是 *.cdc.gov.tw，1 是中繼憑證），Verify return code: 0 (ok)
+```
+
+憑證由署內 CA 簽發時，這台主機不認得根憑證：`curl` 要加 `--cacert 根憑證.crt`，`openssl s_client` 要加 `-CAfile 根憑證.crt`，否則會是 `Verify return code: 20` 或 `21`。這不影響 nginx，只表示 kiosk 需要照 5.4 匯入根憑證。
+
+`curl` 出現 `SSL certificate problem` 或 `no alternative certificate subject name matches`，分別代表憑證鏈不被信任、或主機名稱不在憑證涵蓋範圍。
+
+**一個指令做完檢查與安裝**：`install.sh` 會把 `safetravel-cert.sh` 裝到 `/opt/safetravel/`。它做的就是第 1、2 步的檢查與安裝，另外在 `nginx -t` 不通過時把原來的憑證放回去，並確認 nginx 真的換成新憑證：
+
+```bash
+sudo /opt/safetravel/safetravel-cert.sh ~/tls-in safetravel.cdc.gov.tw   # 資料夾裡要有 fullchain.pem 與 privkey.pem
+sudo /opt/safetravel/safetravel-cert.sh --check                           # 之後隨時查看：名稱、到期日、nginx 是否正在使用
+```
+
+每行應為 `PASS`。`WARN` 是提醒（30 天內到期、nginx 站台還沒啟用等）；`FAIL` 表示沒有安裝，原來的憑證不受影響。主機名稱省略時取 nginx 站台設定裡的 `server_name`。第一次安裝時站台還沒啟用（第 6 節），啟用後再跑一次 `--check`。用了這個工具，第 2 步可以略過，第 3 步（清掉副本）仍然要做。
+
+**萬用字元憑證的私鑰要特別保護**：同一把私鑰保護機關所有 `*.cdc.gov.tw` 的網站，外流的影響不只這台主機。
+
+- 只放在 `/etc/nginx/tls/`，權限 `600 root`；`.pfx`、`.jks` 也含私鑰，不要帶到這台主機。
+- 不要放進 git、不要貼到聊天或工單、不要用電子郵件寄；傳檔用 `scp`，傳完把自己電腦與 VM 上的暫存副本刪掉。
+- 這台 VM 的 SSH 只開給管理網段（第 1 節的 ufw 規則），能 `sudo` 的帳號愈少愈好。
+
+**到期與更換**：萬用字元憑證由資訊室統一換發，換發後每一台使用它的主機都要換檔，而且**會比以前頻繁**：
+
+- `cert.pem`、`chain.pem`、`fullchain.pem`、`privkey.pem` 這組檔名是自動簽發工具（ACME／certbot）的慣例，這類憑證的效期通常只有幾個月。實際效期看第 1 步輸出的 `notBefore`、`notAfter`。
+- 公開受信任的憑證，業界規定的效期上限逐年縮短：2026 年 3 月起 200 天、2027 年 3 月起 100 天、2029 年 3 月起 47 天。
+- 請向資訊室問清楚三件事：**多久換發一次、新檔案怎麼交付、會不會事先通知**。
+
+更換時把新的 `fullchain.pem`、`privkey.pem` 傳上來，執行 `safetravel-cert.sh`（或重做檢查與安裝兩步，再 `sudo nginx -t && sudo systemctl reload nginx`），不會中斷服務。上一組憑證留在 `/etc/nginx/tls/prev/`。5.3 的每週檢查會在到期前 30 天起寫入系統日誌。
+
 ### 5.1 產生私鑰與憑證申請檔（CSR）
 
 私鑰留在這台主機，**不要寄出去**；只把 `.csr` 交給資訊室。
@@ -283,7 +373,7 @@ EOF
 sudo systemctl daemon-reload && sudo systemctl enable --now safetravel-cert.timer
 ```
 
-換憑證：放新的 `safetravel.crt`（必要時連同新私鑰），`sudo nginx -t && sudo systemctl reload nginx`，不會中斷服務。
+換憑證：`sudo /opt/safetravel/safetravel-cert.sh <放新檔案的資料夾>`（見 5.0）；或手動放新的 `safetravel.crt`（必要時連同新私鑰），`sudo nginx -t && sudo systemctl reload nginx`。兩種做法都不會中斷服務。
 
 ### 5.4 kiosk 要信任這張憑證
 
@@ -332,6 +422,28 @@ sudo nginx -t                    # 不應有 warn；出現「listen … http2 is
 sudo systemctl enable --now nginx
 sudo systemctl reload nginx
 ```
+
+啟用後檢查 nginx 實際載入的設定（`nginx -T` 會印出所有設定檔合併後的結果）：
+
+```bash
+sudo nginx -T 2>/dev/null | grep -n -E "^\s*(server_name|listen|ssl_certificate|ssl_certificate_key|http2)\b"
+```
+
+應該只有下面這幾行（行號與行尾的 `# ←` 註解不計）。多出別的 `listen` 或 `server_name`，表示還有其他站台設定檔（常見的是沒刪掉的 `sites-enabled/default`）：
+
+```nginx
+    listen 80;
+    listen [::]:80;
+    server_name safetravel.cdc.gov.tw;
+    listen 443 ssl;
+    http2 on;
+    listen [::]:443 ssl;
+    server_name safetravel.cdc.gov.tw;
+    ssl_certificate     /etc/nginx/tls/safetravel.crt;
+    ssl_certificate_key /etc/nginx/tls/safetravel.key;
+```
+
+再用 `sudo /opt/safetravel/safetravel-cert.sh --check` 確認 nginx 發出去的就是剛安裝的憑證。
 
 範本做了什麼（完整說明在 `MIRROR.md` 第 4 節）：80 轉 443；`/safetravel/` 子路徑與 GitHub Pages 相同；文字檔 `no-cache`（未變動只回 304）、圖片快取 1 小時；gzip；`nosniff`、`Referrer-Policy`、禁止被其他網站內嵌；隱藏檔 403；TLS 只開 1.2 與 1.3；`/safetravel/_mirror/status.json` 提供同步狀態。**不要**加 `open_file_cache`，也不要在標頭的 CSP 加 `script-src` 之類的項目。
 

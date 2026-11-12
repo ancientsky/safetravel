@@ -19,6 +19,7 @@ fi
 install -d -o safetravel -g safetravel -m 755 "$BASE" "$BASE/repo" "$BASE/releases" "$BASE/www" "$BASE/state" "$BASE/tmp"
 install -d -m 755 /opt/safetravel /etc/safetravel
 install -m 755 "$HERE/safetravel-sync.sh" /opt/safetravel/safetravel-sync.sh
+install -m 755 "$HERE/safetravel-cert.sh" /opt/safetravel/safetravel-cert.sh
 install -m 644 "$HERE/mirror.env.example" /etc/safetravel/mirror.env.example
 [ -e /etc/safetravel/mirror.env ] || install -m 640 -o root -g safetravel "$HERE/mirror.env.example" /etc/safetravel/mirror.env
 # the settings may hold a proxy address with credentials: readable by root and the sync user only (also tightens an
@@ -49,6 +50,7 @@ if [ -d /etc/nginx/conf.d ] && [ ! -e /etc/nginx/conf.d/safetravel.conf ]; then
     echo "nginx $nv: template uses \"http2 on;\""
   fi
   echo "nginx: template at /etc/nginx/conf.d/safetravel.conf.disabled — edit host name + certificate, rename to .conf, nginx -t && systemctl reload nginx"
+  echo "certificate: sudo /opt/safetravel/safetravel-cert.sh <directory with fullchain.pem and privkey.pem> <host name>"
 fi
 
 systemctl daemon-reload

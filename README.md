@@ -166,7 +166,7 @@ flowchart LR
 
 ### 署內鏡像站
 
-要在署內 Linux 主機（nginx）提供同一個網站給 kiosk 使用、又不重覆抓取資料：署內主機每 5 分鐘從 GitHub 複製已處理好的網站（`scripts/mirror/`：同步程式、systemd timer、nginx 設定、安裝程式），不連任何資料來源、不需要 API 金鑰。安裝、nginx 設定、30–50 台 kiosk 的建議規格與維運方式見 [docs/MIRROR.md](docs/MIRROR.md)。Ubuntu Server 26.04 的逐步部署步驟（憑證安裝、系統自動更新、防火牆申請清單）見 [docs/MIRROR_UBUNTU2604.md](docs/MIRROR_UBUNTU2604.md)。
+要在署內 Linux 主機（nginx）提供同一個網站給 kiosk 使用、又不重覆抓取資料：署內主機每 5 分鐘從 GitHub 複製已處理好的網站（`scripts/mirror/`：同步程式、systemd timer、nginx 設定、憑證安裝工具、安裝程式），不連任何資料來源、不需要 API 金鑰。安裝、nginx 設定、30–50 台 kiosk 的建議規格與維運方式見 [docs/MIRROR.md](docs/MIRROR.md)。Ubuntu Server 26.04 的逐步部署步驟（憑證安裝、系統自動更新、防火牆申請清單）見 [docs/MIRROR_UBUNTU2604.md](docs/MIRROR_UBUNTU2604.md)。
 
 ### 資料來源
 
