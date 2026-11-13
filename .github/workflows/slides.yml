@@ -4,6 +4,14 @@ name: Health posters (PNG export)
 # poster of slide.html (web/slides/slides.json + auto/index.json, docs/SLIDES.md) as PNG in both orientations
 # (1080x1920, 1920x1080) into web/slides/export/ (PDF: the page's Print / Save as PDF), commits them to main and redeploys
 # Pages. Commits made with GITHUB_TOKEN do not trigger other workflows, hence the explicit deploy dispatch.
+#
+# Three jobs on purpose:
+#   export  installs npm packages, downloads and runs a browser and runs repository code. It has read access only, so
+#           nothing it runs can push to main; it hands over the PNGs, export/index.json and auto/index.json as an artifact.
+#   commit  holds the push rights and runs no npm, node, browser or code from the artifact: it checks the artifact with
+#           the shell and the runner's python3 (only the expected file names, real PNGs and JSON, size limits), copies it
+#           into a fresh checkout of main and pushes.
+#   deploy  may only start workflows: it dispatches deploy-pages.yml when the commit job pushed something.
 on:
   push:
     branches: [main]
@@ -29,9 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
-    outputs:
-      changed: ${{ steps.commit.outputs.changed }}
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -68,14 +74,177 @@ jobs:
           for i in $(seq 1 30); do curl -fsS -o /dev/null http://localhost:8150/slide.html && break; sleep 1; done
           node scripts/export-slides.mjs http://localhost:8150/
 
+      # Both paths share the folder web/slides/, so the artifact holds export/... and auto/index.json (the commit job
+      # checks exactly that layout).
+      - name: Hand the export to the commit job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: slides-export
+          path: |
+            web/slides/export/
+            web/slides/auto/index.json
+          if-no-files-found: error
+          retention-days: 1
+
+  commit:
+    needs: export
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fetch the export (into the runner's temp folder, outside the checkout)
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: slides-export
+          path: ${{ runner.temp }}/slides-export
+
+      # The artifact was made by a job that ran npm packages and a browser, so it is data to be checked, never code
+      # to run: only regular files with the names the exporter writes, real PNGs at the exporter's sizes, JSON that
+      # parses, and limits on size and count. Nothing is copied unless every check passes.
+      - name: Check the export (file names, PNG signature and size, JSON, limits)
+        env:
+          ART: ${{ runner.temp }}/slides-export
+        run: |
+          python3 -I - "$ART" <<'PY'
+          import json, os, re, stat, sys
+
+          root = sys.argv[1]
+          # scripts/export-slides.mjs writes <id>-<orientation>.png; ids follow pipeline/validate.py SLIDE_ID
+          PNG_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}-(portrait|landscape)\.png")
+          DIMS = {"portrait": (1080, 1920), "landscape": (1920, 1080)}  # exporter viewport, deviceScaleFactor 1
+          PNG_SIG = b"\x89PNG\r\n\x1a\n"
+          MAX_PNG = 5 * 1024 * 1024      # largest poster today is about 0.8 MiB
+          MAX_JSON = 1024 * 1024         # export/index.json is about 1 KiB, auto/index.json grows with the folder
+          MAX_PNGS = 400                 # 200 posters in both orientations
+          MAX_TOTAL = 256 * 1024 * 1024
+          errors = []
+
+          def fail(msg):
+              # ascii() escapes newlines etc., so a hostile file name cannot write workflow commands into the log
+              errors.append(msg)
+              print(f"::error::slides artifact: {msg}")
+
+          def done():
+              if errors:
+                  sys.exit(f"slides artifact refused ({len(errors)} problem(s)); nothing was copied")
+
+          def listing(d):
+              return {n: os.lstat(os.path.join(d, n)).st_mode for n in sorted(os.listdir(d))}
+
+          def read_json(path, label):
+              size = os.lstat(path).st_size
+              if size > MAX_JSON:
+                  fail(f"{label} is {size} bytes (limit {MAX_JSON})")
+                  return None
+              def no_constant(c):
+                  raise ValueError(f"non-standard constant {c}")
+              try:
+                  with open(path, "rb") as f:
+                      data = json.loads(f.read().decode("utf-8"), parse_constant=no_constant)
+              except (UnicodeDecodeError, ValueError) as e:
+                  fail(f"{label} is not valid JSON ({ascii(str(e))[:200]})")
+                  return None
+              if not isinstance(data, dict) or not isinstance(data.get("slides"), list):
+                  fail(f"{label} is not an object with a 'slides' list")
+                  return None
+              return data
+
+          if not os.path.isdir(root) or os.path.islink(root):
+              fail("the artifact folder is missing")
+              done()
+          top = listing(root)
+          if sorted(top) != ["auto", "export"] or not all(stat.S_ISDIR(m) for m in top.values()):
+              fail(f"expected exactly the real folders auto/ and export/, no symbolic links (got {ascii({n: stat.filemode(m) for n, m in top.items()})})")
+              done()
+
+          auto = listing(os.path.join(root, "auto"))
+          if list(auto) != ["index.json"] or not stat.S_ISREG(auto["index.json"]):
+              fail(f"auto/ must hold the single regular file index.json, no symbolic link (got {ascii({n: stat.filemode(m) for n, m in auto.items()})})")
+
+          export = listing(os.path.join(root, "export"))
+          pngs, total = [], 0
+          for name, mode in export.items():
+              path = os.path.join(root, "export", name)
+              if not stat.S_ISREG(mode):
+                  fail(f"export/{ascii(name)} is not a regular file ({stat.filemode(mode)})")
+              elif name == "index.json":
+                  pass
+              elif not PNG_NAME.fullmatch(name):
+                  fail(f"export/{ascii(name)}: unexpected file name (want <poster-id>-portrait.png / -landscape.png)")
+              else:
+                  pngs.append(name)
+          if "index.json" not in export:
+              fail("export/index.json is missing")
+          if not pngs:
+              fail("export/ holds no PNG")
+          if len(pngs) > MAX_PNGS:
+              fail(f"export/ holds {len(pngs)} PNGs (limit {MAX_PNGS})")
+          done()
+
+          for name in pngs:
+              path = os.path.join(root, "export", name)
+              size = os.lstat(path).st_size
+              total += size
+              if size > MAX_PNG:
+                  fail(f"export/{name} is {size} bytes (limit {MAX_PNG})")
+                  continue
+              with open(path, "rb") as f:
+                  head = f.read(24)
+              if len(head) < 24 or head[:8] != PNG_SIG or head[12:16] != b"IHDR":
+                  fail(f"export/{name} is not a PNG")
+                  continue
+              w, h = int.from_bytes(head[16:20], "big"), int.from_bytes(head[20:24], "big")
+              want = DIMS[PNG_NAME.fullmatch(name).group(1)]
+              if (w, h) != want:
+                  fail(f"export/{name} is {w}x{h}, expected {want[0]}x{want[1]}")
+          if total > MAX_TOTAL:
+              fail(f"the PNGs add up to {total} bytes (limit {MAX_TOTAL})")
+
+          index = read_json(os.path.join(root, "export", "index.json"), "export/index.json")
+          read_json(os.path.join(root, "auto", "index.json"), "auto/index.json")
+          if index is not None:
+              # every PNG is offered by export/index.json and every file it offers is there
+              listed = set()
+              for s in index["slides"]:
+                  for o in DIMS:
+                      v = s.get(o) if isinstance(s, dict) else None
+                      if isinstance(v, str):
+                          listed.add(v)
+              if listed != set(pngs):
+                  fail(f"export/index.json does not match the PNGs (only listed: {ascii(sorted(listed - set(pngs)))}, "
+                       f"not listed: {ascii(sorted(set(pngs) - listed))})")
+          done()
+          print(f"slides artifact ok: {len(pngs)} PNGs ({total} bytes), export/index.json, auto/index.json")
+          PY
+
       - name: Commit web/slides/export and web/slides/auto/index.json
         id: commit
         env:
+          ART: ${{ runner.temp }}/slides-export
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          # Replace web/slides/export/ with the checked artifact (posters that are gone are deleted) and
+          # web/slides/auto/index.json, as plain non-executable files, then stage exactly those paths.
+          apply() {
+            rm -rf web/slides/export
+            mkdir web/slides/export
+            install -m 0644 -t web/slides/export -- "$ART"/export/*
+            install -m 0644 -- "$ART/auto/index.json" web/slides/auto/index.json
+            git add -A web/slides/export web/slides/auto/index.json
+          }
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A web/slides/export web/slides/auto/index.json
+          apply
           if git diff --cached --quiet; then
             echo "No export changes."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -83,22 +252,35 @@ jobs:
           fi
           # checkout ran with persist-credentials: false, so the token is only present in this step
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git commit -m "slides: export PNG $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M') Asia/Taipei"
+          # On a rejected push, start again from the current main rather than rebasing: fetch it, reset to it and
+          # apply the same checked files again. The export owns web/slides/export/ and auto/index.json (the same result
+          # as the former "rebase -X theirs"), every other file stays as main has it, and a conflict cannot stop the
+          # retry. Poster changes pushed meanwhile start another run of this workflow (one at a time, see concurrency),
+          # which exports them.
           for attempt in 1 2 3; do
+            git commit -q -m "slides: export PNG $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M') Asia/Taipei"
             if git push origin HEAD:main; then
               echo "changed=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            echo "push failed (attempt $attempt); rebasing onto origin/main"
+            [ "$attempt" -lt 3 ] || break
+            echo "push failed (attempt $attempt); starting again from the current origin/main"
             sleep $((attempt * 5))
-            git pull --rebase -X theirs origin main
+            git fetch -q --depth=1 origin main
+            git reset -q --hard FETCH_HEAD
+            apply
+            if git diff --cached --quiet; then
+              echo "main already has this export."
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
           done
-          echo "could not push after 3 attempts" >&2
+          echo "::error::could not push after 3 attempts"
           exit 1
 
   deploy:
-    needs: export
-    if: ${{ needs.export.outputs.changed == 'true' }}
+    needs: commit
+    if: ${{ needs.commit.outputs.changed == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       actions: write

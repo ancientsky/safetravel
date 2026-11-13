@@ -32,7 +32,7 @@ deployed on GitHub Pages, refreshed twice a day by GitHub Actions.
 | `web/slides/` | humans + Actions | Health-poster carousel (`slide.html`): `slides.json` playlist, `assets/` artwork, `auto/` auto-publish folder (images dropped there + generated `index.json`), `export/` PNG written by `slides.yml`. Spec: `SLIDES.md` |
 | `scripts/slide-sources/` | humans | Original Taiwan CDC posters + seal; `scripts/crop-slide-assets.py` cuts the artwork into `web/slides/assets/` |
 | `scripts/mirror/` | humans | Intranet mirror kit (sync script, systemd units, nginx site, installer): copies `web/` of the commit the public site serves + the live `arrivals.json` to an internal nginx host; never contacts the data sources. Spec: `MIRROR.md` |
-| `.github/workflows/` | ops | `update-data.yml` (cron) · `deploy-pages.yml` (on push to main, web/**) · `arrivals.yml` (arrivals board, external trigger) · `slides.yml` (poster PNG/PDF export → commit → dispatch deploy) |
+| `.github/workflows/` | ops | `update-data.yml` (cron) · `deploy-pages.yml` (on every push to main) · `arrivals.yml` (arrivals board, external trigger) · `slides.yml` (poster PNG/PDF export (read-only) → checked commit → dispatch deploy) |
 | `docs/` | — | This file + `DATA_CONTRACT.md` + `SLIDES.md` (poster carousel) + `ARRIVALS.md` (arrivals board spec) + `ARRIVALS_SETUP.md` (owner setup, zh-Hant) |
 
 ## Self-reload of open pages (kiosks)
@@ -228,6 +228,9 @@ Kiosk page for airport quarantine-station screens; maintenance guide in `docs/SL
 - `pipeline/slides_auto.py` (stdlib) indexes `web/slides/auto/`: each image becomes an `image` poster, settings parsed
   from the file name (dates, seconds, 直式/橫式 pair, language); `slide.js` appends `auto/index.json` to the playlist.
   `slides.yml` runs it strictly (a bad file name fails the run), `deploy-pages.yml` with `--lenient` (skips the file).
-- `.github/workflows/slides.yml`: on poster changes, `scripts/export-slides.mjs` renders PNGs with Playwright,
-  commits `web/slides/export/` and `web/slides/auto/index.json` with the bot identity and dispatches `deploy-pages.yml` (GITHUB_TOKEN commits do not
-  trigger workflows).
+- `.github/workflows/slides.yml`: on poster changes, `scripts/export-slides.mjs` renders PNGs with Playwright in the
+  `export` job (`contents: read`), which uploads `web/slides/export/` and `web/slides/auto/index.json` as an artifact.
+  The `commit` job (`contents: write`) runs no npm, node or browser: it checks the artifact with shell + system
+  python3 (regular files only, names `<id>-portrait.png` / `<id>-landscape.png` / `index.json`, PNG signature and
+  size, JSON parses, size and count limits), copies it into a fresh checkout of main, commits with the bot identity
+  and pushes. `deploy` then dispatches `deploy-pages.yml` (GITHUB_TOKEN commits do not trigger workflows).
