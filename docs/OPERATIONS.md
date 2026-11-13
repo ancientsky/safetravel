@@ -142,7 +142,7 @@ After a rebuild, commit the three JSON files, open `web/` locally (`python -m ht
   artifact. `deploy` (`pages: write`, `id-token: write`) runs no repository code: it downloads that artifact, adds the live
   `arrivals.json` and publishes. Nothing executed from the repository can therefore obtain a deployment token.
 - Machine-made data commits (subject starting with `data:` — `update-data.yml` and the daily translation routine) may only change
-  `data/` and `web/data/`. `.github/scripts/check-data-commit.sh` enforces it in `deploy-pages.yml` (the deploy stops) and in the
+  `data/` and `web/data/`. `.github/scripts/check-data-commit.sh` enforces it in `deploy-pages.yml` (the deploy stops; checked from the published version onwards, and no other deploy path publishes code that `deploy-pages.yml` has not — see ARCHITECTURE.md, Scheduling) and in the
   `Data commit guard` workflow on every push to `main` (a red run and a mail when such a commit touches site code, pipeline code,
   workflows or scripts). The routine itself stages the two data paths by name and stops when anything else changed
   (`docs/TRANSLATION_GUIDE.md`).

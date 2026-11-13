@@ -7,6 +7,8 @@ on:
       - 'pipeline/**'
       - 'data/manual/**'
       - '.github/workflows/ci.yml'
+      - '.github/scripts/**'
+      - 'tests/deploy-scripts.test.sh'
   pull_request:
 
 permissions:
@@ -31,6 +33,8 @@ jobs:
           pip install -r pipeline/requirements-dev.txt
       - name: Unit tests
         run: python -m pytest pipeline/tests -q
+      - name: Publish-decision scripts (what the deploys may publish)
+        run: bash tests/deploy-scripts.test.sh
       - name: Offline pipeline run
         run: |
           python -m pipeline run --offline --skip-gemini

@@ -4,7 +4,9 @@ name: Update data
 # redeploys GitHub Pages. Triggered by an external scheduler (cron-job.org → workflow_dispatch, docs/ARRIVALS_SETUP.md):
 # GitHub's own cron started runs 4.5-8.5 h late on this repository, so it is not used.
 #
-# Commits made with GITHUB_TOKEN do not trigger other workflows, hence the deploy job here.
+# Commits made with GITHUB_TOKEN do not trigger other workflows, hence the deploy job here. It publishes main when
+# main differs from the live site only in data files; while main has code changes that Deploy Pages has not published
+# it publishes nothing new (.github/scripts/deployable-ref.sh) — the data goes out once that code has passed.
 #
 # Repository configuration:
 #   vars.AI_PROVIDER            'gemini' to translate with the Gemini API inside this workflow. Anything else (default)
@@ -109,6 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read      # deployable-ref.sh asks which commit the last successful Deploy Pages run published
       pages: write
       id-token: write
     concurrency:
@@ -127,15 +130,25 @@ jobs:
         id: pages
         with:
           enablement: true
+      - name: Choose what to publish (main, or the live version while main has unpublished code changes)
+        id: ref
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/deployable-ref.sh "$BASE_URL"
       - name: Carry over the live arrivals.json (no TDX call)
+        if: steps.ref.outputs.mode == 'main'
         env:
           BASE_URL: ${{ steps.pages.outputs.base_url }}
         run: |
           curl -fsS "${BASE_URL}/data/arrivals.json?t=$(date +%s)" -o web/data/arrivals.json && python3 -m json.tool web/data/arrivals.json >/dev/null || rm -f web/data/arrivals.json
       - name: Stamp the code version (open pages reload themselves when it changes)
+        if: steps.ref.outputs.mode == 'main'
         run: .github/scripts/stamp-version.sh
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: steps.ref.outputs.mode == 'main'
         with:
           path: web
       - id: deployment
+        if: steps.ref.outputs.mode == 'main'
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

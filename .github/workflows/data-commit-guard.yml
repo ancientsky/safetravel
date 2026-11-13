@@ -2,7 +2,8 @@ name: Data commit guard
 
 # Commits whose subject starts with "data:" are made by machines (update-data.yml, the daily translation routine) and
 # may only change data/ and web/data/. This run fails — and GitHub mails the owner — when one touches anything else
-# (site code, pipeline code, workflows, scripts). deploy-pages.yml runs the same check before publishing.
+# (site code, pipeline code, workflows, scripts). deploy-pages.yml runs the same check before publishing, from the
+# published version onwards, and the other deploys publish no code that deploy-pages.yml has not published.
 
 on:
   push:

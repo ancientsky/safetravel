@@ -12,7 +12,7 @@
 疾管署・外交部・陸委會・TDX・氣象署
             │  只有 GitHub Actions 抓取（每日 11:17／21:17；航班每 10 分鐘）
             ▼
-GitHub repo（main 分支 web/：程式＋整理好的資料）   GitHub Pages（另有 data/arrivals.json）
+GitHub repo（web/：程式＋整理好的資料）          GitHub Pages（version.json、data/arrivals.json）
             │                                            │
             └──── 署內主機每 5 分鐘「對外」拉取（git + 一次小下載） ────┘
                                    ▼
@@ -20,13 +20,13 @@ GitHub repo（main 分支 web/：程式＋整理好的資料）   GitHub Pages�
 ```
 
 - **資料只抓一次**：署內主機只從 GitHub 複製「已處理好的成品」，從不連到疾管署、外交部、TDX、氣象署；TDX 每月額度不會多用，API 金鑰也不放在署內主機。
-- **兩邊完全一致**：翻譯排程、海報上架（含 `web/slides/auto/` 自動上架）都在 GitHub 完成，署內版 5 分鐘內跟上。
+- **兩邊完全一致**：翻譯排程、海報上架（含 `web/slides/auto/` 自動上架）都在 GitHub 完成，署內版 5 分鐘內跟上。署內版跟的是**公開站實際發布的那一版**，不是 repo 的最新提交：還沒通過公開站部署檢查的程式，不會先出現在署內。
 - **只需對外連線**：不需要從外網連進署內；防火牆只要放行署內主機連往 `github.com` 與 `ancientsky.github.io`（TCP 443）。
 - **網站不綁網址**：全站只用相對路徑，安全設定（CSP）只允許讀取同一網站，不必改任何程式；預設網址 `https://<署內主機>/safetravel/`，與 GitHub Pages 相同結構。
 
 ### 同步程式做的事（`scripts/mirror/safetravel-sync.sh`）
 
-1. `git fetch` main 分支的最新版本（淺層、只取 `web/` 資料夾，第一次約 30 MB，之後每次只下載變動）。
+1. 從 GitHub Pages 讀 `version.json`，得知公開站目前發布的是哪一個提交，再 `git fetch` 那個提交（淺層、只取 `web/` 資料夾，第一次約 30 MB，之後每次只下載變動）。讀不到 `version.json` 時不更新、繼續提供目前版本，並在 `status.json` 與 journal 記錄。要改回「直接跟 main 分支最新提交」（舊版行為），在 `mirror.env` 設 `FOLLOW=branch`。
 2. 從 GitHub Pages 下載 `data/arrivals.json`（入境航班，不在 git 裡；約 50 KB）。失敗時保留上一份，不影響其他內容。
 3. 兩者都沒變 → 什麼都不做（大多數的 5 分鐘都是這樣）。
 4. 有變動 → 在 `releases/` 建一個新版本目錄：沒變的檔案用硬連結（幾乎不占空間、不到 1 秒），再檢查：必要檔案都在、**所有 JSON 都能解析**。
@@ -256,7 +256,7 @@ CRITICAL - SafeTravel mirror: last successful sync 180 min ago …
 
 An intranet mirror that serves the whole site from a Linux host with nginx **without fetching any source twice**: GitHub Actions remains the only process that talks to Taiwan CDC, MOFA/BOCA, MAC, TDX and CWA, and the mirror copies its output.
 
-- `scripts/mirror/safetravel-sync.sh` (systemd timer, every 5 min, user `safetravel`): shallow, sparse, blob-less `git fetch` of `web/` on `main`, plus `data/arrivals.json` from GitHub Pages (the only file not in git). Nothing new → no-op. Otherwise it builds `releases/<UTC time>-<commit>` with `rsync --link-dest` (unchanged files hard-linked), refuses symbolic links and submodules (plain files only), checks required files and that every JSON parses, then switches `www/safetravel` with an atomic rename (600/600 requests returned 200 during 600 switches). A failed check keeps the current release. Keeps 12 releases; `--rollback` serves the previous one; `--check` is a Nagios/Zabbix-style probe (sync age, upstream data age); `state/status.json` is also served at `/safetravel/_mirror/status.json`.
+- `scripts/mirror/safetravel-sync.sh` (systemd timer, every 5 min, user `safetravel`): reads the commit the public site serves from `version.json` on GitHub Pages and makes a shallow, sparse, blob-less `git fetch` of `web/` at that commit (`FOLLOW=published`, the default — the mirror never runs ahead of the public site's deploy checks; `FOLLOW=branch` takes the tip of `main` as older versions did), plus `data/arrivals.json` from GitHub Pages (the only file not in git). Nothing new → no-op. Otherwise it builds `releases/<UTC time>-<commit>` with `rsync --link-dest` (unchanged files hard-linked), refuses symbolic links and submodules (plain files only), checks required files and that every JSON parses, then switches `www/safetravel` with an atomic rename (600/600 requests returned 200 during 600 switches). A failed check keeps the current release. Keeps 12 releases; `--rollback` serves the previous one; `--check` is a Nagios/Zabbix-style probe (sync age, upstream data age); `state/status.json` is also served at `/safetravel/_mirror/status.json`.
 - `scripts/mirror/nginx-safetravel.conf`: HTTPS (80 → 443), `/safetravel/` sub-path like GitHub Pages, `Cache-Control: no-cache` for text (cheap 304s, as file names are not fingerprinted) and 1 h for images, gzip, basic security headers, no CSP header (the pages carry their own CSP meta with a script hash), hidden files denied, no `open_file_cache`.
 - `scripts/mirror/install.sh`: user, directories, units, SELinux labels, nginx template (not enabled automatically; written with `http2 on;` when nginx is 1.25.1 or newer), first sync. `safetravel-sync.sh --selftest` checks a host in a temporary directory (tools, atomic switch, hard links, symlink refusal, pruning, status file, reachability of GitHub); the switch and the date arithmetic run in python3, so GNU coreutils and the Rust coreutils of Ubuntu 26.04 both work. `safetravel-cert.sh <dir>` installs or replaces the TLS certificate from `fullchain.pem` + `privkey.pem`: it checks chain order, that the key is unencrypted and belongs to the certificate, the host name and the expiry, installs the pair in `/etc/nginx/tls`, runs `nginx -t` (putting the previous pair back if that fails), reloads nginx and confirms the new certificate is the one served; `--check` reports on the installed one. Step-by-step for Ubuntu 26.04, including TLS, unattended upgrades and the firewall request: `MIRROR_UBUNTU2604.md`.
 - Sizing for 30–50 kiosks: steady state ≈ 80 requests/min and well under 1 Mbps; the twice-daily data reload peaks at a few hundred MB over 1–3 minutes in the worst case. 1 vCPU / 1 GB / 10 GB is enough; 2 vCPU / 2–4 GB / 40 GB recommended; for high availability run two VMs behind a load balancer or keepalived VIP, each syncing on its own. Outbound HTTPS to `github.com` and `ancientsky.github.io` only; set `HTTPS_PROXY` in `/etc/safetravel/mirror.env` if needed. Serve kiosks over HTTPS (Screen Wake Lock needs a secure context) and keep kiosk clocks on NTP. The sync also writes `version.json` (hash of the site's code files, identical to the GitHub deploys' `.github/scripts/stamp-version.sh`); the map, trip and poster pages poll it and reload themselves at a quiet moment, so kiosks never need a manual refresh.

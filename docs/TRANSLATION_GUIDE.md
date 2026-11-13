@@ -12,7 +12,8 @@ country overviews **without** the Gemini API. GitHub Actions still fetches the d
 - **Only two paths may change:** `data/safetravel.db` and `web/data/`. Never edit site code (`web/*.html`, `web/js/`,
   `web/*.css`), `pipeline/`, `scripts/`, `.github/` or the docs, and never stage them. Step 7 checks this before
   committing; `deploy-pages.yml` and the "Data commit guard" workflow check it again after the push and refuse to
-  publish a `data:` commit that touches anything else.
+  publish a `data:` commit that touches anything else — and the site then stays on the version before it, because no
+  other deploy publishes code that `deploy-pages.yml` has not.
 - Work files stay under `/tmp/pend`, outside the repository.
 
 ## Procedure

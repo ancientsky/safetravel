@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # SafeTravel TW — intranet mirror sync (docs/MIRROR.md).
 #
-# Copies the already-built site from GitHub — web/ of the main branch, plus the live data/arrivals.json that only
-# exists on GitHub Pages — into a new release directory, checks it, and switches the directory nginx serves with
-# an atomic rename. It never contacts the original data sources (Taiwan CDC, MOFA/BOCA, MAC, TDX, CWA): GitHub
-# Actions stays the only fetcher, and no API key lives on this machine.
+# Copies the already-built site from GitHub — web/ of the commit the public site is serving, plus the live
+# data/arrivals.json that only exists on GitHub Pages — into a new release directory, checks it, and switches the
+# directory nginx serves with an atomic rename. It never contacts the original data sources (Taiwan CDC, MOFA/BOCA,
+# MAC, TDX, CWA): GitHub Actions stays the only fetcher, and no API key lives on this machine.
+#
+# Which commit: the one named in <SITE_URL>/version.json, i.e. what GitHub Pages publishes after its checks
+# (FOLLOW=published, the default). So the mirror never runs ahead of the public site with code that has not passed
+# the checks there. FOLLOW=branch takes the tip of $BRANCH instead, as older versions of this script did.
 #
 #   safetravel-sync.sh             one sync; nothing is rebuilt when GitHub has nothing new
 #                                  (run every 5 minutes by safetravel-sync.timer)
@@ -30,6 +34,7 @@ cd / 2>/dev/null || true
 REPO_URL=${REPO_URL:-https://github.com/ancientsky/safetravel.git}
 BRANCH=${BRANCH:-main}
 SITE_URL=${SITE_URL:-https://ancientsky.github.io/safetravel}
+FOLLOW=${FOLLOW:-published}   # published: the commit in SITE_URL/version.json; branch: the tip of BRANCH
 BASE=${BASE:-/srv/safetravel}
 SELFTEST_DIR=""
 if [ "${1:-}" = "--selftest" ]; then   # everything below then points into a throw-away directory
@@ -113,25 +118,47 @@ need_tools() {
   done
 }
 
-# ------------------------------------------------------------------ git: web/ of main, shallow + sparse + blob-less
+# ------------------------------------------------------------------ which commit: the one the public site serves
+published_commit() { # prints the commit id in SITE_URL/version.json, or nothing
+  local out=$TMP/version.json
+  if curl -fsS --max-time "$HTTP_TIMEOUT" --retry 2 --retry-delay 5 -H 'Cache-Control: no-cache' \
+       -o "$out" "$SITE_URL/version.json?t=$(date +%s)" 2>/dev/null; then
+    python3 - "$out" <<'PY' 2>/dev/null || true
+import json, re, sys
+with open(sys.argv[1], encoding='utf-8') as f:
+    c = str(json.load(f).get('commit', ''))
+print(c if re.fullmatch(r'[0-9a-f]{40}', c) else '')
+PY
+  fi
+  rm -f "$out"
+}
+
+# ------------------------------------------------------------------ git: web/ of that commit, shallow + sparse + blob-less
 clone_repo() {
   rm -rf "$REPO"
   git clone --quiet --depth 1 --filter=blob:none --sparse --branch "$BRANCH" "$REPO_URL" "$REPO"
   git -C "$REPO" sparse-checkout set web
 }
-update_repo() {
+update_repo() { # update_repo <branch name or commit id>
   git -C "$REPO" remote set-url origin "$REPO_URL"
-  git -C "$REPO" fetch --quiet --depth 1 origin "$BRANCH"
+  git -C "$REPO" fetch --quiet --depth 1 origin "$1"
   git -C "$REPO" reset --quiet --hard FETCH_HEAD
   git -C "$REPO" gc --auto --quiet || true
 }
 sync_repo() {
+  local want=$BRANCH
+  if [ "$FOLLOW" = published ]; then
+    want=$(published_commit)
+    [ -n "$want" ] || fail "cannot read the published version ($SITE_URL/version.json); still serving the current release"
+  fi
   if [ -d "$REPO/.git" ]; then
-    update_repo || { warn "git update failed; cloning again"; clone_repo; }
+    update_repo "$want" || { warn "git update failed; cloning again"; clone_repo; update_repo "$want"; }
   else
     clone_repo
+    update_repo "$want"
   fi
   COMMIT=$(git -C "$REPO" rev-parse HEAD)
+  if [ "$FOLLOW" = published ] && [ "$COMMIT" != "$want" ]; then fail "checked out ${COMMIT:0:7}, wanted the published ${want:0:7}"; fi
   [ -s "$REPO/web/index.html" ] || fail "checkout has no web/index.html"
 }
 
@@ -362,6 +389,13 @@ do_selftest() {
   else no "network: cannot read $REPO_URL — $(head -n 1 "$TMP/git.err")"; fi
   if curl -fsS --max-time "$HTTP_TIMEOUT" -o "$TMP/a.json" "$SITE_URL/data/arrivals.json" 2>"$TMP/curl.err" && json_ok "$TMP/a.json" flights; then ok "network: $SITE_URL (arrivals.json)"
   else no "network: cannot download $SITE_URL/data/arrivals.json — $(head -n 1 "$TMP/curl.err")"; fi
+  if [ "$FOLLOW" = published ]; then
+    # the commit the public site serves, and that git hands out exactly that commit
+    v=$(published_commit)
+    if [ -z "$v" ]; then no "published version: $SITE_URL/version.json has no commit id"
+    elif git init --quiet "$TMP/probe" && git -C "$TMP/probe" fetch --quiet --depth 1 --filter=blob:none "$REPO_URL" "$v" 2>"$TMP/git.err"; then ok "published version ${v:0:7}: git serves that commit"
+    else no "published version ${v:0:7}: git cannot fetch that commit — $(head -n 1 "$TMP/git.err")"; fi
+  fi
   rm -rf "$SELFTEST_DIR"
   if [ "$bad" = 0 ]; then echo "self-test passed"; else echo "self-test FAILED (see the FAIL lines)"; fi
   exit "$bad"

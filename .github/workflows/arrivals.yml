@@ -79,7 +79,10 @@ jobs:
           python -m pipeline arrivals "${args[@]}"
 
   # Holds the Pages lock: re-reads the counters (another run may have published while this one queued),
-  # re-checks the guard, then makes the TDX call and deploys the current main with the fresh file.
+  # re-checks the guard, then makes the TDX call and deploys the site with the fresh file.
+  # Which site: main, unless main has changes outside data/ that Deploy Pages has not published — then the version
+  # Deploy Pages last published (.github/scripts/deployable-ref.sh). This job publishes flight data; site code only goes live
+  # through deploy-pages.yml and its checks.
   publish:
     needs: guard
     if: needs.guard.outputs.fetch == 'true'
@@ -87,6 +90,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      actions: read      # deployable-ref.sh asks which commit the last successful Deploy Pages run published
       pages: write
       id-token: write
     concurrency:
@@ -101,6 +105,16 @@ jobs:
           ref: main
           fetch-depth: 1
           persist-credentials: false
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        id: pages
+        with:
+          enablement: true
+      - name: Choose what to publish (main, or the live version while main has unpublished code changes)
+        id: ref
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}   # through env, never interpolated into the script text
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/deployable-ref.sh "$BASE_URL"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.14'
@@ -109,12 +123,9 @@ jobs:
           cache-dependency-path: pipeline/requirements.lock
       - name: Install dependencies
         run: pip install --require-hashes -r pipeline/requirements.lock
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-        id: pages
-        with:
-          enablement: true
       - name: Download the published arrivals.json again (under the lock)
         id: prev
+        if: steps.ref.outputs.ok == 'true'
         env:
           BASE_URL: ${{ steps.pages.outputs.base_url }}   # through env, never interpolated into the script text
         run: .github/scripts/prev-arrivals.sh "$BASE_URL" /tmp/prev.json

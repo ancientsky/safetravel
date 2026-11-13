@@ -187,6 +187,7 @@ sudo -u safetravel /opt/safetravel/safetravel-sync.sh --selftest
 每一行都應是 `PASS`，最後顯示 `self-test passed`。它在暫存目錄裡檢查：必要工具、原子切換、硬連結、拒絕符號連結、舊版本清理、狀態檔與監控指令，以及**能不能連到 GitHub**（最後兩行 `network:`）。
 
 - `network:` 兩行 `FAIL` → 防火牆或 proxy 還沒通，回到第 9 節。
+- `published version …` 那一行確認兩件事：讀得到公開站目前發布的版本（`version.json`），而且 git 能取得那個版本。鏡像站跟隨的是**公開站實際發布的版本**，不是 repo 的最新提交；這行 `FAIL` 同樣先檢查防火牆或 proxy。
 - 其他行 `FAIL` → 請把整段輸出回報給網站維護者。
 
 > 為什麼要這一步：Ubuntu 26.04 預設的 `coreutils` 改成 Rust 版（uutils），與過去的 GNU 版在少數行為上可能不同。同步程式已把關鍵步驟（原子切換、日期計算）改用 python3 執行，不依賴 coreutils 的版本，這個檢查用來在你的 VM 上確認。
