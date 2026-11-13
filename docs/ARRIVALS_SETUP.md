@@ -30,7 +30,7 @@
 4. **Repository access**：選 **Only select repositories** → 只勾 `ancientsky/safetravel`。
 5. **Permissions** → **Repository permissions** → **Actions：Read and write**。其他全部維持 *No access*（Metadata 唯讀是自動附帶的，正常）。
 6. 按 **Generate token**，把 `github_pat_…` 複製下來，**只貼進 cron-job.org**（下一步）。離開頁面後就看不到了。
-7. 之後每隔一段時間到 **Settings → Developer settings → Fine-grained tokens** 點開這把 token 確認兩件事：Repository access 只有 `ancientsky/safetravel`、Permissions 只有 Actions（Read and write）。這把 token 只能啟動、取消工作流程與刪除執行紀錄，不能改程式或讀取 secrets；到 repo 的 **Actions** 頁看執行紀錄，若出現不是每 10 分鐘（arrivals）或每天兩次（update-data）的手動觸發，就把 token 刪掉重建。
+7. 之後每隔一段時間到 **Settings → Developer settings → Fine-grained tokens** 點開這把 token 確認兩件事：Repository access 只有 `ancientsky/safetravel`、Permissions 只有 Actions（Read and write）。這把 token 只能啟動、取消工作流程與刪除執行紀錄，不能改程式或讀取 secrets，也不能讓被部署檢查擋下的提交上線（手動啟動 Deploy Pages 跑的是同一套檢查，沒有略過的選項）；到 repo 的 **Actions** 頁看執行紀錄，若出現不是每 10 分鐘（arrivals）或每天兩次（update-data）的手動觸發，就把 token 刪掉重建。
 
 ## (c) 在 cron-job.org 建立兩個排程
 

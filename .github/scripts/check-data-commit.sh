@@ -12,8 +12,10 @@
 # through because only the newest push was looked at.
 #
 # A change that is no longer there is forgiven: when every file the data commit touched outside data/ is, at <head>,
-# identical to what it was before that commit (someone reverted it), the commit passes with a notice. A change a
-# person has read and wants to keep is released by running Deploy Pages by hand with "reviewed" ticked.
+# identical to what it was before that commit (someone reverted it), the commit passes with a notice.
+# There is no switch to skip this check: a refused commit is released by a commit, which takes push rights — a token
+# that may only start workflows (the external scheduler's) cannot do it. To keep a change that a data commit made:
+# put the files back, let that deploy, then make the change again in an ordinary commit.
 set -euo pipefail
 before=${1:-}
 head=${2:-HEAD}

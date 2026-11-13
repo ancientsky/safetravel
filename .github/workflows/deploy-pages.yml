@@ -14,13 +14,8 @@ name: Deploy Pages
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-    inputs:
-      reviewed:
-        description: 'I have read the data commits since the published version; publish even though one changes files outside data/'
-        type: boolean
-        required: false
-        default: false
+  workflow_dispatch:   # no inputs on purpose: starting a run by hand (or with a token that may only start workflows)
+                       # must never be a way around a check
 
 permissions: {}
 
@@ -42,20 +37,16 @@ jobs:
           filter: blob:none        # ...and needs their file lists only, not 100 copies of the database
           persist-credentials: false
       - name: Automated data commits may only change data files (every commit since the published version)
-        if: ${{ !inputs.reviewed }}
         env:
           BEFORE: ${{ github.event.before }}
         run: |
           # Checked from the commit that is live, not just from the previous push: a data commit that was refused
-          # stays refused when a later push arrives, until it is reverted or released by hand ("reviewed").
+          # stays refused when a later push arrives, until a commit puts the files back (which takes push rights).
           live=$(.github/scripts/live-commit.sh "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}")
           base=${BEFORE:-}
           if [ -n "$live" ] && git merge-base --is-ancestor "$live" "$GITHUB_SHA" 2>/dev/null; then base=$live; fi
           echo "checking data commits after ${base:-<only this commit>}"
           .github/scripts/check-data-commit.sh "$base" "$GITHUB_SHA"
-      - name: Data-commit check skipped by hand
-        if: ${{ inputs.reviewed }}
-        run: echo "::warning title=Data-commit check skipped::this run was started by hand with 'reviewed' ticked"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.14'
