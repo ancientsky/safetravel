@@ -1,19 +1,9 @@
 {
  "note": "https check of the clinics' http:// websites (pipeline/travelmed.py probe_https)",
  "urls": {
-  "http://afph.tsgh.ndmctsgh.edu.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
-  },
   "http://taipei.tzuchi.com.tw/": {
    "https": true,
    "checked": "2026-11-13"
-  },
-  "http://w3.tyh.com.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "ConnectTimeout"
   },
   "http://www.cch.org.tw/": {
    "https": true,
@@ -22,36 +12,6 @@
   "http://www.femh.org.tw/": {
    "https": true,
    "checked": "2026-11-13"
-  },
-  "http://www.hch.gov.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
-  },
-  "http://www.hosp.ncku.edu.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "ConnectTimeout"
-  },
-  "http://www.hwln.mohw.gov.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
-  },
-  "http://www.kln.mohw.gov.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
-  },
-  "http://www.kmhk.kmu.edu.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "ConnectionError"
-  },
-  "http://www.kmhp.mohw.gov.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
   },
   "http://www.kmuh.gov.tw/": {
    "https": true,
@@ -65,33 +25,13 @@
    "https": true,
    "checked": "2026-11-13"
   },
-  "http://www.mil.mohw.gov.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
-  },
   "http://www.mmh.org.tw": {
    "https": true,
    "checked": "2026-11-13"
   },
-  "http://www.nant.mohw.gov.tw/?aid=home": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
-  },
-  "http://www.ntuh.gov.tw/ntuh_chinese.aspx": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "ConnectTimeout"
-  },
   "http://www.pch.org.tw/": {
    "https": true,
    "checked": "2026-11-13"
-  },
-  "http://www.sltung.com.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
   },
   "http://www.smh.org.tw/": {
    "https": true,
@@ -101,34 +41,9 @@
    "https": true,
    "checked": "2026-11-13"
   },
-  "http://www.taic.mohw.gov.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
-  },
-  "http://www.tait.mohw.gov.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
-  },
-  "http://www.tsgh.ndmctsgh.edu.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
-  },
-  "http://www.tygh.mohw.gov.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "HTTP 403"
-  },
   "http://www.wanfang.gov.tw/": {
    "https": true,
    "checked": "2026-11-13"
-  },
-  "http://www.ylh.ntuh.gov.tw/": {
-   "https": false,
-   "checked": "2026-11-13",
-   "reason": "ConnectTimeout"
   }
  }
 }
