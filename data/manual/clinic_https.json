@@ -1,0 +1,4 @@
+{
+ "note": "Hospital websites that CDC's clinic list gives as http:// and that a person has opened over https from a network in Taiwan (same address, no certificate warning, the hospital's own site). The data update cannot check these itself: the sites refuse connections from GitHub's servers abroad. Key: the http:// address exactly as in TMClinicsList.csv; value: the date it was checked. Remove an entry if the https address stops working.",
+ "confirmed": {}
+}

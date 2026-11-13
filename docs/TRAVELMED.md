@@ -64,7 +64,10 @@ The CMS rich text is flattened into lines `{t, d?, h?, k?, g?}`:
   certificate and no redirect back to http. Answers live in `data/raw/travelmed/https_probe.json` (30 days for a
   working address, 7 for a failed one, 3 failed checks in a row before a working one is dropped), so offline builds
   give the same links. The check runs on GitHub's runners; a hospital that refuses connections from abroad stays
-  http. `trip.html` marks http links “未加密 / not encrypted”.
+  http (2026-11-13: 11 of 28 upgraded; the other 17 answered HTTP 403 or timed out, mostly `*.mohw.gov.tw` and military
+  hospitals). Those can be settled by hand: `data/manual/clinic_https.json` lists http addresses a person has opened
+  over https from a network in Taiwan; they are exported as https and no longer probed. `trip.html` marks http links
+  “未加密 / not encrypted”.
 
 ## Front end
 

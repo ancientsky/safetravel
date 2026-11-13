@@ -226,3 +226,17 @@ def test_probe_one_needs_200_over_https_and_no_way_back_to_http():
     assert travelmed._probe_one("http://missing.example/") == (False, "HTTP 404")
     assert travelmed._probe_one("http://back.example/") == (False, "redirects to http")
     assert travelmed._probe_one("http://badcert.example/") == (False, "SSLError")
+
+
+def test_hand_confirmed_https_is_exported_and_not_probed(root):
+    _tm_root(root)
+    raw = root / "data" / "raw" / "travelmed"
+    (raw / travelmed.PROBE_FILE).unlink(missing_ok=True)
+    u = "http://www.ntuh.gov.tw/ntuh_chinese.aspx"   # refuses GitHub's servers; confirmed by a person in Taiwan
+    (root / "data" / "manual" / "clinic_https.json").write_text(
+        json.dumps({"confirmed": {u: "2026-11-13", "https://x.example/": "ignored", "ftp://y": "ignored"}}), encoding="utf-8")
+    asked = []
+    travelmed.probe_https(raw, today="2026-11-13", probe=lambda url: (asked.append(url), (False, "HTTP 403"))[1])
+    assert asked and u not in asked and u not in travelmed.load_probe(raw)
+    urls = {c["id"]: c["url"] for c in travelmed.build(root / "web" / "data")["clinics"]}
+    assert urls["401180014"] == "https://www.ntuh.gov.tw/ntuh_chinese.aspx" and urls["111070010"] == "http://www.kln.mohw.gov.tw/"

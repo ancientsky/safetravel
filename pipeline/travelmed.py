@@ -126,6 +126,14 @@ def load_probe(raw: Path | None = None) -> dict:
     return (C.load_json((raw or raw_dir()) / PROBE_FILE, {}) or {}).get("urls", {})
 
 
+def confirmed_https() -> set[str]:
+    """http:// addresses a person has opened over https from a network in Taiwan (data/manual/clinic_https.json).
+    Several government and military hospital sites refuse connections from GitHub's servers abroad (HTTP 403,
+    timeouts), so the automatic check cannot see that their https works; this list settles those by hand."""
+    d = C.load_json(C.manual_dir() / "clinic_https.json", {}) or {}
+    return {u for u in (d.get("confirmed") or {}) if isinstance(u, str) and u.lower().startswith("http://")}
+
+
 def probe_https(raw: Path | None = None, today: str | None = None, probe=_probe_one) -> dict:
     """Try the clinics' http:// websites over https and record the answers. Never raises; returns counts."""
     from concurrent.futures import ThreadPoolExecutor
@@ -136,7 +144,8 @@ def probe_https(raw: Path | None = None, today: str | None = None, probe=_probe_
     src = raw / FILES["clinics"]
     if not src.exists():
         return st
-    urls = sorted({u for u in (_href(_col(r, "合約醫院網站")) for r in _rows(src)) if u.lower().startswith("http://")})
+    by_hand = confirmed_https()   # settled by a person: not asked again
+    urls = sorted({u for u in (_href(_col(r, "合約醫院網站")) for r in _rows(src)) if u.lower().startswith("http://")} - by_hand)
     old = load_probe(raw)
     day = today or C.iso_ts()[:10]
 
@@ -432,8 +441,9 @@ def build(out_dir: Path | None = None, raw: Path | None = None) -> dict | None:
             "hours": ["".join(str(x) for x in day) for day in g] if g else None,
         })
     secure = load_probe(raw)   # http:// websites that were found to answer over https (probe_https)
+    by_hand = confirmed_https()  # ...or that a person confirmed from Taiwan (data/manual/clinic_https.json)
     for c in clinics:
-        if (secure.get(c["url"]) or {}).get("https"):
+        if (secure.get(c["url"]) or {}).get("https") or c["url"] in by_hand:
             c["url"] = _to_https(c["url"])
     if no_hours:
         C.log.warning("travel medicine: no opening hours for %s", ", ".join(no_hours))
