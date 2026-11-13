@@ -12,7 +12,7 @@ await build({
   globalName: 'd3',
   target: 'es2019',
   legalComments: 'none',
-  banner: { js: '// d3 v7.9.0 (subset: scripts/d3-entry.mjs) https://d3js.org Copyright 2010-2023 Mike Bostock, ISC license' },
+  banner: { js: '// d3 v7.9.2 (subset: scripts/d3-entry.mjs) https://d3js.org Copyright 2010-2023 Mike Bostock, ISC license' },
   outfile: 'web/vendor/d3.min.js',
 });
 copyFileSync('node_modules/topojson-client/dist/topojson-client.min.js', 'web/vendor/topojson-client.min.js');
