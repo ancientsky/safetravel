@@ -26,10 +26,11 @@
 
 1. GitHub 右上角頭像 → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**。
 2. **Token name**：`cron-job.org safetravel`。
-3. **Expiration**：建議 1 年（到期前記得換新並更新 cron-job.org）。
+3. **Expiration**：90 天到 1 年之間自行取捨。愈短，這把 token 萬一從 cron-job.org 外洩時能被濫用的時間愈短；但**到期當天看板就會停止更新**，所以選定後請在行事曆記下到期日（GitHub 也會在到期前約一週寄信提醒），到期前換新並更新 cron-job.org 的兩個排程。
 4. **Repository access**：選 **Only select repositories** → 只勾 `ancientsky/safetravel`。
 5. **Permissions** → **Repository permissions** → **Actions：Read and write**。其他全部維持 *No access*（Metadata 唯讀是自動附帶的，正常）。
 6. 按 **Generate token**，把 `github_pat_…` 複製下來，**只貼進 cron-job.org**（下一步）。離開頁面後就看不到了。
+7. 之後每隔一段時間到 **Settings → Developer settings → Fine-grained tokens** 點開這把 token 確認兩件事：Repository access 只有 `ancientsky/safetravel`、Permissions 只有 Actions（Read and write）。這把 token 只能啟動、取消工作流程與刪除執行紀錄，不能改程式或讀取 secrets；到 repo 的 **Actions** 頁看執行紀錄，若出現不是每 10 分鐘（arrivals）或每天兩次（update-data）的手動觸發，就把 token 刪掉重建。
 
 ## (c) 在 cron-job.org 建立兩個排程
 

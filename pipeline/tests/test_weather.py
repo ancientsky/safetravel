@@ -65,6 +65,33 @@ def test_fetch_success_writes_raw(monkeypatch, tmp_path):
     assert st["ok"] and st["items"] == 80 and (tmp_path / "F-C0032-007.json").exists()
 
 
+@responses.activate
+def test_fetch_sends_the_key_in_a_header_not_in_the_url(monkeypatch, tmp_path):
+    monkeypatch.setenv("CWA_API_KEY", "CWA-SECRET-1234")
+    monkeypatch.setattr(W, "raw_path", lambda: tmp_path / "F-C0032-007.json")
+    responses.add(responses.GET, re.compile(r"https://opendata\.cwa\.gov\.tw/.*"), status=200, json=RAW)
+    st = W.fetch()
+    assert st["ok"] and len(responses.calls) == 1
+    req = responses.calls[0].request
+    assert req.headers["Authorization"] == "CWA-SECRET-1234" and "CWA-SECRET-1234" not in req.url
+
+
+@responses.activate
+def test_fetch_falls_back_to_the_url_parameter_when_the_header_is_refused(monkeypatch, tmp_path):
+    monkeypatch.setenv("CWA_API_KEY", "CWA-SECRET-1234")
+    monkeypatch.setattr(W, "raw_path", lambda: tmp_path / "F-C0032-007.json")
+
+    def server(request):   # a server that only reads the documented URL parameter
+        if "Authorization=CWA-SECRET-1234" in request.url:
+            return 200, {}, json.dumps(RAW)
+        return 401, {}, "401 Forbidden: Authorization key is not correct."
+
+    responses.add_callback(responses.GET, re.compile(r"https://opendata\.cwa\.gov\.tw/.*"), callback=server)
+    st = W.fetch()
+    assert st["ok"] and st["items"] == 80 and len(responses.calls) == 2
+    assert "CWA-SECRET-1234" not in responses.calls[0].request.url
+
+
 def test_validator_accepts_export_and_rejects_bad_rows(tmp_path):
     doc = W.export(None, tmp_path)
     v = VAL.V()

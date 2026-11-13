@@ -1,4 +1,19 @@
-// Every page (classic script, no CSP hash needed): recover from a half-updated browser cache.
+// Every page (classic script, no CSP hash needed). Two guards.
+//
+// 1. Framed by another website (clickjacking). GitHub Pages cannot send X-Frame-Options or frame-ancestors, and a
+//    <meta> CSP cannot carry frame-ancestors (the intranet mirror's nginx sends both). So when this page sits in a frame
+//    whose top page is another origin, it leaves for framed.html — a static notice with a link that opens the site
+//    itself — before any page code draws. Frames on the same origin are allowed, like frame-ancestors 'self'.
+//    "localhost" is exempt so a development preview pane can show the pages.
+(function () {
+  if (window.top === window.self || location.hostname === 'localhost') return;
+  try { if (window.top.location.origin === location.origin) return; } catch (e) { /* another origin: reading it throws */ }
+  window.safetravelFramed = true;
+  document.documentElement.style.display = 'none';
+  location.replace('framed.html');
+})();
+
+// 2. Recover from a half-updated browser cache.
 // GitHub Pages lets browsers keep each file for 10 minutes. Right after a deploy a browser can hold an old copy of one
 // module next to the new copy of another; the new one may import something the old one lacks, and then the page's
 // whole module graph refuses to start (blank page, as on 2026-11-05). Each page's entry module marks <html data-booted>
@@ -30,6 +45,7 @@
   }
   window.safetravelFreshReload = freshReload;
   window.addEventListener('load', function () {
+    if (window.safetravelFramed) return; // on its way to framed.html
     setTimeout(function () {
       var n = 0;
       try { n = Number(sessionStorage.getItem(KEY)) || 0; } catch (e) { /* storage blocked */ }

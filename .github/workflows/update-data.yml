@@ -122,6 +122,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 1
+          persist-credentials: false
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
         id: pages
         with:

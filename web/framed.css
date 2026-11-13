@@ -1,0 +1,22 @@
+/* framed.html — the notice shown when another website loads a page of this site inside a frame. No script on that
+   page, so the theme follows the system setting: dark (black / green) by default, light when the system asks for it. */
+:root { --bg: #030806; --fg: #d7f5e3; --dim: #8fb8a0; --accent: #39ff88; --border: #1c4a33; --on-accent: #02140a; }
+@media (prefers-color-scheme: light) {
+  :root { --bg: #f6faf7; --fg: #12241a; --dim: #4a6355; --accent: #0a7a3d; --border: #c4d9cc; --on-accent: #ffffff; }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px;
+  background: var(--bg); color: var(--fg);
+  font: 16px/1.6 system-ui, -apple-system, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+main { max-width: 34rem; width: 100%; border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; }
+.brand { margin: 0 0 8px; color: var(--accent); font-weight: 700; letter-spacing: .04em; }
+h1 { margin: 0 0 6px; font-size: 1.15rem; line-height: 1.35; }
+p { margin: 0 0 10px; color: var(--dim); }
+div + div { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--border); }
+.btn {
+  display: inline-block; padding: 8px 16px; border-radius: 8px; background: var(--accent); color: var(--on-accent);
+  font-weight: 700; text-decoration: none;
+}
+.btn:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }

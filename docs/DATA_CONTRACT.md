@@ -244,7 +244,7 @@ shown as a link in the menu. Rules: `routes` sorted by `monthly` desc (routes li
 
 Central Weather Administration open data **F-C0032-007 全球都市天氣預報**: 80 cities, 7 daily forecasts each. Built by
 `pipeline/weather.py` from `data/raw/cwa/F-C0032-007.json` (file API, JSON). `update-data.yml` downloads it twice a day with
-the `CWA` repository secret (env `CWA_API_KEY`; the key is passed as a URL parameter and masked in every logged error); without
+the `CWA` repository secret (env `CWA_API_KEY`; the key is sent in the `Authorization` header, with the documented URL parameter as a fallback when the server answers 401, and masked in every logged error); without
 a key, or when the download does not parse with ≥ 50 cities, the previous raw file is kept and re-exported. The dataset is
 Chinese only: English names, ISO country and coordinates come from `data/manual/cwa_cities.json` (keyed by `StationID`, a WMO
 station number); stations missing there are still exported (empty `name_en`, `iso: null`) and listed under `unmapped`.

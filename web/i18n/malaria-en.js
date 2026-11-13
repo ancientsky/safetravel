@@ -18,7 +18,7 @@ export default {
   title: 'Malaria prophylaxis calculator',
   lede: 'Enter your itinerary and health details. Following Taiwan CDC’s travel prescriptions and its malaria prophylaxis guidance, the calculator shows whether the trip calls for preventive medicine, which drugs can be considered, when to start and stop, how many doses and tablets — and exports reminders to Google Calendar or your phone.',
   draft_h: 'Draft · unofficial',
-  draft: 'Not a Taiwan CDC service: this site compiled it from CDC’s public guidance. It awaits review by physicians and may contain errors; for discussion with your doctor only. Malaria prophylaxis must be prescribed by a doctor — do not buy or take it on your own. Everything you enter stays in your browser; nothing is stored or sent.',
+  draft: 'Not a Taiwan CDC service: this site compiled it from CDC’s public guidance. It awaits review by physicians and may contain errors; for discussion with your doctor only. Malaria prophylaxis must be prescribed by a doctor — do not buy or take it on your own. What you enter is calculated in your browser; this site neither stores nor sends it. Only “Add to Google Calendar” passes the medicine, dose, and medication and travel dates to Google’s page.',
 
   trip_h: 'Itinerary',
   trip_sub: 'Add each country or area in order, with the local arrival and departure dates. Transit stops count too.',
@@ -154,7 +154,7 @@ export default {
   cal_time: 'Reminder time (local time)',
   cal_google: 'Add to Google Calendar',
   cal_ics: 'Download calendar file (.ics)',
-  cal_note: 'The Google Calendar button creates a repeating reminder; the .ics file imports into Google Calendar, iPhone or Outlook and adds a 90-day “malaria watch” after return. Times are local: reminders follow your phone’s time zone.',
+  cal_note: 'The .ics file is only downloaded to your device; it imports into Google Calendar, iPhone or Outlook and adds a 90-day “malaria watch” after return. “Add to Google Calendar” opens Google’s page and creates a repeating reminder: the medicine, dose, and medication and travel dates travel to Google in the link. Use the .ics file if you would rather not send them. Times are local: reminders follow your phone’s time zone.',
   cal_title: ({ name, amount }) => `Malaria prevention: ${name}, ${amount}`,
   cal_desc: ({ name, amount, freq, first, last, n, start, end }) =>
     `${name}, ${freq}, ${amount} each time.\nDoses: ${first} to ${last}, ${n} in total.\nRisk area: ${start} to ${end}.\nTake with food and plenty of water, regularly, and finish the course after leaving.\nYour prescription decides.`,

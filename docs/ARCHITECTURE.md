@@ -54,6 +54,13 @@ re-fetches every same-site script / stylesheet the page used with `cache: 'reloa
 session (`sessionStorage safetravel.recover`). And every code-update reload (`refresh.js`, `autoreload.js`) goes through
 the same re-fetch first (`freshReload`), so kiosks never mix versions. New pages: include the guard and set the mark.
 
+**Framed by another website.** GitHub Pages cannot send `X-Frame-Options` or `frame-ancestors`, and a `<meta>` CSP
+cannot carry `frame-ancestors` (the intranet mirror's nginx sends both headers). The same `js/boot-guard.js` therefore
+checks first whether the page sits in a frame whose top page is another origin; if so it replaces itself with
+`framed.html` (static, no script: a bilingual notice and a link that opens the site in a new tab) before any page
+code draws. Same-origin frames are allowed, like `frame-ancestors 'self'`; the host name `localhost` is exempt for
+development preview panes. The pages' own CSP has no `frame-src`, so the site never frames anything itself.
+
 ## Data sources
 
 1. **Travel alert levels** (國際旅遊疫情建議等級, all history)

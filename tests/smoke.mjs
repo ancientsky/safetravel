@@ -1640,6 +1640,34 @@ async function run(browser) {
     return 'switch mirrors the card setting; compact closes the panel and the tour continues on the card';
   });
 
+  await check('framed by another origin: the page leaves for the static notice; a same-origin frame is left alone', async () => {
+    // the tests' own host name (localhost) is exempt for preview panes, so the framed copy is loaded from 127.0.0.1
+    const alt = BASE_URL.replace('//localhost', '//127.0.0.1');
+    // its own browser: Chrome refuses to load one loopback host inside a page from another unless this check is off
+    const fb = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--disable-features=LocalNetworkAccessChecks'] });
+    const pf = await fb.newPage();
+    const frameUrl = async () => {
+      await pf.waitForFunction(() => window.frames.length === 1);
+      const f = pf.frames().find((x) => x !== pf.mainFrame());
+      await f.waitForLoadState('load');
+      await pf.waitForTimeout(600);
+      return f;
+    };
+    // 1. top page on another origin (same server under its other host name; a stand-in page without the site's CSP)
+    await pf.route(`${BASE_URL}__other.html`, (r) => r.fulfill({ contentType: 'text/html', body: `<!doctype html><iframe src="${alt}index.html" width="900" height="600"></iframe>` }));
+    await pf.goto(`${BASE_URL}__other.html`);
+    let f = await frameUrl();
+    const notice = { url: f.url(), link: await f.getAttribute('a.btn', 'href'), target: await f.getAttribute('a.btn', 'target'), scripts: await f.locator('script').count() };
+    assert(notice.url === `${alt}framed.html` && notice.link === './' && notice.target === '_blank' && notice.scripts === 0, `cross-origin ${JSON.stringify(notice)}`);
+    // 2. top page on the same origin (a page without the site's CSP, which forbids frames altogether)
+    await pf.route(`${alt}__parent.html`, (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><iframe src="m.html" width="900" height="600"></iframe>' }));
+    await pf.goto(`${alt}__parent.html`);
+    f = await frameUrl();
+    const same = f.url();
+    await fb.close();
+    assert(same === `${alt}m.html`, `same-origin frame went to ${same}`);
+  });
+
   await check('kiosk self-reload: new site code (version.json) reloads the map page at a quiet moment', async () => {
     const pr = await context.newPage();
     const errs = [];

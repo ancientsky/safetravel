@@ -339,7 +339,7 @@ function calendarBlock(drug, sch, dose, win) {
   });
   return h('div', { class: 'ml-calb' },
     h('div', { class: 'f-field' }, h('label', { for: time.id, text: t('cal_time') }), time),
-    gcal, ics,
+    ics, gcal,   // the file that stays on the device first; the Google link carries the reminder text to Google
     h('p', { class: 'ml-note', text: t('cal_note') }));
 }
 
