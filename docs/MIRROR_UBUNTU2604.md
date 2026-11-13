@@ -446,13 +446,19 @@ sudo nginx -T 2>/dev/null | grep -n -E "^\s*(server_name|listen|ssl_certificate|
 
 再用 `sudo /opt/safetravel/safetravel-cert.sh --check` 確認 nginx 發出去的就是剛安裝的憑證。
 
-範本做了什麼（完整說明在 `MIRROR.md` 第 4 節）：80 轉 443；`/safetravel/` 子路徑與 GitHub Pages 相同；文字檔 `no-cache`（未變動只回 304）、圖片快取 1 小時；gzip；`nosniff`、`Referrer-Policy`、禁止被其他網站內嵌；隱藏檔 403；TLS 只開 1.2 與 1.3；`/safetravel/_mirror/status.json` 提供同步狀態。**不要**加 `open_file_cache`，也不要在標頭的 CSP 加 `script-src` 之類的項目。
+範本做了什麼（完整說明在 `MIRROR.md` 第 4 節）：80 轉 443；80 與 443 的回應都不顯示 nginx 版本（`server_tokens off;`）；`/safetravel/` 子路徑與 GitHub Pages 相同；文字檔 `no-cache`（未變動只回 304）、圖片快取 1 小時；gzip；`nosniff`、`Referrer-Policy`、禁止被其他網站內嵌；網頁以外的檔案（JS、JSON、圖片）帶嚴格的 CSP 標頭；轉址回應也帶同一組安全標頭並設 `no-store`；隱藏檔 404；TLS 只開 1.2 與 1.3，TLS 1.2 只用 ECDHE + AES-GCM／ChaCha20；`/safetravel/_mirror/status.json` 提供同步狀態。**不要**加 `open_file_cache`，也不要在網頁的 CSP 標頭加 `script-src`、`default-src` 之類的項目。
 
-所有 kiosk 都確定只用 HTTPS 之後，可在 `location /safetravel/ { … }` 內取消這行的註解：
+所有 kiosk 都確定只用 HTTPS 之後，把範本裡**兩行** `# add_header Strict-Transport-Security …` 前面的 `#` 去掉（一行在 `server` 層，給轉址等回應；一行在 `location /safetravel/ { … }` 內）：
 
-```nginx
-        add_header Strict-Transport-Security "max-age=31536000" always;
+```bash
+sudo sed -i 's|^\( *\)# add_header Strict-Transport-Security|\1add_header Strict-Transport-Security|' /etc/nginx/conf.d/safetravel.conf
+sudo nginx -t && sudo systemctl reload nginx
+curl -skI https://127.0.0.1/ | grep -i strict      # strict-transport-security: max-age=31536000; includeSubDomains
 ```
+
+`includeSubDomains` 只涵蓋**這個主機名稱底下**的名稱（`*.safetravel.cdc.gov.tw`，目前沒有），不影響 `cdc.gov.tw` 的其他網站。不要加 `preload`。
+
+2026-11 以前安裝的主機，照第 12 節把設定補到與範本相同。
 
 ---
 
@@ -464,9 +470,10 @@ sudo nginx -T 2>/dev/null | grep -n -E "^\s*(server_name|listen|ssl_certificate|
 H=safetravel.cdc.internal
 curl -skI https://$H/safetravel/ | head -n 1                                  # HTTP/2 200
 curl -sI  http://$H/safetravel/  | grep -i -E "^HTTP|^location"               # 301 → https
+curl -sI  http://$H/safetravel/  | grep -i "^server"                          # Server: nginx（不應有版本號或 Ubuntu）
 curl -skI https://$H/safetravel/ | grep -i -E "frame|content-security|nosniff"
 curl -sk  https://$H/safetravel/_mirror/status.json                           # "result": "ok"
-curl -skI https://$H/safetravel/.gitignore | head -n 1                        # 403
+curl -skI https://$H/safetravel/.gitignore | head -n 1                        # 404（隱藏檔與不存在的檔案一樣）
 curl -sk -H 'Accept-Encoding: gzip' -o /dev/null -w '%{size_download}\n' https://$H/safetravel/data/epidemics.json   # 約 30 萬位元組（未壓縮約 130 萬）
 echo | openssl s_client -connect $H:443 -servername $H 2>/dev/null | grep -E "Verify return code|Protocol"
 ```
@@ -631,6 +638,156 @@ IP 清單過期時的表現：同步失敗，鏡像站繼續提供最後一個�
 
 ---
 
+## 12. 弱點掃描與已安裝主機的更新（2026-11）
+
+2026-11-13 資安單位對這台主機做了兩種掃描：主機弱點掃描（DragonSoft，11 項全為資訊類）與網站應用程式掃描（Fortify WebInspect，2 高、4 低、7 資訊、3 最佳實務）。範本已改好；**2026-11 以前安裝的主機**照 12.1 的順序做一次。每一步都可以重複執行；已經改過的部分不會再改。
+
+### 12.1 已安裝的主機：照順序執行
+
+**準備**（更新程式碼；備份目前的設定，只在第一次備份）：
+
+```bash
+cd /opt/safetravel-src && sudo git pull            # 經 proxy：sudo env https_proxy=http://proxy.cdc.internal:8080 git pull
+F=/etc/nginx/conf.d/safetravel.conf
+T=/opt/safetravel-src/scripts/mirror/nginx-safetravel.conf
+H=safetravel.cdc.gov.tw                            # 本機的主機名稱
+[ -e /etc/nginx/safetravel.conf.before-2026-11 ] || sudo cp -p "$F" /etc/nginx/safetravel.conf.before-2026-11
+```
+
+之後每一步都在**同一個終端機視窗**執行（要用到上面的 `F`、`T`、`H`）。任何一步的 `nginx -t` 失敗時，nginx 仍在用舊設定、網站不受影響；把備份放回去即可：`sudo cp /etc/nginx/safetravel.conf.before-2026-11 "$F" && sudo nginx -t && sudo systemctl reload nginx`。
+
+**第 1 步：80 轉址不顯示 nginx 版本**（主機掃描「HTTP 伺服器類型和版本」）
+
+```bash
+curl -sI --noproxy '*' http://127.0.0.1/safetravel/ | grep -i '^server'    # 修改前：Server: nginx/1.28.3 (Ubuntu)
+awk '/^[[:space:]]*listen 80[ ;]/{b=1} b && /server_tokens/{f=1} b && /^}/{exit} END{exit !f}' "$F" \
+  || sudo sed -i 's|^\( *\)return 301 https://.*|\1server_tokens off;\n&|' "$F"
+sudo nginx -t && sudo systemctl reload nginx
+curl -sI --noproxy '*' http://127.0.0.1/safetravel/ | grep -i '^server'    # 修改後：Server: nginx
+```
+
+`Server: nginx` 這幾個字會留著（不另外裝模組就無法拿掉），掃描仍會有一筆「偵測到 nginx」的資訊類項目，但不再有版本與作業系統名稱。
+
+**第 2 步：TLS 1.2 只用有前向保密的 AEAD 加密套件**（網站掃描「Weak SSL Cipher」「Missing Perfect Forward Secrecy」）
+
+先定義一個列出「伺服器實際接受哪些套件」的指令（只在這個視窗有效）：
+
+```bash
+tlslist() {
+  for c in $(openssl ciphers 'ALL:COMPLEMENTOFALL:@SECLEVEL=0' | tr ':' ' '); do
+    case $c in TLS_*) continue;; esac
+    echo | timeout 5 openssl s_client -connect 127.0.0.1:443 -servername $H -tls1_2 -cipher "$c:@SECLEVEL=0" >/dev/null 2>&1 && echo "TLS1.2 $c"
+  done
+  for c in TLS_AES_128_GCM_SHA256 TLS_AES_256_GCM_SHA384 TLS_CHACHA20_POLY1305_SHA256; do
+    echo | timeout 5 openssl s_client -connect 127.0.0.1:443 -servername $H -tls1_3 -ciphersuites $c >/dev/null 2>&1 && echo "TLS1.3 $c"
+  done
+}
+tlslist                     # 修改前：二十多行，含 AES128-SHA、CAMELLIA…、AES128-GCM-SHA256（無 ECDHE）等
+grep -q '^[[:space:]]*ssl_ciphers ' "$F" \
+  || sudo sed -i 's|^\( *\)ssl_protocols .*|&\n\1ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;|' "$F"
+sudo nginx -t && sudo systemctl reload nginx
+tlslist
+```
+
+修改後應該只剩這六行（順序可能不同）：
+
+```text
+TLS1.2 ECDHE-RSA-AES256-GCM-SHA384
+TLS1.2 ECDHE-RSA-CHACHA20-POLY1305
+TLS1.2 ECDHE-RSA-AES128-GCM-SHA256
+TLS1.3 TLS_AES_128_GCM_SHA256
+TLS1.3 TLS_AES_256_GCM_SHA384
+TLS1.3 TLS_CHACHA20_POLY1305_SHA256
+```
+
+憑證是 RSA，所以清單裡的 `ECDHE-ECDSA-…` 不會出現（日後換 ECDSA 憑證時用得到）。TLS 1.3 的套件不受 `ssl_ciphers` 影響，三個都是強加密。目前的 Chrome、Edge、Firefox 都支援這些套件。
+
+**第 3 步：隱藏檔回 404**（網站掃描「Unpatched Application / CVE-2024-38474」誤判）
+
+```bash
+for p in 'js/z%3F.x.%3Fzlang-boot.js' 'js/.%3Fzxz%3F.lang-boot.js' '.git/config'; do
+  curl -sk --noproxy '*' -o /dev/null -w "%{http_code} $p\n" "https://127.0.0.1/safetravel/$p"; done   # 修改前：404、403、403
+sudo sed -i 's|location ~ /\\\. { deny all; }|location ~ /\\. { return 404; }|' "$F"
+sudo nginx -t && sudo systemctl reload nginx
+for p in 'js/z%3F.x.%3Fzlang-boot.js' 'js/.%3Fzxz%3F.lang-boot.js' '.git/config'; do
+  curl -sk --noproxy '*' -o /dev/null -w "%{http_code} $p\n" "https://127.0.0.1/safetravel/$p"; done   # 修改後：404、404、404
+```
+
+**第 4 步：轉址也帶安全標頭；網頁以外的檔案帶嚴格的 CSP 標頭**（網站掃描「Cache Management: Insecure Policy」「Missing / Misconfigured Content Security Policy」）
+
+這一步把範本裡新增的兩段（`map $uri $safetravel_csp` 與 `server` 層的一組 `add_header`）原樣複製到 `$F`；HSTS 已啟用的主機，新加的那行 HSTS 也會是啟用的。
+
+```bash
+curl -skI --noproxy '*' https://127.0.0.1/ | grep -i -E '^(cache-control|content-security)'   # 修改前：沒有輸出
+if ! grep -q 'safetravel_csp' "$T"; then
+  echo "範本是舊版：先執行 cd /opt/safetravel-src && sudo git pull"
+else
+  if ! grep -q 'safetravel_csp' "$F"; then
+    D=$(mktemp -d)
+    sed -n '/^# Content-Security-Policy header/,/^}/p' "$T" > "$D/map"
+    sed -n '/# Answers that do not come from/,/# add_header Strict-Transport-Security/p' "$T" > "$D/hdr"
+    if grep -Eq '^[[:space:]]*add_header Strict-Transport-Security' "$F"; then
+      sed -i 's|# add_header Strict-Transport-Security|add_header Strict-Transport-Security|' "$D/hdr"
+    fi
+    awk 'FNR==1{n++} n==1{m=m $0 "\n"; next} n==2{h=h $0 "\n"; next}
+         /^server \{/ && !a {printf "%s\n", m; a=1}
+         /^[[:space:]]*location = \/ \{/ && !b {printf "%s\n", h; b=1}
+         {print}' "$D/map" "$D/hdr" "$F" > "$D/new"
+    sudo install -m 644 "$D/new" "$F"
+    rm -rf "$D"
+  fi
+  sudo sed -i -e "s|add_header Content-Security-Policy \"frame-ancestors 'self'\" always;|add_header Content-Security-Policy \$safetravel_csp always;|" \
+    -e '/^[[:space:]]*add_header Cache-Control no-store;$/d' \
+    -e '/The header above holds$/d' -e '/frame-ancestors only, which restricts nothing else/d' "$F"
+fi
+sudo nginx -t && sudo systemctl reload nginx
+curl -skI --noproxy '*' https://127.0.0.1/ | grep -i -E '^(cache-control|content-security)'
+#   cache-control: no-store
+#   content-security-policy: default-src 'none'; frame-ancestors 'none'
+curl -skI --noproxy '*' https://127.0.0.1/safetravel/js/textsize-boot.js | grep -i '^content-security'
+#   content-security-policy: default-src 'none'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'
+curl -skI --noproxy '*' https://127.0.0.1/safetravel/ | grep -i -E '^(cache-control|content-security)'
+#   cache-control: no-cache
+#   content-security-policy: frame-ancestors 'self'; base-uri 'none'; form-action 'none'; object-src 'none'
+```
+
+接著在一台 kiosk 或自己的電腦開 `https://safetravel.cdc.gov.tw/safetravel/`、`trip.html`、`arrivals.html`，按 F12 看主控台：不應有紅字或「Content Security Policy」字樣。
+
+**第 5 步：HSTS 加上 `includeSubDomains`**（網站掃描「HSTS Does Not Include Subdomains」）
+
+已啟用的那行會改成新值；還是註解（`#`）的行只更新內容、仍維持註解。
+
+```bash
+sudo sed -i 's|Strict-Transport-Security "max-age=31536000"|Strict-Transport-Security "max-age=31536000; includeSubDomains"|' "$F"
+sudo nginx -t && sudo systemctl reload nginx
+curl -skI --noproxy '*' https://127.0.0.1/safetravel/ | grep -i '^strict'
+#   HSTS 已啟用：strict-transport-security: max-age=31536000; includeSubDomains
+#   HSTS 未啟用：沒有輸出
+```
+
+**最後**：`sudo nginx -T 2>/dev/null | grep -c 'ssl_ciphers\|safetravel_csp\|return 404'` 應大於等於 4；請資安單位重新掃描。
+
+### 12.2 掃描項目與處理
+
+| 掃描項目 | 處理 |
+|---|---|
+| 主機：HTTP 伺服器類型和版本（80 埠顯示 `nginx/1.28.3`、`Ubuntu`） | **已修正**（第 1 步）。之後只顯示 `nginx`。 |
+| 網站：Weak SSL Cipher（高）、Missing Perfect Forward Secrecy | **已修正**（第 2 步）。TLS 1.2 只剩 ECDHE + AES-GCM／ChaCha20-Poly1305，TLS 1.3 不變。 |
+| 網站：Unpatched Application，CVE-2024-38474（高） | **誤判**，另把隱藏檔改回 404（第 3 步），讓這個比對不再成立。說明見 12.3。 |
+| 網站：Cache Management: Insecure Policy（`/`） | **已修正**（第 4 步）：轉址回應改為 `no-store`。網站內容維持 `no-cache`（每次向伺服器確認，未變動回 304），是公開、非機敏的靜態內容，**刻意不用** `no-store`。 |
+| 網站：Missing Content Security Policy（`/`）、Misconfigured CSP（`js/textsize-boot.js`） | **已修正**（第 4 步）：轉址與所有非網頁檔案帶 `default-src 'none'` 的 CSP 標頭。網頁的完整 CSP 寫在每頁的 `<meta>`（含內嵌腳本的雜湊），標頭只補 `frame-ancestors` 等不會變動的項目。 |
+| 網站：HSTS Does Not Include Subdomains | **已修正**（第 5 步）。只涵蓋本主機名稱底下的名稱；不加 `preload`。 |
+| 網站：Cache Management: Headers（`Vary`） | **設計如此**。`Vary: Accept-Encoding` 來自 gzip，告訴快取同一網址有壓縮與未壓縮兩種版本，拿掉反而可能讓不支援 gzip 的用戶端拿到壓縮內容。 |
+| 網站：Weak Cryptographic Hash（`travelmed.json`、`version.json`） | **誤判**。兩者是 40 位十六進位的識別碼，不是密碼或簽章：`version.json` 的是 git 版本編號（鏡像同步靠它判斷該取哪個版本，不能改），`travelmed.json` 的是來源檔的變更指紋。 |
+| 主機：作業系統識別（Crestron XPanel）、DNS hostname.bind、身份服務 identd | **掃描器誤判**。這是 VMware 上的 Ubuntu；主機只開 80、443（SSH 限管理網段），沒有 DNS（53）或 identd（113）服務。 |
+| 主機：TCP 時間標記、SSL 憑證資訊、根憑證資訊、路由追蹤、服務檢測、nginx 偵測、ALPN | **資訊類，不需處理**。TCP 時間標記是 Linux 預設；關掉（`net.ipv4.tcp_timestamps=0`）會影響 TCP 效能，Linux 每條連線的時間標記起點是隨機的，無法推算開機時間，不建議關。 |
+
+### 12.3 給資安單位的說明（CVE-2024-38474）
+
+> CVE-2024-38474 是 Apache HTTP Server mod_rewrite 的漏洞；本主機是 nginx 1.28（Ubuntu 套件），沒有安裝 Apache，不受影響。WebInspect 的判斷方式是把檔名裡的 `z%3F.x.%3Fz` 換成 `.%3Fzxz%3F.` 再送一次，兩次狀態碼不同就判定有漏洞。換過的檔名以 `.` 開頭，nginx 設定一律拒絕存取隱藏檔，所以回 403，原本的請求則是一般的「檔案不存在」404，差別來自這條保護規則，不是檔名混淆。我們以相同的 nginx 設定實測各種 `%3F` 變形，都只得到 404（不存在）或 400（不合法路徑），沒有任何檔案或原始碼被讀出；隱藏檔也已改為回 404，與一般不存在的檔案相同，存取仍被拒絕。
+
+---
+
 ## English summary
 
-Step-by-step deployment of the intranet mirror on Ubuntu Server 26.04 LTS: base OS settings (time zone, chrony pointed at the internal NTP server, ufw), packages, optional outbound proxy, `install.sh`, a host self-test (`safetravel-sync.sh --selftest`: tools, atomic switch, hard links, symlink refusal, pruning, status file, and reachability of GitHub), TLS (key + CSR with a SAN, converting and chaining what the CA returns, three pre-install checks, an expiry reminder, trusting an internal CA on kiosks), enabling the nginx site (`http2 on;` on nginx 1.25.1+, written by the installer), verification commands, `unattended-upgrades` (security and regular updates nightly, automatic reboot at 03:45, timers pinned to the small hours) and the firewall request: outbound TCP 443 to `github.com` and `ancientsky.github.io`, the Ubuntu archive, internal NTP and DNS; inbound 443/80 from kiosks and 22 from the management network. GitHub's addresses change — allow by name or through a proxy where possible, otherwise take the `web`, `git` and `pages` ranges from `https://api.github.com/meta`. Items that could not be verified on a real 26.04 host when this was written are marked 待現場確認.
+Step-by-step deployment of the intranet mirror on Ubuntu Server 26.04 LTS: base OS settings (time zone, chrony pointed at the internal NTP server, ufw), packages, optional outbound proxy, `install.sh`, a host self-test (`safetravel-sync.sh --selftest`: tools, atomic switch, hard links, symlink refusal, pruning, status file, and reachability of GitHub), TLS (key + CSR with a SAN, converting and chaining what the CA returns, three pre-install checks, an expiry reminder, trusting an internal CA on kiosks), enabling the nginx site (`http2 on;` on nginx 1.25.1+, written by the installer; `server_tokens off` in both server blocks), verification commands, a section on the November 2026 scans (host scan and Fortify WebInspect) with repeatable, step-by-step commands for hosts installed earlier (version hidden on the port-80 redirect, TLS 1.2 limited to ECDHE + AEAD suites, hidden files 404, security headers and `no-store` on redirects, a strict CSP header on non-page files, HSTS `includeSubDomains`), what each finding was and the explanation for the CVE-2024-38474 false positive, `unattended-upgrades` (security and regular updates nightly, automatic reboot at 03:45, timers pinned to the small hours) and the firewall request: outbound TCP 443 to `github.com` and `ancientsky.github.io`, the Ubuntu archive, internal NTP and DNS; inbound 443/80 from kiosks and 22 from the management network. GitHub's addresses change — allow by name or through a proxy where possible, otherwise take the `web`, `git` and `pages` ranges from `https://api.github.com/meta`. Items that could not be verified on a real 26.04 host when this was written are marked 待現場確認.

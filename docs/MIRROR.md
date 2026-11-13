@@ -134,35 +134,29 @@ tmp/                       建置中的版本（與 releases 同一檔案系統�
 | 設定 | 說明 |
 |---|---|
 | `root /srv/safetravel/www;` + `location /safetravel/` | 網址 `/safetravel/…` 對應 `www/safetravel/…`（即目前版本）。想用獨立主機名稱且不要子路徑時，可把 `location /` 的 root 指到 `/srv/safetravel/www/safetravel`；網站只用相對路徑，兩種都可以。 |
-| `location = /` → 302 `/safetravel/`、`/safetravel` → 301 `/safetravel/` | 打主機名稱或少打斜線都會導到首頁。 |
+| `location = /` → 302 `/safetravel/`、`/safetravel` → 301 `/safetravel/` | 打主機名稱或少打斜線都會導到首頁。這兩個轉址（以及 `/safetravel/` 以外的 404、狀態檔）用 `server` 層的一組標頭：`Cache-Control: no-store`（轉址沒有內容，重抓不花成本；被瀏覽器快取的 301 收不回來）、與網站相同的安全標頭、`Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`。 |
 | 80 → 443 轉址 | kiosk 一律用 HTTPS。 |
+| `server_tokens off;`（80 與 443 兩個 `server` 區塊**各一行**） | 回應標頭與錯誤頁只寫 `nginx`，不寫版本與 `(Ubuntu)`。只寫在 443 那段時，80 的轉址回應仍是 `Server: nginx/1.28.3 (Ubuntu)`，弱點掃描的「HTTP 伺服器類型和版本」會列出來。寫在各 `server` 區塊而不是放在本檔最上面（`http` 層級），是因為 `nginx.conf` 若已有一行 `server_tokens`，同層級重複會讓 `nginx -t` 失敗。 |
 | `Cache-Control: no-cache`（HTML、JS、CSS、JSON） | 本站檔名沒有版本雜湊，所以每次都向伺服器確認；未變動時只回 **304**（幾百 bytes），既即時又省流量。 |
 | `Cache-Control: public, max-age=3600`（圖片） | 圖片快取 1 小時。 |
 | `gzip`（JSON、JS、CSS、SVG） | `epidemics.json` 1.3 MB → 305 KB、`arrivals.json` 50 KB → 6 KB。 |
 | `X-Content-Type-Options`、`Referrer-Policy`（皆加 `always`） | 基本安全標頭；`always` 讓 304／404 回應也帶標頭。 |
-| `X-Frame-Options: SAMEORIGIN` + `Content-Security-Policy: frame-ancestors 'self'` | **禁止其他網站把本站內嵌在框架裡**（防點擊劫持）。前者給舊瀏覽器、後者給新瀏覽器；頁面內的 CSP `<meta>` 不能設定 `frame-ancestors`，所以要用標頭。這個標頭**只放 `frame-ancestors`**，不要加 `script-src` 等其他項目：每個頁面已有自己的 CSP `<meta>`（含內嵌腳本的雜湊），標頭若再限制腳本來源，兩者會互相限制而讓頁面壞掉。 |
-| `location ~ /\.` → 403 | 不提供隱藏檔。 |
+| `ssl_ciphers`（TLS 1.2 只用 ECDHE + AES-GCM／ChaCha20-Poly1305） | 不接受 RSA 金鑰交換（無前向保密）、CBC、CAMELLIA、ARIA、CCM，這些會被弱點掃描列為高風險。TLS 1.3 的套件不受這行影響，全都是強加密。憑證是 RSA 時用 `ECDHE-RSA-…`，`ECDHE-ECDSA-…` 留給日後的 ECDSA 憑證。目前的瀏覽器都支援。 |
+| `X-Frame-Options: SAMEORIGIN` + CSP 標頭（`map $uri $safetravel_csp`） | **禁止其他網站把本站內嵌在框架裡**（防點擊劫持），前者給舊瀏覽器、後者給新瀏覽器。網頁（`.html`）的 CSP 標頭只放 `frame-ancestors 'self'; base-uri 'none'; form-action 'none'; object-src 'none'`：完整的政策（含內嵌腳本的雜湊）在每個頁面的 `<meta>`，`<meta>` 不能設定 `frame-ancestors`，所以要用標頭；兩份政策會同時生效，標頭若加 `script-src`／`default-src` 就得重複那個雜湊，而這個檔不會隨網站更新，雜湊一變首頁就空白，**所以不要加**。其他檔案（JS、JSON、圖片、字型）不會被當成網頁開啟，標頭是 `default-src 'none'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'`（`script-src`、`connect-src` 給 `js/epidemics-worker.js`：worker 的政策取自它自己的回應標頭，它要讀 `epidemics.json`，日後也可能載入本站其他程式）。 |
+| `location ~ /\.` → 404 | 不提供隱藏檔，回應與不存在的檔案相同。原本是 403，弱點掃描會拿「正常檔名」與「以 `.` 開頭的檔名」的狀態碼差異誤判為 Apache 的 CVE-2024-38474。 |
 | `/safetravel/_mirror/status.json` | 同步狀態（JSON），給監控或維運人員查看；可用 `allow`／`deny` 限定網段。 |
 | **不要開 `open_file_cache`** | nginx 每個請求都要重新解析 `www/safetravel` 連結，切換版本才會立刻生效；若一定要開，`open_file_cache_valid` 請設幾秒以內。 |
 
-**已安裝的主機要補上「禁止內嵌」標頭**（安裝腳本不會覆蓋你編輯過的 nginx 設定）：打開 `/etc/nginx/conf.d/safetravel.conf`，把 `location /safetravel/ { … }` 裡原本的四行 `add_header` 換成下面五行，然後 `sudo nginx -t && sudo systemctl reload nginx`：
+**HSTS**：所有 kiosk 都只用 HTTPS 連線後，把範本裡兩行 `# add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;` 的 `#` 去掉（`server` 層與 `location /safetravel/` 各一行）。`includeSubDomains` 只涵蓋本主機名稱底下的名稱，不影響同網域的其他網站；不要加 `preload`。
 
-```nginx
-        add_header Cache-Control $safetravel_cache_control always;
-        add_header X-Content-Type-Options nosniff always;
-        add_header Referrer-Policy strict-origin-when-cross-origin always;
-        add_header X-Frame-Options SAMEORIGIN always;
-        add_header Content-Security-Policy "frame-ancestors 'self'" always;
-```
-
-確認：`curl -skI https://<主機>/safetravel/ | grep -i -E 'frame|content-security'` 應看到 `X-Frame-Options: SAMEORIGIN` 與 `Content-Security-Policy: frame-ancestors 'self'`。所有 kiosk 都只用 HTTPS 連線後，可再加一行 `add_header Strict-Transport-Security "max-age=31536000" always;`。
+**已安裝的主機**（安裝腳本不會覆蓋你編輯過的 nginx 設定）：2026-11 的變更（80 轉址隱藏版本、加密套件、隱藏檔 404、轉址與非網頁檔案的標頭、HSTS `includeSubDomains`）照 [`MIRROR_UBUNTU2604.md`](MIRROR_UBUNTU2604.md) 第 12 節逐步執行，每一步都可重複執行。更早的安裝若 `location /safetravel/ { … }` 裡還沒有 `X-Frame-Options` 與 `Content-Security-Policy` 兩行，先補上 `add_header X-Frame-Options SAMEORIGIN always;` 與 `add_header Content-Security-Policy "frame-ancestors 'self'" always;`，第 12 節第 4 步會再把後者換成新的寫法。
 
 **只發布一般檔案**：同步腳本在建立新版本前會檢查 `web/` 裡只有一般檔案與目錄；若出現符號連結（symbolic link）或子模組就拒絕發布、繼續提供目前版本，並在 `status.json` 與 journal 記錄原因（nginx 會跟隨符號連結，連結若指向主機上的其他檔案就會被讀到）。`/etc/safetravel/mirror.env` 的權限為 `640 root:safetravel`（可能含 proxy 帳密）；重新執行 `sudo bash scripts/mirror/install.sh` 會把舊安裝的權限一併收緊。若監控帳號要用非預設設定執行 `safetravel-sync.sh --check`，請把它加入 `safetravel` 群組。
 | `listen 443 ssl http2;` | nginx 1.25.1 以上（Ubuntu 26.04 為 1.28）這個寫法已淘汰，要用 `listen 443 ssl;` ＋ `http2 on;`；`install.sh` 偵測到新版 nginx 時會自動改好範本。主機停用 IPv6 時刪除 `listen [::]:…` 兩行。 |
 
 MIME 類型：網站需要 `.json`（`application/json`）、`.js`（`application/javascript` 或 `text/javascript`；網頁以 ES 模組載入，類型錯誤會載不到）、`.webp`、`.svg`；若日後上架 AVIF 圖片則需 `.avif`。確認方式：`grep -E 'json|javascript|webp|avif|svg' /etc/nginx/mime.types`，缺少的請在該檔加上（例如 `image/avif avif;`）。
 
-實測（nginx 1.24）：首頁、`trip.html`、`slide.html`、各 JSON、圖片、狀態檔皆 200 且類型正確；`.gitignore` 403；JSON 以 gzip 傳送；帶 ETag 的重複請求回 304；三組瀏覽器自動測試（主頁 22 項、`trip.html` 24 項、`slide.html` 24 項）透過 nginx 鏡像全部通過。
+實測（nginx 1.24）：首頁、`trip.html`、`slide.html`、各 JSON、圖片、狀態檔皆 200 且類型正確；`.gitignore` 404（2026-11 以前為 403）；JSON 以 gzip 傳送；帶 ETag 的重複請求回 304；三組瀏覽器自動測試（主頁 22 項、`trip.html` 24 項、`slide.html` 24 項）透過 nginx 鏡像全部通過。
 
 ---
 
@@ -257,6 +251,6 @@ CRITICAL - SafeTravel mirror: last successful sync 180 min ago …
 An intranet mirror that serves the whole site from a Linux host with nginx **without fetching any source twice**: GitHub Actions remains the only process that talks to Taiwan CDC, MOFA/BOCA, MAC, TDX and CWA, and the mirror copies its output.
 
 - `scripts/mirror/safetravel-sync.sh` (systemd timer, every 5 min, user `safetravel`): reads the commit the public site serves from `version.json` on GitHub Pages and makes a shallow, sparse, blob-less `git fetch` of `web/` at that commit (`FOLLOW=published`, the default — the mirror never runs ahead of the public site's deploy checks; `FOLLOW=branch` takes the tip of `main` as older versions did), plus `data/arrivals.json` from GitHub Pages (the only file not in git). Nothing new → no-op. Otherwise it builds `releases/<UTC time>-<commit>` with `rsync --link-dest` (unchanged files hard-linked), refuses symbolic links and submodules (plain files only), checks required files and that every JSON parses, then switches `www/safetravel` with an atomic rename (600/600 requests returned 200 during 600 switches). A failed check keeps the current release. Keeps 12 releases; `--rollback` serves the previous one; `--check` is a Nagios/Zabbix-style probe (sync age, upstream data age); `state/status.json` is also served at `/safetravel/_mirror/status.json`.
-- `scripts/mirror/nginx-safetravel.conf`: HTTPS (80 → 443), `/safetravel/` sub-path like GitHub Pages, `Cache-Control: no-cache` for text (cheap 304s, as file names are not fingerprinted) and 1 h for images, gzip, basic security headers, no CSP header (the pages carry their own CSP meta with a script hash), hidden files denied, no `open_file_cache`.
+- `scripts/mirror/nginx-safetravel.conf`: HTTPS (80 → 443), `/safetravel/` sub-path like GitHub Pages, `Cache-Control: no-cache` for text (cheap 304s, as file names are not fingerprinted) and 1 h for images, gzip, basic security headers, a CSP header for pages with `frame-ancestors 'self'` and a few fixed directives only, no `script-src`/`default-src` (the pages carry their own CSP meta with a script hash), `server_tokens off` in both server blocks (no nginx version or "(Ubuntu)" in the port-80 redirect either), TLS 1.2 limited to ECDHE with AES-GCM/ChaCha20-Poly1305, a strict CSP header (`default-src 'none'`) on everything that is not a page and on the redirects (which also get `no-store`), hidden files answered 404 like missing ones (a 403 there made a scanner report Apache's CVE-2024-38474), no `open_file_cache`.
 - `scripts/mirror/install.sh`: user, directories, units, SELinux labels, nginx template (not enabled automatically; written with `http2 on;` when nginx is 1.25.1 or newer), first sync. `safetravel-sync.sh --selftest` checks a host in a temporary directory (tools, atomic switch, hard links, symlink refusal, pruning, status file, reachability of GitHub); the switch and the date arithmetic run in python3, so GNU coreutils and the Rust coreutils of Ubuntu 26.04 both work. `safetravel-cert.sh <dir>` installs or replaces the TLS certificate from `fullchain.pem` + `privkey.pem`: it checks chain order, that the key is unencrypted and belongs to the certificate, the host name and the expiry, installs the pair in `/etc/nginx/tls`, runs `nginx -t` (putting the previous pair back if that fails), reloads nginx and confirms the new certificate is the one served; `--check` reports on the installed one. Step-by-step for Ubuntu 26.04, including TLS, unattended upgrades and the firewall request: `MIRROR_UBUNTU2604.md`.
 - Sizing for 30–50 kiosks: steady state ≈ 80 requests/min and well under 1 Mbps; the twice-daily data reload peaks at a few hundred MB over 1–3 minutes in the worst case. 1 vCPU / 1 GB / 10 GB is enough; 2 vCPU / 2–4 GB / 40 GB recommended; for high availability run two VMs behind a load balancer or keepalived VIP, each syncing on its own. Outbound HTTPS to `github.com` and `ancientsky.github.io` only; set `HTTPS_PROXY` in `/etc/safetravel/mirror.env` if needed. Serve kiosks over HTTPS (Screen Wake Lock needs a secure context) and keep kiosk clocks on NTP. The sync also writes `version.json` (hash of the site's code files, identical to the GitHub deploys' `.github/scripts/stamp-version.sh`); the map, trip and poster pages poll it and reload themselves at a quiet moment, so kiosks never need a manual refresh.
