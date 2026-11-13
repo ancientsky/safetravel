@@ -178,10 +178,15 @@ def test_crawl_fetches_index_and_stale_pages(root, monkeypatch):
     assert "503.html" in {p.name for p in d.glob("*.html")}
 
 
+def _no_hand_list(root):   # these tests are about the automatic check: start without the hand-confirmed addresses
+    (root / "data" / "manual" / "clinic_https.json").write_text('{"confirmed": {}}', encoding="utf-8")
+
+
 def test_probe_https_upgrades_only_what_answers_and_is_cached(root):
     _tm_root(root)
     raw = root / "data" / "raw" / "travelmed"
     (raw / travelmed.PROBE_FILE).unlink(missing_ok=True)
+    _no_hand_list(root)
     asked = []
 
     def probe(url):   # only two hospitals answer over https
@@ -206,6 +211,7 @@ def test_probe_https_keeps_a_working_link_through_two_failed_checks(root):
     _tm_root(root)
     raw = root / "data" / "raw" / "travelmed"
     (raw / travelmed.PROBE_FILE).unlink(missing_ok=True)
+    _no_hand_list(root)
     u = "http://www.mmh.org.tw"
     travelmed.probe_https(raw, today="2026-11-01", probe=lambda url: (True, ""))
     down = lambda url: (False, "ConnectTimeout") if url == u else (True, "")   # noqa: E731
