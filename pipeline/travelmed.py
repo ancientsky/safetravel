@@ -88,6 +88,97 @@ def fetch(session=None) -> dict:
     return st
 
 
+# ------------------------------------------------------------------- https for the clinics' own websites
+# CDC's list gives most hospital websites as http://. During the data update each such address is tried over https;
+# where the same address answers there, travelmed.json carries the https link. The answers are kept in
+# data/raw/travelmed/https_probe.json, so an offline build gives the same result and a site is asked about once a
+# month, not twice a day. The pages show a "not encrypted" note next to links that stay http.
+PROBE_FILE = "https_probe.json"
+PROBE_TIMEOUT = (5, 8)
+PROBE_WORKERS = 8
+PROBE_OK_DAYS = 30      # a working https address is checked again after a month
+PROBE_FAIL_DAYS = 7     # one that did not work is tried again after a week
+PROBE_DROP_AFTER = 3    # a working one goes back to http only after this many failed checks in a row (one per run)
+
+
+def _to_https(u: str) -> str:
+    return "https://" + u[len("http://"):]
+
+
+def _probe_one(url: str) -> tuple[bool, str]:
+    """True when the same address answers 200 over https with a valid certificate and is still https after redirects."""
+    try:
+        r = http.new_session().get(_to_https(url), timeout=PROBE_TIMEOUT, stream=True, allow_redirects=True)
+        try:
+            status, final = r.status_code, r.url
+        finally:
+            r.close()
+    except Exception as e:  # no TLS, bad certificate, timeout, refused, redirect loop …
+        return False, type(e).__name__
+    if status != 200:
+        return False, f"HTTP {status}"
+    if not str(final).lower().startswith("https://"):
+        return False, "redirects to http"
+    return True, ""
+
+
+def load_probe(raw: Path | None = None) -> dict:
+    return (C.load_json((raw or raw_dir()) / PROBE_FILE, {}) or {}).get("urls", {})
+
+
+def probe_https(raw: Path | None = None, today: str | None = None, probe=_probe_one) -> dict:
+    """Try the clinics' http:// websites over https and record the answers. Never raises; returns counts."""
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import date
+
+    raw = raw or raw_dir()
+    st = {"checked": 0, "https": 0, "http": 0}
+    src = raw / FILES["clinics"]
+    if not src.exists():
+        return st
+    urls = sorted({u for u in (_href(_col(r, "合約醫院網站")) for r in _rows(src)) if u.lower().startswith("http://")})
+    old = load_probe(raw)
+    day = today or C.iso_ts()[:10]
+
+    def age(entry: dict) -> int:
+        try:
+            return (date.fromisoformat(day) - date.fromisoformat(entry.get("checked", ""))).days
+        except ValueError:
+            return 10 ** 6
+
+    def due(u: str) -> bool:
+        e = old.get(u)
+        if not e:
+            return True
+        if e.get("https"):
+            return bool(e.get("fails")) or age(e) >= PROBE_OK_DAYS
+        return age(e) >= PROBE_FAIL_DAYS
+
+    todo = [u for u in urls if due(u)]
+    results = {}
+    if todo:
+        with ThreadPoolExecutor(max_workers=PROBE_WORKERS) as pool:
+            results = dict(zip(todo, pool.map(probe, todo)))
+    new = {}
+    for u in urls:
+        e = dict(old.get(u) or {})
+        if u in results:
+            ok, why = results[u]
+            st["checked"] += 1
+            if ok:
+                e = {"https": True, "checked": day}
+            elif e.get("https") and int(e.get("fails", 0)) + 1 < PROBE_DROP_AFTER:
+                e = {"https": True, "checked": e.get("checked", day), "fails": int(e.get("fails", 0)) + 1, "reason": why}
+            else:
+                e = {"https": False, "checked": day, "reason": why}
+        new[u] = e
+        st["https" if e.get("https") else "http"] += 1
+    if new != old:
+        C.write_json(raw / PROBE_FILE, {"note": "https check of the clinics' http:// websites (pipeline/travelmed.py probe_https)", "urls": new}, indent=1)
+    C.log.info("clinic websites: %d http links, %d answer over https, %d checked this run", len(urls), st["https"], st["checked"])
+    return st
+
+
 # ------------------------------------------------------------------- build web/data/travelmed.json
 FILES = {name: fname for name, (_u, fname, _c, _m) in SOURCES.items()}
 DIS_GROUPS = {"蟲媒傳染": "vector", "食物或飲水傳染": "food", "接觸傳染": "contact", "其他類": "other"}
@@ -340,6 +431,10 @@ def build(out_dir: Path | None = None, raw: Path | None = None) -> dict | None:
             "since": _day(_col(r, "開辦日期")), "mpox": _col(r, "M痘疫苗接種") == "1",
             "hours": ["".join(str(x) for x in day) for day in g] if g else None,
         })
+    secure = load_probe(raw)   # http:// websites that were found to answer over https (probe_https)
+    for c in clinics:
+        if (secure.get(c["url"]) or {}).get("https"):
+            c["url"] = _to_https(c["url"])
     if no_hours:
         C.log.warning("travel medicine: no opening hours for %s", ", ".join(no_hours))
     order = list(en["cities"])

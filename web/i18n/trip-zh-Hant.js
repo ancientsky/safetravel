@@ -372,6 +372,8 @@ export default {
   cl_b_airport: '機場內',
   cl_b_new: '{d} 加入',
   cl_web: '醫院網站',
+  cl_web_plain: '未加密',
+  cl_web_plain_tip: '這個連結是 http（未加密）：在公共 Wi-Fi 上，內容可能被他人看到或竄改，請勿在該網頁輸入個人資料。',
   cl_maps: '地圖',
   cl_reset: '清除篩選',
   cl_empty: '沒有符合條件的門診。',

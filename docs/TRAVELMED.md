@@ -59,6 +59,12 @@ The CMS rich text is flattened into lines `{t, d?, h?, k?, g?}`:
 - Clinics: sessions are joined by medical institution code, else by hospital name (the two CSVs disagree on Penghu's
   code); sorted north → south by city. `updated` changes only when the three CSVs change (SHA-1).
 - Nothing is written when the CSVs are missing or yield < 150 countries / < 10 clinics (the previous files stay).
+- Hospital websites: CDC's list gives most as `http://`. Each data update (`travelmed.probe_https`, network runs only)
+  tries those over https and the export uses the https address where the same address answers 200 with a valid
+  certificate and no redirect back to http. Answers live in `data/raw/travelmed/https_probe.json` (30 days for a
+  working address, 7 for a failed one, 3 failed checks in a row before a working one is dropped), so offline builds
+  give the same links. The check runs on GitHub's runners; a hospital that refuses connections from abroad stays
+  http. `trip.html` marks http links “未加密 / not encrypted”.
 
 ## Front end
 

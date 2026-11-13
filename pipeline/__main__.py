@@ -90,6 +90,10 @@ def do_fetch(conn, only: str | None = None) -> dict:
         except Exception as e:  # never break the data update
             C.log.exception("travel medicine fetch crashed")
             st = {"url": travelmed.SOURCES["prescription"][0], "ok": False, "reason": f"crash: {type(e).__name__}: {e}"}
+        try:  # which of the clinics' http:// websites also answer over https
+            st["https"] = travelmed.probe_https()
+        except Exception as e:  # pragma: no cover
+            C.log.exception("clinic website check crashed: %s", e)
         try:  # full per-country text from www.cdc.gov.tw (a few pages per run)
             from . import travelmed_pages
             st["pages"] = travelmed_pages.crawl()

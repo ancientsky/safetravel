@@ -149,6 +149,7 @@ export function createClinics({ root }) {
     const name = clean(isEn() ? c.name_en || c.name : c.name);
     const tel = telHref(c.tel);
     const web = webHref(c.url);
+    const plain = web.startsWith('http:');   // the data update found no working https address for this hospital's site
     const maps = mapsHref(c.lat, c.lon);
     const since = /^\d{4}-\d{2}-\d{2}$/.test(c.since || '') ? c.since : '';
     const isNew = since && (Date.now() - Date.parse(since)) < 365 * 864e5;
@@ -171,7 +172,8 @@ export function createClinics({ root }) {
       h('p', { class: 'cl-addr', lang: ZH, text: clean(c.addr) }),
       h('div', { class: 'cl-acts' },
         tel ? h('a', { class: 'btn cl-act', href: tel }, h('span', { 'aria-hidden': 'true', text: '☎ ' }), clean(c.tel)) : null,
-        web ? h('a', { class: 'btn cl-act', href: web, target: '_blank', rel: 'noopener noreferrer', text: t('cl_web') }) : null,
+        web ? h('a', { class: 'btn cl-act', href: web, target: '_blank', rel: 'noopener noreferrer', title: plain ? t('cl_web_plain_tip') : null },
+          t('cl_web'), plain ? h('span', { class: 'cl-plain', 'data-testid': 'cl-plain', text: t('cl_web_plain') }) : null) : null,
         maps ? h('a', { class: 'btn cl-act', href: maps, target: '_blank', rel: 'noopener noreferrer', text: t('cl_maps') }) : null));
     card.addEventListener('mouseenter', () => mapApi?.hover(c.id));
     card.addEventListener('mouseleave', () => mapApi?.hover(null));

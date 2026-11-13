@@ -32,6 +32,8 @@ def test_fetch_skips_the_rest_when_the_host_is_unreachable(monkeypatch, tmp_path
 # ------------------------------------------------------------------- web pages and export
 import json  # noqa: E402
 import shutil  # noqa: E402
+import requests  # noqa: E402
+import responses  # noqa: E402
 
 from pipeline import travelmed_pages as P  # noqa: E402
 from pipeline import validate  # noqa: E402
@@ -174,3 +176,53 @@ def test_crawl_fetches_index_and_stale_pages(root, monkeypatch):
     st = P.crawl(S(), max_pages=3)
     assert st["checked"] == 3 and not any("CounterList" in c for c in calls)
     assert "503.html" in {p.name for p in d.glob("*.html")}
+
+
+def test_probe_https_upgrades_only_what_answers_and_is_cached(root):
+    _tm_root(root)
+    raw = root / "data" / "raw" / "travelmed"
+    (raw / travelmed.PROBE_FILE).unlink(missing_ok=True)
+    asked = []
+
+    def probe(url):   # only two hospitals answer over https
+        asked.append(url)
+        return (True, "") if "ntuh.gov.tw/ntuh_chinese" in url or "mmh.org.tw" in url else (False, "SSLError")
+
+    st = travelmed.probe_https(raw, today="2026-11-13", probe=probe)
+    http_links = {u for u in asked}
+    assert st["checked"] == len(http_links) > 20 and st["https"] == 2 and st["http"] == len(http_links) - 2
+    assert all(u.startswith("http://") for u in http_links)          # links that are https already are left alone
+    urls = {c["id"]: c["url"] for c in travelmed.build(root / "web" / "data")["clinics"]}
+    assert urls["401180014"] == "https://www.ntuh.gov.tw/ntuh_chinese.aspx" and urls["1101100011"] == "https://www.mmh.org.tw"
+    assert urls["111070010"] == "http://www.kln.mohw.gov.tw/" and urls["1301170017"] == "https://www.tmuh.org.tw/"
+
+    asked.clear()                                                    # next day: nothing is due
+    assert travelmed.probe_https(raw, today="2026-11-14", probe=probe)["checked"] == 0 and not asked
+    travelmed.probe_https(raw, today="2026-11-20", probe=probe)      # a week later: only the failures are retried
+    assert len(asked) == len(http_links) - 2 and not any("mmh.org.tw" in u for u in asked)
+
+
+def test_probe_https_keeps_a_working_link_through_two_failed_checks(root):
+    _tm_root(root)
+    raw = root / "data" / "raw" / "travelmed"
+    (raw / travelmed.PROBE_FILE).unlink(missing_ok=True)
+    u = "http://www.mmh.org.tw"
+    travelmed.probe_https(raw, today="2026-11-01", probe=lambda url: (True, ""))
+    down = lambda url: (False, "ConnectTimeout") if url == u else (True, "")   # noqa: E731
+    for day, still_https in (("2026-12-01", True), ("2026-12-02", True), ("2026-12-03", False)):
+        travelmed.probe_https(raw, today=day, probe=down)
+        assert bool(travelmed.load_probe(raw)[u]["https"]) is still_https, day
+    assert travelmed.load_probe(raw)[u]["reason"] == "ConnectTimeout"
+
+
+@responses.activate
+def test_probe_one_needs_200_over_https_and_no_way_back_to_http():
+    responses.add(responses.GET, "https://ok.example/", status=200, body="x")
+    responses.add(responses.GET, "https://missing.example/", status=404)
+    responses.add(responses.GET, "https://back.example/", status=302, headers={"Location": "http://back.example/"})
+    responses.add(responses.GET, "http://back.example/", status=200, body="x")
+    responses.add(responses.GET, "https://badcert.example/", body=requests.exceptions.SSLError("certificate verify failed"))
+    assert travelmed._probe_one("http://ok.example/") == (True, "")
+    assert travelmed._probe_one("http://missing.example/") == (False, "HTTP 404")
+    assert travelmed._probe_one("http://back.example/") == (False, "redirects to http")
+    assert travelmed._probe_one("http://badcert.example/") == (False, "SSLError")

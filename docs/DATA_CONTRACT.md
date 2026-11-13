@@ -308,7 +308,11 @@ and the per-country web pages (`data/raw/travelmed/pages/`); see `docs/TRAVELMED
 - `dis` groups: `vector` (蟲媒傳染), `food` (食物或飲水傳染), `contact` (接觸傳染), `other`. `adv` groups: `bites`
   (預防蚊蟲叮咬), `food` (注意飲食安全), `animals` (避免接觸動物), `water` (感染血吸蟲風險), `other` (其他類).
 - `en` equals `zh` when no translation is known (logged). `name_en` / `dept_en` may be `""`.
-- `url` is http or https (not every hospital serves https); `lat`/`lon` may be `null`.
+- `url` is http or https. CDC's list gives most hospital sites as `http://`; the data update tries each over https
+  (`travelmed.probe_https`: same address, 200, valid certificate, no redirect back to http) and exports the https
+  address where that works. Answers are cached in `data/raw/travelmed/https_probe.json` (rechecked after 30 days,
+  failures after 7; a working one is dropped only after 3 failed checks in a row). `trip.html` marks the links that
+  are still http as “not encrypted”. `lat`/`lon` may be `null`.
 
 ## `travelmed/<ISO>.json` (travel prescription page text)
 

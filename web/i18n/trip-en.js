@@ -372,6 +372,8 @@ export default {
   cl_b_airport: 'At the airport',
   cl_b_new: 'Since {d}',
   cl_web: 'Website',
+  cl_web_plain: 'not encrypted',
+  cl_web_plain_tip: 'This link is http (not encrypted): on public Wi-Fi others may read or alter the page. Do not enter personal data there.',
   cl_maps: 'Map',
   cl_reset: 'Clear filters',
   cl_empty: 'No clinic matches these filters.',

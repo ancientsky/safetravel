@@ -724,6 +724,11 @@ async function run(page, context) {
     await pr.click('[data-testid="cl-mpox"]');
     const tel = await pr.locator('[data-testid="cl-card"] a[href^="tel:"]').count();
     assert(tel >= 30, `${tel} call buttons`);
+    // website links that are still http carry the "not encrypted" note, https ones do not
+    const web = await pr.$$eval('[data-testid="cl-card"] a.cl-act[target="_blank"]', (as) => as.filter((a) => /^https?:/.test(a.getAttribute('href')) && !/google\.[a-z.]+\/maps|maps\.google|\/maps\//.test(a.href))
+      .map((a) => ({ http: a.href.startsWith('http:'), note: !!a.querySelector('[data-testid="cl-plain"]'), tip: !!a.title })));
+    const wrong = web.filter((w) => w.http !== w.note || w.http !== w.tip).length;
+    assert(web.length >= 30 && wrong === 0, `website links ${web.length}, note mismatch ${wrong}`);
     await pr.waitForSelector('[data-testid="med-find-clinic"]', { timeout: 15000 });
     await pr.click('[data-testid="med-find-clinic"]');
     await pr.waitForFunction(() => document.activeElement?.id === 'cl-h', null, { timeout: 5000 });
