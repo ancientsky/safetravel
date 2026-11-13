@@ -119,18 +119,9 @@ def build(raw: dict, manual: dict | None = None) -> dict:
 
 
 def _download(key: str, session=None) -> bytes:
-    """The key goes in the Authorization header, so it is in no URL (proxy logs, redirects, exception texts).
-    CWA documents the header for its REST API; for this file API it is not documented, so a 401 falls back to the
-    documented URL parameter. The log line says which one the server took — never the key."""
-    try:
-        body = http.get(API_URL, session=session, tries=2, timeout=(10, 90), headers={"Authorization": key}).content
-        C.log.info("CWA weather: key accepted in the Authorization header")
-        return body
-    except http.HttpError as e:
-        if getattr(e, "status", None) != 401:
-            raise
-    C.log.info("CWA weather: header key refused (401); using the URL parameter")
-    return http.get(f"{API_URL}&Authorization={key}", session=session, tries=2, timeout=(10, 90)).content
+    """The key goes in the Authorization header, never in the URL (proxy logs, redirects, exception texts).
+    CWA documents the header for its REST API only; the file API accepted it on 2026-11-13 (update-data run 81)."""
+    return http.get(API_URL, session=session, tries=2, timeout=(10, 90), headers={"Authorization": key}).content
 
 
 def fetch(session=None) -> dict:
@@ -148,7 +139,7 @@ def fetch(session=None) -> dict:
         if n < MIN_CITIES:
             raise ValueError(f"too few cities ({n})")
     except Exception as e:  # network / parser trouble must never break the data update
-        st["reason"] = f"{type(e).__name__}: {e}".replace(key, "***")  # the key may travel in the URL: never log or store it
+        st["reason"] = f"{type(e).__name__}: {e}".replace(key, "***")  # belt and braces: the key is never logged or stored
         C.log.warning("CWA weather not refreshed: %s", st["reason"])
         return st
     p = raw_path()
