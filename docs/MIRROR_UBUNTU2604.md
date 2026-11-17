@@ -786,6 +786,19 @@ curl -skI --noproxy '*' https://127.0.0.1/safetravel/ | grep -i '^strict'
 
 > CVE-2024-38474 是 Apache HTTP Server mod_rewrite 的漏洞；本主機是 nginx 1.28（Ubuntu 套件），沒有安裝 Apache，不受影響。WebInspect 的判斷方式是把檔名裡的 `z%3F.x.%3Fz` 換成 `.%3Fzxz%3F.` 再送一次，兩次狀態碼不同就判定有漏洞。換過的檔名以 `.` 開頭，nginx 設定一律拒絕存取隱藏檔，所以回 403，原本的請求則是一般的「檔案不存在」404，差別來自這條保護規則，不是檔名混淆。我們以相同的 nginx 設定實測各種 `%3F` 變形，都只得到 404（不存在）或 400（不合法路徑），沒有任何檔案或原始碼被讀出；隱藏檔也已改為回 404，與一般不存在的檔案相同，存取仍被拒絕。
 
+
+### 12.4 重新掃描後（2026-11-17）仍列出的項目
+
+12.1 做完後的 WebInspect 重掃：高風險 0、中 0、低 2、資訊 7、最佳實務 2。原本的兩個高風險、加密套件、前向保密、HSTS、轉址的快取與 CSP 都已不再出現。剩下的都是設計上的選擇或掃描器只看標頭造成的，建議**不再修改**，以下說明可直接回覆資安單位：
+
+> **Cache Management: Insecure Policy（`/safetravel/`）**：本站是公開、不含個人資料的靜態網頁，沒有登入、表單或 Cookie（掃描報告本身也列為 0）。網頁使用 `Cache-Control: no-cache`，瀏覽器每次都會向伺服器確認內容是否更新，未變動時只回 304，資料更新後立即生效。`no-store` 是用來防止機敏資料留在磁碟上，本站沒有這類資料；改用 `no-store` 會讓 30–50 台展示機每次都重新下載全部內容，並停用瀏覽器的上一頁快取，沒有安全上的好處。
+>
+> **HTML5: Misconfigured Content Security Policy（`/safetravel/`）**：每個網頁都以 `<meta http-equiv="Content-Security-Policy">` 帶有嚴格的政策（`default-src 'none'; script-src 'self' 'sha256-…'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'`），瀏覽器對 `<meta>` 與標頭的政策同樣強制執行。回應標頭另外加上 `<meta>` 無法表達的 `frame-ancestors 'self'`。掃描器只讀取回應標頭，因此把標頭中沒有出現的項目判為萬用字元；實際生效的政策沒有任何萬用字元。
+
+其餘：`Vary` 標頭（資訊 ×7）與 Weak Cryptographic Hash（最佳實務 ×2）同 12.2 的說明。報告中 `trip.html` 的兩個「Broken Links」（網站根目錄下一串 UUID）是「下載 CSV」按鈕產生的 `blob:` 暫存網址，掃描器去掉 `blob:` 後當成一般網址請求才得到 404，使用者不會遇到。「External Links」是資料裡的外部連結清單（疾管署、外交部等），不是弱點；其中 `evil.example` 出自 `js/osk.js` 一段說明安全檢查的程式註解，不是實際連結。
+
+若資安單位仍要求這兩項低風險在報告上消失：網頁改 `no-store` 只需一行設定；CSP 則要把 `<meta>` 的完整政策（含 `index.html` 內嵌腳本的雜湊）也放進 nginx 標頭，之後只要那段內嵌腳本有改動，就必須同步更新每台鏡像站的設定，否則首頁的主題與語言會在載入時閃一下。兩者都請先跟網站維護者確認。
+
 ---
 
 ## English summary
