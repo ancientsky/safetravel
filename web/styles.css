@@ -20,9 +20,24 @@
 /* phones hide the stat tiles: the toolbar follows the title row (fallback = its height before it is measured) */
 @media (max-width: 760px) { :root:has(body) { --toolbar-top-phone: calc(var(--hud-b, calc(46px * var(--ts-hud))) + 9px); } }
 
+/* CJK punctuation (、。，：「」…) always from a Traditional Chinese font. system-ui comes first in the stacks below
+   so Latin text keeps the platform font, but Ubuntu 26.04's system font (Ubuntu Sans) has its own ideographic
+   comma, drawn mirrored, which then wins over the CJK fonts. This face covers only those code points and uses
+   fonts already on the machine (local(), nothing is downloaded); where none is installed it is skipped. */
+@font-face {
+  font-family: "TW Punct"; font-weight: 100 599; font-display: swap; unicode-range: U+3000-303F, U+FF01-FF60;
+  src: local("Noto Sans CJK TC"), local("NotoSansCJKtc-Regular"), local("Noto Sans TC"), local("NotoSansTC-Regular"),
+       local("Microsoft JhengHei"), local("PingFangTC-Regular");
+}
+@font-face {
+  font-family: "TW Punct"; font-weight: 600 900; font-display: swap; unicode-range: U+3000-303F, U+FF01-FF60;
+  src: local("Noto Sans CJK TC Bold"), local("NotoSansCJKtc-Bold"), local("Noto Sans TC Bold"), local("NotoSansTC-Bold"),
+       local("Microsoft JhengHei Bold"), local("PingFangTC-Semibold");
+}
+
 :root {
-  --sans: system-ui, -apple-system, "Segoe UI", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Heiti TC", Roboto, sans-serif;
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
+  --sans: "TW Punct", system-ui, -apple-system, "Segoe UI", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Heiti TC", Roboto, sans-serif;
+  --mono: "TW Punct", ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", "Noto Sans Mono CJK TC", monospace;
   --gutter: 16px;
   --radius: 10px;
   --panel-w: min(calc(460px * var(--ts)), 46vw);

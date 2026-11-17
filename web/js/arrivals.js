@@ -325,10 +325,10 @@ export function createArrivals({ root, button, map, openCountry, onLayout, stand
     const cps = checkpoints();
     if (cps.length) cfg.cps = cfg.cps.filter((id) => cps.some((c) => c.id === id));
     if (cps.length && cfg.cps.length === cps.length) cfg.cps = []; // every checkpoint = all
-    // one filter button ("檢疫站：B、C ▾") with a small list of toggles: several checkpoints at once
+    // one filter button ("檢疫站：B、C ▾" / "Checkpoint B, C ▾") with a small list of toggles: several checkpoints at once
     if (cpBtn) {
       cpBtn.hidden = !cps.length;
-      const label = cfg.cps.length ? cfg.cps.join('、') : t('arr_cp_all');
+      const label = cfg.cps.length ? cfg.cps.join(isEn() ? ', ' : '、') : t('arr_cp_all');
       cpBtn.innerHTML = `<span class="arr-cp-k">${esc(t('arr_checkpoint'))}</span><b>${esc(label)}</b><span aria-hidden="true">▾</span>`;
       cpBtn.classList.toggle('is-on', cfg.cps.length > 0);
       const item = (id, text, on) => `<button type="button" class="arr-cp-opt" data-cp="${esc(id)}" aria-pressed="${on}"><i aria-hidden="true"></i>${esc(text)}</button>`;

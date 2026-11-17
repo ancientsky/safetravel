@@ -1,5 +1,20 @@
 /* On-screen keyboard (js/osk.js, ?osk=1). Self-contained tokens so index.html (dark default) and trip.html
    (light default) both get a keyboard that matches their theme. */
+/* CJK punctuation (、。，：「」…) always from a Traditional Chinese font. system-ui comes first in the stacks below
+   so Latin text keeps the platform font, but Ubuntu 26.04's system font (Ubuntu Sans) has its own ideographic
+   comma, drawn mirrored, which then wins over the CJK fonts. This face covers only those code points and uses
+   fonts already on the machine (local(), nothing is downloaded); where none is installed it is skipped. */
+@font-face {
+  font-family: "TW Punct"; font-weight: 100 599; font-display: swap; unicode-range: U+3000-303F, U+FF01-FF60;
+  src: local("Noto Sans CJK TC"), local("NotoSansCJKtc-Regular"), local("Noto Sans TC"), local("NotoSansTC-Regular"),
+       local("Microsoft JhengHei"), local("PingFangTC-Regular");
+}
+@font-face {
+  font-family: "TW Punct"; font-weight: 600 900; font-display: swap; unicode-range: U+3000-303F, U+FF01-FF60;
+  src: local("Noto Sans CJK TC Bold"), local("NotoSansCJKtc-Bold"), local("Noto Sans TC Bold"), local("NotoSansTC-Bold"),
+       local("Microsoft JhengHei Bold"), local("PingFangTC-Semibold");
+}
+
 .osk {
   --osk-bg: rgba(4, 12, 8, 0.97);
   --osk-key: #0d1f15;
@@ -19,7 +34,7 @@
   background: var(--osk-bg); color: var(--osk-fg);
   border-top: 1px solid var(--osk-border);
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
-  font-family: system-ui, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-family: "TW Punct", system-ui, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
   user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }

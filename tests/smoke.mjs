@@ -994,6 +994,10 @@ async function run(browser) {
     await pr.keyboard.press('Escape');
     const status = await pr.evaluate(() => ({ kicker: document.querySelector('#arrivals .arr-kicker').textContent, quota: document.querySelector('[data-arr-quota]')?.textContent || '' }));
     const belt = await pr.$eval('#arrivals .arr-belt', (e) => e.textContent.replace(/\s+/g, ''));
+    // the page above is English ("A, C"); in Chinese the checkpoints are joined with the ideographic comma
+    await pr.goto(`${BASE_URL}?arr=TPE-AC&lang=zh`, { waitUntil: 'load' });
+    await pr.waitForSelector('[data-testid="arrivals-cp"]:not([hidden])', { timeout: 10000 });
+    const cpLabelZh = (await pr.textContent('[data-testid="arrivals-cp"] b')).trim();
     await pr.close();
     assert(base.join() === 'CI 101', `checkpoint A without search: ${base}`);
     for (const q of ['JK202', 'jk-202', 'JK0202', 'jk 2', '首爾']) assert(res[q].join() === 'JK 202', `${q} → ${res[q]}`);
@@ -1001,7 +1005,8 @@ async function run(browser) {
     assert(res['CI 777'].join() === 'CI 777', `90 min ago, outside ±60 → ${res['CI 777']}`);
     assert(res.ZZ9.length === 0 && after.join() === 'CI 101', `none ${res.ZZ9}, after Esc ${after}`);
     assert(/03/.test(belt), `carousel ${belt}`);
-    assert(ac.join() === 'CI 101,JK 202' && /A、C/.test(cpLabel), `A + C: ${ac} (${cpLabel})`);
+    assert(ac.join() === 'CI 101,JK 202' && /A,C/.test(cpLabel), `A + C: ${ac} (${cpLabel})`);
+    assert(cpLabelZh === 'A、C', `Chinese checkpoint label: ${cpLabelZh}`);
     assert(all.join() === 'CI 101,JK 202', `all checkpoints: ${all}`);
     assert(!/MIN|±/.test(status.kicker) && /API/.test(status.quota), `status ${JSON.stringify(status)}`);
     assert(!errs.length, errs[0]);
