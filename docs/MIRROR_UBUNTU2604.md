@@ -563,7 +563,7 @@ cat /var/run/reboot-required 2>/dev/null                          # 有這個檔
 - **只想自動裝安全性更新**：刪掉 `Allowed-Origins::` 那一行。
 - **不想自動重開機**：把 `Automatic-Reboot` 設成 `"false"`，改為定期人工檢查 `/var/run/reboot-required`。不重開機，核心的安全性更新不會生效。
 - **重開機的影響**：約 1 分鐘。kiosk 上已開啟的頁面照常顯示，這段時間的背景更新會失敗並自動重試；凌晨 03:45 幾乎沒有人使用。
-- **nginx 更新後**：服務會自動重新啟動（`needrestart`），設定檔不會被改。
+- **nginx 更新後**：服務會自動重新啟動（`needrestart`），設定檔不會被改。遇到安全公告時，照第 13 節確認修補已裝好、執行中的是新程式。
 - **大版本升級**（26.04 → 28.04）不會自動進行，要人工執行 `do-release-upgrade`。
 - **鏡像同步程式本身**不在 apt 裡，更新方式：`cd /opt/safetravel-src && sudo git pull && sudo bash scripts/mirror/install.sh`（網站內容每 5 分鐘自動同步，與這個無關）。
 
@@ -799,8 +799,106 @@ curl -skI --noproxy '*' https://127.0.0.1/safetravel/ | grep -i '^strict'
 
 若資安單位仍要求這兩項低風險在報告上消失：網頁改 `no-store` 只需一行設定；CSP 則要把 `<meta>` 的完整政策（含 `index.html` 內嵌腳本的雜湊）也放進 nginx 標頭，之後只要那段內嵌腳本有改動，就必須同步更新每台鏡像站的設定，否則首頁的主題與語言會在載入時閃一下。兩者都請先跟網站維護者確認。
 
+## 13. 安全公告的處理（以 2026-11 NGINX2Root 為例）
+
+nginx、OpenSSL 或核心出現安全公告時，照下面的順序判斷與處理。大多數情況第 8 節的自動更新會在一兩天內裝好修補，人要做的是**確認**，以及在修補出來前決定要不要先採取暫時措施。
+
+### 13.1 這台主機會不會受影響
+
+先看公告寫的「前提條件」（要用到哪個模組或設定），再對照這台主機實際載入的設定：
+
+```bash
+sudo nginx -T 2>/dev/null | grep -n -E "http2|quic|http3|proxy_pass|fastcgi_pass|uwsgi_pass|grpc_pass|resolver|mail|ssi |mp4|js_|lua"
+```
+
+這台鏡像站只用到 `ssl`、`http2`、`gzip`、`map`、`add_header`、`try_files`、`alias`（`status.json`）與 `return`。沒有轉送到後端（`proxy_pass` 等），也沒有 HTTP/3（QUIC）、`resolver`、郵件代理、SSI、`mp4`、njs／lua 或第三方模組。只要公告的前提裡有任何一項是這台**有用到**的，就當作受影響。
+
+2026-11-18 公開的 NGINX2Root 對照結果：
+
+| 漏洞 | 前提 | 這台 |
+|---|---|---|
+| CVE-2026-123007（HTTP/2，可遠端執行程式碼） | 開啟 HTTP/2 即可，靜態網站也算 | **受影響** |
+| CVE-2026-123633（HTTP/2） | HTTP/2 **且**轉送到後端 | 不受影響 |
+| HTTP/3、`resolver`、郵件代理的幾個 CVE | 要用到那些模組 | 不受影響 |
+| CVE-2026-125283（DoS，`try_files` 搭配 `alias` 與 `map` 擷取值） | 同時用到三者且有擷取值 | 看起來不受影響（`alias` 只用在 `status.json`，`map` 沒有擷取值），已隨更新修補 |
+
+名稱裡的「root」：攻擊者先在 nginx 工作程序（`www-data` 權限）執行程式碼，再搭配另一個核心漏洞才拿到 root，所以核心更新也要裝（13.4）。
+
+### 13.2 已安裝的套件修補了沒有
+
+Ubuntu 會把修正補進自家套件，**上游版號不變**（仍是 1.28.3），所以要看完整的套件版本與套件附帶的 changelog：
+
+```bash
+dpkg-query -W -f='${Package} ${Version}\n' nginx nginx-common
+zgrep -n "CVE-2026-123007" /usr/share/doc/nginx*/changelog.Debian.gz || echo "尚未修補"   # 換成公告的 CVE 編號
+zcat /usr/share/doc/nginx-common/changelog.Debian.gz | head -n 15                        # 最近一版修了哪些 CVE
+```
+
+- 不要用 `apt-get changelog nginx`：它要連到 `changelogs.ubuntu.com`，防火牆沒有開，所以**什麼都不印**，看起來像「沒有修補」，其實是沒連上。
+- 還沒修補就手動更新一次：
+
+  ```bash
+  sudo apt-get update && sudo apt-get install --only-upgrade nginx nginx-common
+  ```
+
+  顯示 `is already the newest version` 表示更新來源（NCHC 鏡像的 `resolute-security`）還沒有修補版，先做 13.3。
+
+### 13.3 修補出來前：暫時措施
+
+公告通常會附暫時措施。HTTP/2 的漏洞（例如 NGINX2Root 的 CVE-2026-123007）可以先關掉 HTTP/2，瀏覽器會自動改用 HTTP/1.1，kiosk 照常運作：
+
+```bash
+sudo sed -i 's/^\( *\)http2 on;/\1http2 off;/' /etc/nginx/conf.d/safetravel.conf
+grep -n "http2" /etc/nginx/conf.d/safetravel.conf          # 應看到 http2 off;
+sudo nginx -t && sudo systemctl reload nginx
+sleep 3; curl -sk --noproxy '*' --http2 -o /dev/null -w '%{http_version}\n' https://127.0.0.1/safetravel/   # 1.1
+```
+
+`systemctl reload` 送出指令就返回，新設定要再過一兩秒才由新的工作程序接手，所以檢查前先等幾秒；緊接著執行可能還看到舊設定的結果。
+
+### 13.4 修補裝好之後
+
+1. **執行中的 nginx 是不是新程式**。套件更新後通常會由 `needrestart` 自動重啟，但仍要確認：
+
+   ```bash
+   sudo ls -l /proc/$(cat /run/nginx.pid)/exe     # 結尾有 (deleted) = 還在跑舊程式
+   sudo nginx -t && sudo systemctl restart nginx   # 有 (deleted) 才需要；中斷約 1 秒
+   ```
+
+   只做 `reload` 不會換掉程式本身，要用 `restart`。
+
+2. **把暫時措施改回來**（確認第 1 步沒有 `(deleted)` 之後）：
+
+   ```bash
+   sudo sed -i 's/^\( *\)http2 off;/\1http2 on;/' /etc/nginx/conf.d/safetravel.conf
+   sudo nginx -t && sudo systemctl reload nginx
+   sleep 3; curl -sk --noproxy '*' --http2 -o /dev/null -w '%{http_version}\n' https://127.0.0.1/safetravel/   # 2
+   ```
+
+3. **核心更新是否在等重開機**：
+
+   ```bash
+   ls /var/run/reboot-required 2>/dev/null && cat /var/run/reboot-required.pkgs
+   ```
+
+   有輸出就表示要重開機才生效。第 8 節的設定會在凌晨 03:45 自動重開；想提早可手動 `sudo reboot`。
+
+### 13.5 修補遲遲沒有出現時
+
+- 先從自己的電腦查 Ubuntu 的 CVE 頁面（`https://ubuntu.com/security/CVE-2026-123007` 這種網址）：寫著 26.04（resolute）已修補、版本比這台新，但這台一兩天後仍裝不到，多半是 NCHC 鏡像還沒同步。
+- 可以請資訊室開通 `security.ubuntu.com`（TCP 80／443），安全性更新改從官方來源取得（第 1 節「做法二」）。
+- 修補出來前，暫時措施（13.3）就一直保留。
+
+### 13.6 NGINX2Root 的處理紀錄（2026-11）
+
+| 日期 | 狀況 | 處理 |
+|---|---|---|
+| 11-18 | 公告與上游修正（1.30.7／1.31.9）發布 | — |
+| 11-19 | 這台仍是 `1.28.3-2ubuntu1.12`，NCHC 鏡像尚無修補版 | 關閉 HTTP/2（13.3） |
+| 11-20 | 自動更新裝上 `1.28.3-2ubuntu1.14`（`…1.13` 修 CVE-2026-123007，`…1.14` 修 CVE-2026-125283）；執行中的是新程式；不需重開機 | 重新開啟 HTTP/2（13.4） |
+
 ---
 
 ## English summary
 
-Step-by-step deployment of the intranet mirror on Ubuntu Server 26.04 LTS: base OS settings (time zone, chrony pointed at the internal NTP server, ufw), packages, optional outbound proxy, `install.sh`, a host self-test (`safetravel-sync.sh --selftest`: tools, atomic switch, hard links, symlink refusal, pruning, status file, and reachability of GitHub), TLS (key + CSR with a SAN, converting and chaining what the CA returns, three pre-install checks, an expiry reminder, trusting an internal CA on kiosks), enabling the nginx site (`http2 on;` on nginx 1.25.1+, written by the installer; `server_tokens off` in both server blocks), verification commands, a section on the November 2026 scans (host scan and Fortify WebInspect) with repeatable, step-by-step commands for hosts installed earlier (version hidden on the port-80 redirect, TLS 1.2 limited to ECDHE + AEAD suites, hidden files 404, security headers and `no-store` on redirects, a strict CSP header on non-page files, HSTS `includeSubDomains`), what each finding was and the explanation for the CVE-2024-38474 false positive, `unattended-upgrades` (security and regular updates nightly, automatic reboot at 03:45, timers pinned to the small hours) and the firewall request: outbound TCP 443 to `github.com` and `ancientsky.github.io`, the Ubuntu archive, internal NTP and DNS; inbound 443/80 from kiosks and 22 from the management network. GitHub's addresses change — allow by name or through a proxy where possible, otherwise take the `web`, `git` and `pages` ranges from `https://api.github.com/meta`. Items that could not be verified on a real 26.04 host when this was written are marked 待現場確認.
+Step-by-step deployment of the intranet mirror on Ubuntu Server 26.04 LTS: base OS settings (time zone, chrony pointed at the internal NTP server, ufw), packages, optional outbound proxy, `install.sh`, a host self-test (`safetravel-sync.sh --selftest`: tools, atomic switch, hard links, symlink refusal, pruning, status file, and reachability of GitHub), TLS (key + CSR with a SAN, converting and chaining what the CA returns, three pre-install checks, an expiry reminder, trusting an internal CA on kiosks), enabling the nginx site (`http2 on;` on nginx 1.25.1+, written by the installer; `server_tokens off` in both server blocks), verification commands, a section on the November 2026 scans (host scan and Fortify WebInspect) with repeatable, step-by-step commands for hosts installed earlier (version hidden on the port-80 redirect, TLS 1.2 limited to ECDHE + AEAD suites, hidden files 404, security headers and `no-store` on redirects, a strict CSP header on non-page files, HSTS `includeSubDomains`), what each finding was and the explanation for the CVE-2024-38474 false positive, how to handle a security advisory (does it apply to this configuration, is the installed package patched — read the local `changelog.Debian.gz`, as `apt-get changelog` cannot reach its server through the firewall — a temporary workaround such as `http2 off`, restarting so the new binary runs, waiting reboots; the November 2026 NGINX2Root case as the worked example), `unattended-upgrades` (security and regular updates nightly, automatic reboot at 03:45, timers pinned to the small hours) and the firewall request: outbound TCP 443 to `github.com` and `ancientsky.github.io`, the Ubuntu archive, internal NTP and DNS; inbound 443/80 from kiosks and 22 from the management network. GitHub's addresses change — allow by name or through a proxy where possible, otherwise take the `web`, `git` and `pages` ranges from `https://api.github.com/meta`. Items that could not be verified on a real 26.04 host when this was written are marked 待現場確認.
