@@ -693,6 +693,36 @@ async function run(page, context) {
     return `${names.length} vaccines; tel ${tel.length}`;
   });
 
+  await check('travel prescription in English: unofficial translation, labelled, no Chinese left; Chinese UI unchanged', async () => {
+    const pr = await context.newPage();
+    await pr.goto(`${PAGE_URL.split('#')[0]}?lang=en#TH`, { waitUntil: 'load' });
+    await pr.waitForSelector('[data-testid="med"] [data-testid="med-vax"]', { timeout: 15000 });
+    const yf = pr.locator('[data-testid="med-vax"]', { hasText: 'Yellow fever' });
+    await yf.locator('summary').click();
+    const en = await yf.evaluate((det) => {
+      const box = det.querySelector('[data-testid="med-en"]');
+      const lines = [...det.querySelectorAll('.med-ln')].filter((p) => p.offsetParent).map((p) => p.textContent);
+      return { lang: box?.getAttribute('lang'), label: box?.querySelector('.zh-label')?.textContent || '', lines,
+        zhLeft: [...det.querySelectorAll('.med-ln[lang="zh-Hant"]')].length, pre: det.querySelector('.med-vax-pre')?.textContent || '' };
+    });
+    assert(en.lang === 'en' && /Unofficial translation/.test(en.label), `block ${JSON.stringify(en).slice(0, 300)}`);
+    assert(en.lines.length && !en.lines.some((t) => /[\u4e00-\u9fff]/.test(t)) && !en.zhLeft, `Chinese left: ${en.lines.join(' | ').slice(0, 300)}`);
+    assert(/[a-z]/.test(en.pre), `summary preview: ${en.pre}`);
+    await pr.locator('[data-testid="med"] .med-before summary').click();
+    const before = await pr.$eval('[data-testid="med"] .med-before', (d) => d.textContent);
+    assert(/travel medicine clinic/.test(before), `before: ${before.slice(0, 200)}`);
+    const sos = await pr.$$eval('[data-testid="med"] .med-sos-x', (els) => els.map((e) => e.textContent).join(' '));
+    assert(!/[\u4e00-\u9fff]/.test(sos), `hotline labels: ${sos}`);
+    // the Chinese UI shows CDC's text and no translation note
+    await pr.goto(`${PAGE_URL.split('#')[0]}?lang=zh#TH`, { waitUntil: 'load' });
+    await pr.waitForSelector('[data-testid="med"] [data-testid="med-vax"]', { timeout: 15000 });
+    const zh = await pr.$$eval('[data-testid="med"] .med-ln', (ps) => ps.slice(0, 3).map((p) => p.textContent).join(''));
+    const notes = await pr.locator('[data-testid="med-en"]').count();
+    await pr.close();
+    assert(/[\u4e00-\u9fff]/.test(zh) && notes === 0, `Chinese UI: ${zh.slice(0, 80)} (${notes} translation blocks)`);
+    return `${en.lines.length} English lines in the yellow fever row`;
+  });
+
   await check('travel prescription: a country split by CDC (Portugal) offers its island areas', async () => {
     const pr = await context.newPage();
     await pr.goto(`${PAGE_URL.split('#')[0]}#PT`, { waitUntil: 'load' });

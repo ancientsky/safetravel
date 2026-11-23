@@ -289,6 +289,7 @@ export default {
   med_foot: '資料來源：',
   med_foot_checked: '疾管署網頁 {d} 查核 ·',
   med_zh_only: '中文原文',
+  med_en_mt: '非官方英譯，以疾管署中文原文為準',
   med_when: '建議出發前 2–4 週到旅遊醫學門診',
   med_when_sub: '多數疫苗接種後約 2 週才有足夠保護力，有些要接種 2–3 劑；瘧疾預防藥物也要在抵達前就開始服用。',
   med_find_clinic: '找旅遊醫學門診',

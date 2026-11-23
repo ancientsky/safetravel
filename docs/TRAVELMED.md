@@ -54,8 +54,13 @@ The CMS rich text is flattened into lines `{t, d?, h?, k?, g?}`:
 - `國際旅遊疫情建議等級` rows are not exported: they duplicate `alerts.json`.
 - English: `data/manual/travelmed_en.json` (advice sentences, vaccines and the diseases each one prevents, disease
   qualifiers, cities, departments, hospital names). Disease base names also come from `data/manual/diseases.json` and
-  `alerts.json`. Anything missing is exported with `en = zh` and logged. The web-page text stays Chinese; the English UI
-  labels it "Chinese original".
+  `alerts.json`. Anything missing is exported with `en = zh` and logged.
+- Page text (`travelmed/<ISO>.json`): `data/manual/travelmed_lines_en.json` holds an unofficial English translation keyed
+  by the exact Chinese text — `lines` (paragraphs and bullets), `labels` (the bold labels), `where` (Taiwan mission
+  cities). `travelmed.add_english` adds `e` / `ke` to each line and `we` to each mission phone entry. Text CDC rewrites
+  no longer matches and is shown in Chinese (`lang="zh-Hant"`) until it is translated; the build logs how many distinct
+  lines lack English. The English UI labels translated blocks "Unofficial translation … the Chinese original prevails"
+  and keeps the "Chinese original" label for a block with no English at all.
 - Clinics: sessions are joined by medical institution code, else by hospital name (the two CSVs disagree on Penghu's
   code); sorted north → south by city. `updated` changes only when the three CSVs change (SHA-1).
 - Nothing is written when the CSVs are missing or yield < 150 countries / < 10 clinics (the previous files stay).

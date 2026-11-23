@@ -337,7 +337,9 @@ One file per country whose CDC web page has been read (`countries[ISO].page` in 
 ```
 
 - A line: `t` plain text (never HTML); optional `d` list depth 1–4, `h` 1 = sub-heading, `k` bold label shown before `t`,
-  `g` traveller group ∈ `infants, pregnancy, chronic, immuno, longstay, aid` (shown only when the traveller picks it).
+  `g` traveller group ∈ `infants, pregnancy, chronic, immuno, longstay, aid` (shown only when the traveller picks it),
+  `e` / `ke` unofficial English of `t` / `k` (plain text, no Chinese; from `data/manual/travelmed_lines_en.json`,
+  absent when that text has no translation yet). A hotline entry may carry `we`, the English of `where`.
 - Section keys ∈ `before, vaccines, diseases, during, after`; any may be missing. `hotline` may be empty (no Taiwan
   mission there); `where` names the mission's city when there are several, else `""`.
 

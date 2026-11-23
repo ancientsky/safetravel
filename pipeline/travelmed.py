@@ -468,6 +468,7 @@ def build(out_dir: Path | None = None, raw: Path | None = None) -> dict | None:
         C.log.warning("travel medicine: only %d countries / %d clinics, travelmed.json not rebuilt", len(countries), len(clinics))
         return None
     C.write_json(out_dir / "travelmed.json", doc)
+    add_english(details)
     _write_details(out_dir / "travelmed", details)
     mal = build_malaria(details, countries)
     C.write_json(out_dir / "malaria.json", mal)
@@ -517,6 +518,49 @@ def _page_details(resolve, where: dict, countries: dict, explicit: set) -> dict[
     if missing:
         C.log.info("travel prescription pages without a country: %s", ", ".join(missing))
     return out
+
+
+LINES_EN = "travelmed_lines_en.json"
+
+
+def add_english(details: dict[str, dict], mem: dict | None = None) -> dict:
+    """Attach English to the page text from data/manual/travelmed_lines_en.json, keyed by the exact Chinese text:
+    a line gets "e" (for "t") and "ke" (for its label "k"), a mission phone entry "we" (for "where"). Text that CDC
+    rewrites no longer matches and is shown in Chinese until it is translated. Returns counts for the log."""
+    mem = mem if mem is not None else (C.load_json(C.manual_dir() / LINES_EN, {}) or {})
+    tl, tk, tw = (mem.get(k) or {} for k in ("lines", "labels", "where"))
+    st = {"lines": 0, "missing": set()}
+
+    def lines(ls):
+        for ln in ls or []:
+            st["lines"] += 1
+            e = tl.get(ln.get("t"))
+            if e:
+                ln["e"] = e
+            else:
+                st["missing"].add(ln.get("t"))
+            if ln.get("k") and tk.get(ln["k"]):
+                ln["ke"] = tk[ln["k"]]
+
+    def page(p):
+        for ls in (p.get("sections") or {}).values():
+            lines(ls)
+        for v in p.get("vaccines") or []:
+            lines(v.get("lines"))
+        for x in p.get("hotline") or []:
+            if x.get("where") and tw.get(x["where"]):
+                x["we"] = tw[x["where"]]
+
+    for det in details.values():
+        if det.get("page"):
+            page(det["page"])
+        for sb in det.get("subs") or []:
+            if sb.get("page"):
+                page(sb["page"])
+    n_missing = len(st["missing"])
+    if n_missing:
+        C.log.info("travel prescription text without English: %d distinct lines (shown in Chinese)", n_missing)
+    return {"lines": st["lines"], "untranslated": n_missing}
 
 
 def _write_details(d: Path, details: dict[str, dict]) -> None:

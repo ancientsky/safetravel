@@ -246,3 +246,27 @@ def test_hand_confirmed_https_is_exported_and_not_probed(root):
     assert asked and u not in asked and u not in travelmed.load_probe(raw)
     urls = {c["id"]: c["url"] for c in travelmed.build(root / "web" / "data")["clinics"]}
     assert urls["401180014"] == "https://www.ntuh.gov.tw/ntuh_chinese.aspx" and urls["111070010"] == "http://www.kln.mohw.gov.tw/"
+
+
+def test_add_english_attaches_translations_and_leaves_the_rest_in_chinese():
+    det = {"TH": {"page": {"sections": {"before": [{"t": "甲", "k": "標籤"}, {"t": "乙"}]},
+                           "vaccines": [{"name": "黃熱病疫苗", "lines": [{"t": "甲"}]}],
+                           "hotline": [{"where": "曼谷", "tel": "+66-1"}, {"where": "", "tel": "+66-2"}]},
+                  "subs": [{"page": {"sections": {"after": [{"t": "丙"}]}, "vaccines": [], "hotline": []}}]}}
+    mem = {"lines": {"甲": "A", "丙": "C"}, "labels": {"標籤": "Label"}, "where": {"曼谷": "Bangkok"}}
+    st = travelmed.add_english(det, mem)
+    p = det["TH"]["page"]
+    assert p["sections"]["before"][0] == {"t": "甲", "k": "標籤", "e": "A", "ke": "Label"}
+    assert p["sections"]["before"][1] == {"t": "乙"}                      # no translation: stays Chinese only
+    assert p["vaccines"][0]["lines"][0]["e"] == "A"
+    assert p["hotline"][0]["we"] == "Bangkok" and "we" not in p["hotline"][1]
+    assert det["TH"]["subs"][0]["page"]["sections"]["after"][0]["e"] == "C"
+    assert st == {"lines": 4, "untranslated": 1}
+
+
+def test_validator_accepts_english_and_rejects_chinese_left_in_it():
+    v = validate.V()
+    validate._tm_lines(v, "x", [{"t": "甲", "e": "A", "k": "標", "ke": "Label"}])
+    assert not v.errors
+    validate._tm_lines(v, "y", [{"t": "甲", "e": "A 甲"}, {"t": "乙", "ke": "L"}, {"t": "丙", "e": "<b>x</b>"}])
+    assert len(v.errors) == 3

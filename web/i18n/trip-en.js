@@ -289,6 +289,7 @@ export default {
   med_foot: 'Source:',
   med_foot_checked: 'Taiwan CDC page checked {d} ·',
   med_zh_only: 'Chinese original (CDC text)',
+  med_en_mt: 'Unofficial translation of Taiwan CDC’s Chinese text — the Chinese original prevails',
   med_when: 'See a travel medicine clinic 2–4 weeks before you leave',
   med_when_sub: 'Most vaccines need about 2 weeks to protect you and some need 2–3 doses; malaria prevention medicine also has to start before you arrive.',
   med_find_clinic: 'Find a travel clinic',

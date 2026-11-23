@@ -53,24 +53,36 @@ const vaxName = (tm, name) => {
   return clean(isEn() ? v?.en || name : name);
 };
 
-/** Chinese-only text block: the English UI gets a small "Chinese original" label first. */
-function zhBlock(...kids) {
-  return h('div', { class: 'med-zh', lang: ZH }, isEn() ? h('span', { class: 'zh-label', lang: 'en', text: t('med_zh_only') }) : null, kids);
+/** English of a CDC line (its "e"; the pipeline adds it from data/manual/travelmed_lines_en.json), or '' */
+const lineEn = (ln) => (isEn() ? clean(ln?.e) : '');
+
+/**
+ * CDC page text. Chinese UI: as CDC wrote it. English UI: the unofficial translation under a label that says so, any
+ * line without one in Chinese (marked lang="zh-Hant"); a block with no English at all keeps the "Chinese original" label.
+ */
+function textBlock(lines) {
+  const list = Array.isArray(lines) ? lines : [];
+  if (!isEn()) return h('div', { class: 'med-zh', lang: ZH }, linesEl(list));
+  const any = list.some((ln) => clean(ln?.e));
+  return h('div', { class: any ? 'med-en' : 'med-zh', lang: any ? 'en' : ZH, 'data-testid': any ? 'med-en' : null },
+    h('span', { class: 'zh-label', lang: 'en', text: t(any ? 'med_en_mt' : 'med_zh_only') }), linesEl(list));
 }
 
 /** Flattened CDC rich text: paragraphs, bullets (depth), sub-headings, bold labels and traveller-group notes. */
 function linesEl(lines) {
   const box = h('div', { class: 'med-lines' });
   for (const ln of Array.isArray(lines) ? lines : []) {
-    const text = clean(ln?.t);
-    if (!text) continue;
+    const zh = clean(ln?.t);
+    if (!zh) continue;
+    const en = lineEn(ln);
     const d = Math.min(Number(ln.d) || 0, 3);
     const g = GROUPS.includes(ln.g) ? ln.g : null;
     const cls = ['med-ln', ln.h ? 'med-ln-h' : '', d ? `med-d${d}` : '', g ? 'med-ln-g' : ''].filter(Boolean).join(' ');
-    box.append(h('p', { class: cls, 'data-g': g },
+    const label = ln.k ? (en && clean(ln.ke)) || clean(ln.k) : '';
+    box.append(h('p', { class: cls, 'data-g': g, lang: isEn() && !en ? ZH : null },
       g ? h('span', { class: 'med-gtag', lang: isEn() ? 'en' : null, text: t(`med_g_${g}_s`) }) : null,
-      ln.k ? h('b', { text: `${clean(ln.k)}${isEn() ? ': ' : '：'}` }) : null,
-      text));
+      label ? h('b', { text: `${label}${isEn() && en ? ': ' : '：'}` }) : null,
+      en || zh));
   }
   return box;
 }
@@ -132,13 +144,15 @@ function vaxBlock(tm, entry, page) {
     const meta = tm.vaccines?.[name];
     const lines = Array.isArray(v.lines) ? v.lines : [];
     const first = lines.find((ln) => !ln.g && !ln.h);
+    const firstEn = first && lineEn(first);
     const gtags = GROUPS.filter((g) => groupCount(lines, g)).map((g) => h('span', { class: 'med-gtag', 'data-g': g, text: t(`med_g_${g}_s`) }));
     const summary = [
       h('span', { class: 'med-vax-name', lang: isEn() && !meta?.en ? ZH : null, text: vaxName(tm, name) }),
       gtags.length ? h('span', { class: 'med-gtags' }, gtags) : null,
       first && !isEn() ? h('span', { class: 'med-vax-pre', text: `${first.k ? `${clean(first.k)}：` : ''}${clean(first.t)}` }) : null,
+      firstEn ? h('span', { class: 'med-vax-pre', text: `${first.ke ? `${clean(first.ke)}: ` : ''}${firstEn}` }) : null,
     ];
-    const body = lines.length ? zhBlock(linesEl(lines)) : h('p', { class: 'muted', text: t('med_vax_nopage') });
+    const body = lines.length ? textBlock(lines) : h('p', { class: 'muted', text: t('med_vax_nopage') });
     const det = details('med-vax', summary, body);
     det.dataset.testid = 'med-vax';
     list.append(det);
@@ -214,7 +228,7 @@ function diseaseBlock(tm, entry, page) {
   return h('div', { class: 'med-block' },
     h('h4', { class: 'med-bh' }, icon('other'), h('span', { text: t('med_dis_h') })),
     h('div', { class: 'med-dis-grid' }, cards),
-    full?.length ? details('med-full', t('med_dis_full'), zhBlock(linesEl(full))) : null);
+    full?.length ? details('med-full', t('med_dis_full'), textBlock(full)) : null);
 }
 
 /** "新型A型流感(近5年禽鳥有檢出H5N1病毒)" → base name with the qualifier in small print. */
@@ -227,7 +241,7 @@ function diseaseChip(x) {
 /** [{where, tel}] → "河內 +84-…" tel: links (one per Taiwan mission). */
 function hotlineLinks(list) {
   return (Array.isArray(list) ? list : []).filter((x) => x && telHref(x.tel)).map((x) => h('span', { class: 'med-sos-one' },
-    x.where ? h('span', { class: 'med-sos-x', lang: ZH, text: clean(x.where) }) : null,
+    x.where ? h('span', { class: 'med-sos-x', lang: isEn() && x.we ? 'en' : ZH, text: (isEn() && clean(x.we)) || clean(x.where) }) : null,
     h('a', { class: 'med-tel', href: telHref(x.tel), text: clean(x.tel) })));
 }
 
@@ -252,14 +266,14 @@ function duringBlock(page) {
   return h('div', { class: 'med-block' },
     h('h4', { class: 'med-bh' }, icon('phone'), h('span', { text: t('med_during_h') })),
     tel,
-    during?.length ? details('med-full', t('med_during_full'), zhBlock(linesEl(during))) : null,
-    after?.length ? details('med-full', t('med_after_full'), zhBlock(linesEl(after))) : null);
+    during?.length ? details('med-full', t('med_during_full'), textBlock(during)) : null,
+    after?.length ? details('med-full', t('med_after_full'), textBlock(after)) : null);
 }
 
 function beforeBlock(page) {
   const lines = page?.sections?.before;
   if (!lines?.length) return null;
-  return details('med-full med-before', t('med_before_full'), zhBlock(linesEl(lines)));
+  return details('med-full med-before', t('med_before_full'), textBlock(lines));
 }
 
 // ---------------------------------------------------------------- section

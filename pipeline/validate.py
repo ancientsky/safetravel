@@ -743,10 +743,16 @@ def _tm_lines(v: V, where: str, lines) -> None:
         return
     for i, ln in enumerate(lines):
         lw = f"{where}[{i}]"
-        if not v.keys(lw, ln, ["t"], ["d", "h", "k", "g"]):
+        if not v.keys(lw, ln, ["t"], ["d", "h", "k", "g", "e", "ke"]):
             continue
         if not isinstance(ln["t"], str) or not ln["t"] or "<" in ln["t"] and re.search(r"<\s*/?\s*[a-zA-Z]", ln["t"]):
             v.err(lw, "t should be plain non-empty text")
+        for k in ("e", "ke"):  # English (data/manual/travelmed_lines_en.json): plain text, no Chinese left in it
+            if k in ln and (not isinstance(ln[k], str) or not ln[k].strip() or re.search(r"<\s*/?\s*[a-zA-Z]", ln[k])
+                            or re.search(r"[\u3400-\u9fff\uff01-\uff60\u3000-\u303f]", ln[k])):
+                v.err(lw, f"{k} should be plain English text")
+        if "ke" in ln and "k" not in ln:
+            v.err(lw, "ke without k")
         if "g" in ln and ln["g"] not in TM_GROUPS:
             v.err(lw, f"g {ln['g']!r} is not one of {TM_GROUPS}")
         if "d" in ln and ln["d"] not in (1, 2, 3, 4):
@@ -771,7 +777,7 @@ def _tm_page(v: V, where: str, page) -> None:
         v.err(where, "hotline should be a list")
     else:
         for i, x in enumerate(hl):
-            if v.keys(f"{where}.hotline[{i}]", x, ["where", "tel"]):
+            if v.keys(f"{where}.hotline[{i}]", x, ["where", "tel"], ["we"]):
                 if not isinstance(x["where"], str) or not re.fullmatch(r"\+?[\d\-()]{6,30}", str(x["tel"])):
                     v.err(f"{where}.hotline[{i}]", "where should be a string, tel a phone number")
 
