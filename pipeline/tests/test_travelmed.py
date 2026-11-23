@@ -270,3 +270,38 @@ def test_validator_accepts_english_and_rejects_chinese_left_in_it():
     assert not v.errors
     validate._tm_lines(v, "y", [{"t": "甲", "e": "A 甲"}, {"t": "乙", "ke": "L"}, {"t": "丙", "e": "<b>x</b>"}])
     assert len(v.errors) == 3
+
+
+def _detail(tmp_path, page):
+    d = tmp_path / "travelmed"
+    d.mkdir(exist_ok=True)
+    (d / "TH.json").write_text(json.dumps({"iso": "TH", "en": "Thailand", "page": page, "subs": []}, ensure_ascii=False), encoding="utf-8")
+    return d
+
+
+def test_pending_english_lists_text_without_english_once(tmp_path):
+    d = _detail(tmp_path, {"sections": {"before": [{"t": "甲", "e": "A"}, {"t": "乙", "k": "標"}, {"t": "乙", "k": "標"}]},
+                           "vaccines": [{"name": "黃熱病疫苗", "lines": [{"t": "丙", "g": "pregnancy"}]}],
+                           "hotline": [{"where": "曼谷", "tel": "+66-1"}, {"where": "清邁", "we": "Chiang Mai", "tel": "+66-2"}]})
+    got = {(x["kind"], x["zh"]): x for x in travelmed.pending_english(d)}
+    assert set(got) == {("line", "乙"), ("label", "標"), ("line", "丙"), ("where", "曼谷")}
+    assert got[("line", "乙")]["count"] == 2 and got[("line", "丙")]["context"]["vaccine"] == "黃熱病疫苗"
+
+
+def test_import_english_accepts_pending_text_only_and_flags_numbers(tmp_path):
+    d = _detail(tmp_path, {"sections": {"diseases": [{"t": "11月至隔年6月有風險", "k": "高風險地區"}, {"t": "需接種2劑"}]},
+                           "vaccines": [], "hotline": [{"where": "曼谷", "tel": "+66-1"}]})
+    mem = tmp_path / "mem.json"
+    mem.write_text(json.dumps({"lines": {"舊": "Old"}, "labels": {}, "where": {}}), encoding="utf-8")
+    items = [{"kind": "line", "zh": "11月至隔年6月有風險", "en": "Risk from November to May of the following year"},
+             {"kind": "line", "zh": "需接種2劑", "en": "2 doses are needed"},
+             {"kind": "label", "zh": "高風險地區", "en": "High-risk areas"},
+             {"kind": "where", "zh": "曼谷", "en": "曼谷"},                              # Chinese left: refused
+             {"kind": "line", "zh": "不在待譯清單", "en": "Not pending"}]               # not pending: refused
+    st = travelmed.import_english(items, mem, d, check_only=True)
+    assert st["imported"] == 3 and len(st["refused"]) == 2 and json.loads(mem.read_text())["lines"] == {"舊": "Old"}
+    assert [c["notes"] for c in st["check"]] == [["month 6 (June) not in the English"]]
+    st = travelmed.import_english(items, mem, d)
+    saved = json.loads(mem.read_text(encoding="utf-8"))
+    assert saved["lines"]["需接種2劑"] == "2 doses are needed" and saved["lines"]["舊"] == "Old"
+    assert saved["labels"] == {"高風險地區": "High-risk areas"} and saved["where"] == {}

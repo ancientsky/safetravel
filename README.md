@@ -287,7 +287,7 @@ SafeTravel TW is a static GitHub Pages dashboard that combines Taiwan CDC (TCDC)
 | Taipei time | Job | Trigger |
 |---|---|---|
 | 11:17 and 21:17 daily | TCDC CSVs + TPE flights + MOFA travel warnings + CWA world-city forecast + a few TCDC travel prescription pages → SQLite (incl. warning-level history) → JSON → deploy | cron-job.org → `update-data.yml` |
-| 11:52 daily | translate new digests and MOFA warning summaries, refresh overviews and disease names (no Gemini needed) | scheduled Claude Code routine ([TRANSLATION_GUIDE](docs/TRANSLATION_GUIDE.md)) |
+| 11:52 daily | translate new digests, MOFA warning summaries and new or rewritten travel-prescription text, refresh overviews and disease names (no Gemini needed) | scheduled Claude Code routine ([TRANSLATION_GUIDE](docs/TRANSLATION_GUIDE.md)) |
 | when MAC announces a change | update the mainland China / Hong Kong / Macau ratings (the MAC site blocks automated fetches) | edit `data/manual/mac_warnings.json` by hand |
 | monthly (after CDC refreshes its open data) | travel medicine clinic and travel prescription CSVs (`od.cdc.gov.tw` blocks GitHub runners); the per-country prescription pages are checked automatically in the twice-daily update | upload to `data/raw/travelmed/` by hand (see the README there) |
 | every 10 min 05:00–23:59, every 30 min 00:00–04:59 | inbound flights (one TDX call covers every Taiwan airport) → published straight to Pages | cron-job.org → `arrivals.yml` |
@@ -356,7 +356,7 @@ To watch another outbreak city, add `data/manual/watch/<id>.json` plus its route
 - [ ] Secret `CWA` (CWA open-data key for the world-city forecast; without it the last download is kept).
 - [ ] Secrets `TDX_CLIENT_ID` / `TDX_CLIENT_SECRET` (optional variable `ARRIVALS_MONTHLY_CAP`, default 4200).
 - [ ] A fine-grained PAT with only *Actions: read and write* on this repository, used by two cron-job.org jobs ([steps](docs/ARRIVALS_SETUP.md)); renew it before it expires.
-- [ ] Translation (digests, overviews, disease names, MOFA warning summaries) runs in the daily Claude routine; to use Gemini instead set variable `AI_PROVIDER=gemini` and secret `GEMINI_API_KEY`.
+- [ ] Translation (digests, overviews, disease names, MOFA warning summaries, travel-prescription text) runs in the daily Claude routine; to use Gemini instead set variable `AI_PROVIDER=gemini` and secret `GEMINI_API_KEY`.
 - [ ] When MAC changes its mainland China / Hong Kong / Macau rating, update level, dates, summaries and `confirmed` in `data/manual/mac_warnings.json`.
 - [ ] Monthly: download `TMClinicsList.csv`, `ClinicsTime.csv`, `TMPrescription.csv` from `od.cdc.gov.tw/quarantine/` (Taiwan network) and upload them to `data/raw/travelmed/`.
 

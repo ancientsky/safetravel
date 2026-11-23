@@ -7,6 +7,7 @@ Writes:
   DIR/overviews/in/countries_NN.json   countries whose 2-year item set changed since their stored overview
   DIR/diseases/in/names.json           disease names (zh) with no English name in the dictionary or the DB
   DIR/warnings/in/chunk_NNN.json       MOFA (BOCA) travel-warning summaries / area names with no English yet
+  DIR/travelmed/in/lines.json          travel prescription page text (lines, labels, mission cities) with no English yet
   DIR/README.txt                       the expected output format (what import_translations.py consumes)
 
 Exits 0 and prints JSON counts. The translator writes DIR/translations/out/*.json and DIR/overviews/out/*.json,
@@ -36,6 +37,9 @@ diseases/out/names.json : JSON object {zh: en} for every name in diseases/in/nam
 
 warnings/out/chunk_NNN.json : JSON list, one object per input item in the same order:
   {"hash": <copied>, "kind": <copied>, "zh": <copied unchanged>, "en": str (English, no Chinese characters)}
+
+travelmed/out/lines.json : JSON list, one object per input item in the same order:
+  {"kind": <copied>, "zh": <copied unchanged>, "en": str (English, no Chinese characters, plain text)}
 """
 
 
@@ -112,11 +116,20 @@ def main(argv=None) -> int:
         (wdir / f"chunk_{k // a.chunk:03d}.json").write_text(
             json.dumps(warns[k:k + a.chunk], ensure_ascii=False, indent=0), encoding="utf-8")
 
+    from . import travelmed
+    tms = travelmed.pending_english()
+    tmdir = out / "travelmed" / "in"
+    tmdir.mkdir(parents=True, exist_ok=True)
+    (out / "travelmed" / "out").mkdir(parents=True, exist_ok=True)
+    if tms:
+        (tmdir / "lines.json").write_text(json.dumps(tms, ensure_ascii=False, indent=0), encoding="utf-8")
+
     (out / "README.txt").write_text(README, encoding="utf-8")
     counts = {"translations": len(items), "translation_chunks": -(-len(items) // a.chunk) if items else 0,
               "overviews": len(ovs), "overview_files": -(-len(ovs) // a.overview_batch) if ovs else 0,
               "diseases": len(dis),
-              "warnings": len(warns), "warning_chunks": -(-len(warns) // a.chunk) if warns else 0}
+              "warnings": len(warns), "warning_chunks": -(-len(warns) // a.chunk) if warns else 0,
+              "travelmed": len(tms)}
     print(json.dumps(counts))
     return 0
 

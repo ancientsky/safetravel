@@ -5,6 +5,7 @@ Usage:
   python pipeline/import_translations.py overviews <file.json> [--model NAME]
   python pipeline/import_translations.py diseases <file.json> [--model NAME]
   python pipeline/import_translations.py warnings <dir-or-file.json> [--model NAME]
+  python pipeline/import_translations.py travelmed <file.json> [--check]
 
 translations: JSON list (or a directory of JSON lists) of
   {"hash": <epidemics.content_hash>, "headline_en", "description_en", "summary_zh", "summary_en"}
@@ -13,6 +14,9 @@ overviews: JSON object {ISO2: {"zh": ..., "en": ...}}; items_hash is computed fr
 diseases: JSON object {zh: en} stored in the disease_names table (data/manual/diseases.json still takes precedence).
 warnings: JSON list (or a directory of JSON lists) of {"hash", "kind", "zh", "en"} for MOFA (BOCA) travel-warning
   summaries and area names (from `python -m pipeline pending`), stored in mofa_translations.
+travelmed: JSON list of {"kind", "zh", "en"} for travel prescription page text (from `python -m pipeline pending`,
+  travelmed/in/lines.json), merged into data/manual/travelmed_lines_en.json. Only text that is pending is accepted.
+  --check writes nothing and lists refused items and numbers/months to verify; exit status 1 if anything is listed.
 """
 from __future__ import annotations
 
@@ -112,11 +116,22 @@ def import_diseases(conn: sqlite3.Connection, data: dict, model: str) -> tuple[i
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("kind", choices=["translations", "overviews", "diseases", "warnings"])
+    ap.add_argument("kind", choices=["translations", "overviews", "diseases", "warnings", "travelmed"])
     ap.add_argument("path")
     ap.add_argument("--model", default="batch-import")
     ap.add_argument("--db", default=str(ROOT / "data" / "safetravel.db"))
+    ap.add_argument("--check", action="store_true", help="travelmed: report only, write nothing")
     a = ap.parse_args()
+    if a.kind == "travelmed":
+        from pipeline import travelmed
+        st = travelmed.import_english(json.loads(Path(a.path).read_text(encoding="utf-8")), check_only=a.check)
+        for r in st["refused"]:
+            print(f"refused ({r['why']}): {r['kind']} {str(r['zh'])[:60]}")
+        for c in st["check"]:
+            print(f"check: {c['kind']} {c['zh'][:60]} -> {c['en'][:80]} | {'; '.join(c['notes'])}")
+        verb = "would import" if a.check else "imported"
+        print(f"travelmed: {verb} {st['imported']}, refused {len(st['refused'])}, to check {len(st['check'])}")
+        raise SystemExit(1 if a.check and (st["refused"] or st["check"]) else 0)
     conn = sqlite3.connect(a.db)
     if a.kind == "translations":
         ok, skipped = import_translations(conn, load_items(Path(a.path)), a.model)

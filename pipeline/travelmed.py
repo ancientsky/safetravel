@@ -563,6 +563,107 @@ def add_english(details: dict[str, dict], mem: dict | None = None) -> dict:
     return {"lines": st["lines"], "untranslated": n_missing}
 
 
+KINDS_EN = {"line": "lines", "label": "labels", "where": "where"}   # pending kind -> section of travelmed_lines_en.json
+_CJK = re.compile(r"[\u2e80-\u9fff\uf900-\ufaff\uff01-\uff60\u3000-\u303f]")
+_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+           "November", "December"]
+
+
+def pending_english(details_dir: Path | None = None) -> list[dict]:
+    """Page text with no English yet, from the exported web/data/travelmed/*.json: one item per distinct Chinese
+    string, {"kind": line|label|where, "zh", "count", "context": {...}} — what the daily routine translates."""
+    import glob
+    d = Path(details_dir or (C.web_data() / "travelmed"))
+    items: dict[tuple, dict] = {}
+
+    def add(kind, zh, ctx):
+        it = items.get((kind, zh))
+        if it:
+            it["count"] += 1
+        else:
+            items[(kind, zh)] = {"kind": kind, "zh": zh, "count": 1, "context": ctx}
+
+    def lines(ls, sec, place, vax=None):
+        for ln in ls or []:
+            ctx = {"section": sec, "place": place, **({"vaccine": vax} if vax else {}),
+                   **({"label": ln["k"]} if ln.get("k") else {}), **({"group": ln["g"]} if ln.get("g") else {}),
+                   **({"heading": True} if ln.get("h") else {})}
+            if ln.get("t") and not ln.get("e"):
+                add("line", ln["t"], ctx)
+            if ln.get("k") and not ln.get("ke"):
+                add("label", ln["k"], {"place": place})
+
+    def page(p, place):
+        for sec, ls in (p.get("sections") or {}).items():
+            lines(ls, sec, place)
+        for v in p.get("vaccines") or []:
+            lines(v.get("lines"), "vaccine", place, v.get("name"))
+        for x in p.get("hotline") or []:
+            if x.get("where") and not x.get("we"):
+                add("where", x["where"], {"place": place, "tel": x.get("tel", "")})
+
+    for f in sorted(glob.glob(str(d / "*.json"))):
+        det = C.load_json(Path(f), {}) or {}
+        if det.get("page"):
+            page(det["page"], det.get("en") or det.get("iso"))
+        for sb in det.get("subs") or []:
+            if sb.get("page"):
+                page(sb["page"], sb.get("en") or sb.get("zh"))
+    return list(items.values())
+
+
+def english_problems(zh: str, en: str) -> tuple[str | None, list[str]]:
+    """(reason to refuse, notes to check by hand) for one translation of page text."""
+    if not isinstance(en, str) or not en.strip():
+        return "empty", []
+    if _CJK.search(en):
+        return "Chinese characters in the English", []
+    if re.search(r"<\s*/?\s*[a-zA-Z]", en) or "\n" in en:
+        return "HTML or a line break in the English", []
+    notes = []
+    months = {int(m) for m in re.findall(r"(?<![個\d])(\d{1,2})(?=(?:、\d{1,2})*月)", zh)} | \
+             {int(m) for m in re.findall(r"(\d{1,2})、(?=\d{1,2}月)", zh)}
+    for m in sorted(x for x in months if 1 <= x <= 12):
+        if _MONTHS[m - 1] not in en:
+            notes.append(f"month {m} ({_MONTHS[m - 1]}) not in the English")
+    rest = re.sub(r"\d{1,2}(?:、\d{1,2})*月", "", zh)
+    nums = set(re.findall(r"\d+", en))
+    for n in dict.fromkeys(re.findall(r"\d+", rest)):
+        if n not in nums:
+            notes.append(f"number {n} not in the English")
+    return None, notes
+
+
+def import_english(items: list[dict], path: Path | None = None, details_dir: Path | None = None,
+                   check_only: bool = False) -> dict:
+    """Merge [{kind, zh, en}] into data/manual/travelmed_lines_en.json. Only strings that are pending right now are
+    accepted (zh copied byte for byte from `python -m pipeline pending`); refused items are listed, numbers and
+    months that do not reappear in the English are listed for a person or the routine to check."""
+    path = path or (C.manual_dir() / LINES_EN)
+    pending = {(it["kind"], it["zh"]) for it in pending_english(details_dir)}
+    mem = C.load_json(path, {}) or {}
+    for sec in KINDS_EN.values():
+        mem.setdefault(sec, {})
+    st = {"imported": 0, "refused": [], "check": []}
+    for it in items:
+        kind, zh, en = it.get("kind"), it.get("zh"), it.get("en")
+        if kind not in KINDS_EN or (kind, zh) not in pending:
+            st["refused"].append({"kind": kind, "zh": zh, "why": "not pending (zh must be copied unchanged)"})
+            continue
+        en = C.nfkc(en).strip() if isinstance(en, str) else en
+        why, notes = english_problems(zh, en)
+        if why:
+            st["refused"].append({"kind": kind, "zh": zh, "why": why})
+            continue
+        if notes:
+            st["check"].append({"kind": kind, "zh": zh, "en": en, "notes": notes})
+        mem[KINDS_EN[kind]][zh] = en
+        st["imported"] += 1
+    if not check_only and st["imported"]:
+        C.write_json(path, mem, indent=1)
+    return st
+
+
 def _write_details(d: Path, details: dict[str, dict]) -> None:
     d.mkdir(parents=True, exist_ok=True)
     for iso, det in details.items():
