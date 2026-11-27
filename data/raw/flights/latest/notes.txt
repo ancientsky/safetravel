@@ -1,10 +1,10 @@
-# flight fetch 2026-11-26T21:19:10+08:00
+# flight fetch 2026-11-27T11:18:58+08:00
 tdx auth: token ok
-tdx_fids_tpe	https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE?%24format=JSON	200	1516146 bytes	1922 physical flights (all days)
+tdx_fids_tpe	https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE?%24format=JSON	200	1500447 bytes	1957 physical flights (all days)
 tdx_airports	469 airports
-tdx_fids_all	https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport?%24format=JSON	200	1761821 bytes	airports CMJ,CYI,GNI,KHH,KNH,KYD,LZN,MFK,MZG,RMQ,TNN,TPE,TSA,TTT
-hub TSA: 38 international flights (all days), 7 routes / 38 flights on 2026-11-26
-hub RMQ: 49 international flights (all days), 14 routes / 49 flights on 2026-11-26
-hub TNN: 4 international flights (all days), 2 routes / 4 flights on 2026-11-26
-hub KHH: 111 international flights (all days), 25 routes / 111 flights on 2026-11-26
-RESULT ok=True source=https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE kind=tdx day=2026-11-26 routes=85 reason=None warn=None
+tdx_fids_all	https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport?%24format=JSON	200	1762735 bytes	airports CMJ,CYI,GNI,HUN,KHH,KNH,KYD,LZN,MFK,MZG,RMQ,TNN,TPE,TSA,TTT,WOT
+hub TSA: 40 international flights (all days), 8 routes / 40 flights on 2026-11-27
+hub RMQ: 50 international flights (all days), 13 routes / 50 flights on 2026-11-27
+hub TNN: 4 international flights (all days), 2 routes / 4 flights on 2026-11-27
+hub KHH: 121 international flights (all days), 24 routes / 121 flights on 2026-11-27
+RESULT ok=True source=https://tdx.transportdata.tw/api/basic/v2/Air/FIDS/Airport/TPE kind=tdx day=2026-11-27 routes=86 reason=None warn=None
