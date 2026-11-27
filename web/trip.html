@@ -183,7 +183,17 @@
 
     <section id="card" class="wrap sec card" data-testid="card" aria-labelledby="card-title" hidden></section>
 
-    <section id="clinics" class="wrap sec cl" aria-labelledby="cl-h" data-testid="clinics">
+    <!-- js/trip-views.js: one of the four sections below shows at a time (the page is as long as one of them) -->
+    <div id="views" class="wrap views" data-testid="views">
+      <div class="views-bar" role="tablist" data-i18n-attr="aria-label:views_label">
+        <button type="button" role="tab" class="vtab" id="vt-clinics" data-view="clinics" aria-controls="clinics" aria-selected="true" data-testid="view-clinics"><span data-i18n="nav_clinics">旅遊醫學門診</span></button>
+        <button type="button" role="tab" class="vtab" id="vt-weather" data-view="weather" aria-controls="weather" aria-selected="false" tabindex="-1" data-testid="view-weather"><span data-i18n="nav_weather">天氣預報</span></button>
+        <button type="button" role="tab" class="vtab" id="vt-changes" data-view="changes" aria-controls="changes" aria-selected="false" tabindex="-1" data-testid="view-changes"><span data-i18n="nav_changes">近期變動</span></button>
+        <button type="button" role="tab" class="vtab" id="vt-all" data-view="all" aria-controls="all" aria-selected="false" tabindex="-1" data-testid="view-all"><span data-i18n="nav_all">全部目的地</span></button>
+      </div>
+    </div>
+
+    <section id="clinics" class="wrap sec cl view" role="tabpanel" aria-labelledby="cl-h" data-testid="clinics">
       <div class="sec-head">
         <div>
           <h2 id="cl-h" tabindex="-1" data-i18n="cl_h">旅遊醫學門診</h2>
@@ -201,7 +211,7 @@
       </div>
     </section>
 
-    <section id="weather" class="wrap sec wx" aria-labelledby="wx-h" data-testid="weather">
+    <section id="weather" class="wrap sec wx view" role="tabpanel" aria-labelledby="wx-h" data-testid="weather" hidden>
       <div class="sec-head">
         <div>
           <h2 id="wx-h" data-i18n="wx_h">全球都市天氣預報</h2>
@@ -228,7 +238,7 @@
       </div>
     </section>
 
-    <section id="changes" class="wrap sec" aria-labelledby="chg-h">
+    <section id="changes" class="wrap sec view" role="tabpanel" aria-labelledby="chg-h" data-testid="changes" hidden>
       <div class="sec-head">
         <div>
           <h2 id="chg-h" data-i18n="changes_h">近期變動</h2>
@@ -252,7 +262,7 @@
       </div>
     </section>
 
-    <section id="all" class="wrap sec" aria-labelledby="all-h" data-testid="table-section">
+    <section id="all" class="wrap sec view" role="tabpanel" aria-labelledby="all-h" data-testid="table-section" hidden>
       <div class="sec-head">
         <div>
           <h2 id="all-h" data-i18n="all_h">全部目的地一覽</h2>

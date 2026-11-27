@@ -21,6 +21,7 @@ export default {
   stamp_unknown: 'unknown',
 
   nav_label: 'On this page',
+  views_label: 'Clinics, weather, recent changes, all destinations (one at a time)',
   nav_map: 'Map',
   nav_changes: 'Recent changes',
   nav_all: 'All destinations',

@@ -983,18 +983,42 @@ button.chg:hover { background: var(--surface-2); border-color: var(--border); }
   .t-tools .btn { flex: 1; }
 }
 
-/* ---------- phones: short lists, sticky section chips, back to top (js/trip-more.js, js/trip-nav.js) ----------
-   Screen only, so wider screens and print keep every item and none of these controls. */
-.more-btn, .to-top { display: none; }
-@media screen and (max-width: 760px) {
-  /* anchors, the opened card and focused controls land below the stuck chip row */
-  html { scroll-padding-top: calc(var(--jump-h, 56px) + 8px); }
+/* ---------- the four reference sections as tabs (js/trip-views.js) ---------- */
+.views { margin-top: 28px; }
+.views-bar {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 4px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.vtab {
+  flex: 1 1 0; min-width: max-content; min-height: 44px; padding: 8px 14px; border: 1px solid transparent; border-radius: 9px;
+  background: none; color: var(--fg-dim); font: inherit; font-size: calc(15px * var(--ts)); font-weight: 600; cursor: pointer;
+}
+.vtab:hover { color: var(--fg); }
+.vtab:focus-visible { outline: 2px solid var(--focus, var(--accent)); outline-offset: 1px; }
+.vtab[aria-selected="true"] { background: var(--surface); color: var(--fg); border-color: var(--border-strong); box-shadow: 0 1px 4px rgba(0, 0, 0, .08); }
+.sec.view { padding-top: 18px; }
+/* wider screens: the tab bar stays at the top while a long tab is read (phones have the sticky chip row instead) */
+@media screen and (min-width: 761px) {
+  .views { position: sticky; top: 0; z-index: 30; padding-block: 8px; background: var(--bg); }
+  .view { scroll-margin-top: var(--views-h, 72px); }
+  .cl-map { top: calc(var(--views-h, 72px) + 12px); }
+}
 
-  /* the first few items of a long list; the rest wait behind "show all" */
+/* ---------- long lists start short; phones: sticky section chips, back to top (js/trip-more.js, js/trip-nav.js) ----------
+   Screen only, so print keeps every item and none of these controls. */
+.more-btn, .to-top { display: none; }
+@media screen {
+  /* the first items of a long list (fewer on a phone); the rest wait behind "show all" */
   .clip:not(.is-all) .is-more { display: none !important; }
   .more-btn { display: flex; width: 100%; min-height: 48px; margin-top: 12px; font-size: calc(16px * var(--ts)); }
   .more-btn::after { content: "▾"; color: var(--fg-mute); }
   .more-btn[aria-expanded="true"]::after { content: "▴"; }
+}
+@media screen and (max-width: 760px) {
+  /* anchors, the opened card and focused controls land below the stuck chip row */
+  html { scroll-padding-top: calc(var(--jump-h, 56px) + 8px); }
+  .views { margin-top: 20px; }
+  .vtab { flex-basis: calc(50% - 6px); min-width: 0; padding: 8px 6px; font-size: calc(14px * var(--ts)); }
 
   /* the header sticks with everything above the chip row scrolled away (--jump-top: minus that height) */
   .top { position: sticky; top: var(--jump-top, auto); z-index: 40; }

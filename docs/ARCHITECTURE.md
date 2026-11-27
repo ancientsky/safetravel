@@ -170,11 +170,17 @@ map). Data and refresh: `docs/TRAVELMED.md`.
 - **Board filter button** (`js/arrivals.js`): the count of listed flights from level 2+ areas is a compact toggle beside the
   checkpoint control (also on a collapsed board); `.arr-stale-bar` appears when the feed is older than twice the refresh interval plus 5 minutes.
 
-## `trip.html` on phones
+## `trip.html` layout
 
-Screen widths up to 760 px only (wider screens and print keep everything):
-- `trip-more.js`: one helper that shows the first N items of a long list behind a "顯示全部（N）" button — clinics 6, weather
-  cities 6, destination table 8. Filters, search and sorting always run over the whole list; hidden items carry `.is-more`.
+- `trip-views.js`: the four sections under the map and the card (`#clinics`, `#weather`, `#changes`, `#all`) are tabs of
+  one tablist (`#views`); only the selected one is shown (`hidden` on the others). Any click on a link to one of those
+  anchors (captured before navigation) and a typed `#weather` select its tab first; `?view=` picks the first tab
+  (default clinics). On screens wider than 760 px the tab row is sticky (`--views-h` for what sits under it).
+- `trip-more.js`: one helper that shows the first N items of a long list behind a "顯示全部（N）" button — clinics 12 / 6,
+  weather cities 24 / 6, destination table 40 / 8 (wider screens / phones; screen only, print keeps every item).
+  Filters, search and sorting always run over the whole list; hidden items carry `.is-more`.
+
+Screen widths up to 760 px only:
 - `trip-nav.js`: the header sticks with only the section-chip row visible (`--jump-top`, `--jump-h`), the chip of the section
   in view gets `aria-current`, and a back-to-top button appears after the first screen.
 - `trip.js`: opening a destination card pushes one history entry, so Back closes the card instead of leaving the page;

@@ -12,6 +12,7 @@ import { createMore } from './trip-more.js';
 const SLOTS = [[480, 720], [810, 1050], [1080, 1290]];
 const ZH = 'zh-Hant';
 const PHONE_FIRST = 6; // clinics listed on a phone before "show all" (trip-more.js)
+const WIDE_FIRST = 12; // … and on wider screens (beside the locator map)
 
 /** Day (0 = Monday) and minutes after midnight in Taipei. */
 export function taipeiNow(now = new Date()) {
@@ -82,7 +83,7 @@ export function createClinics({ root }) {
   const listEl = root.querySelector('.cl-list');
   const countEl = root.querySelector('.cl-count');
   const mapEl = root.querySelector('.cl-map');
-  const more = createMore({ host: listEl, after: root.querySelector('.cl-body'), limit: PHONE_FIRST, testid: 'cl-more' });
+  const more = createMore({ host: listEl, after: root.querySelector('.cl-body'), limit: PHONE_FIRST, wide: WIDE_FIRST, testid: 'cl-more' });
   let mapApi = null;
   let started = false;
 

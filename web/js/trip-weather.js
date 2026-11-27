@@ -12,6 +12,7 @@ const UNIT_KEY = 'safetravel.trip.unit';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const DEFAULT_URL = DATASET_URL;
 const PHONE_FIRST = 6; // city cards listed on a phone before "show all" (trip-more.js)
+const WIDE_FIRST = 24; // … and on wider screens
 
 let dataPromise = null;
 /** weather.json, fetched once per page (retried after a failure). */
@@ -171,7 +172,7 @@ export function createWeather({ root, onOpen, onSettled, onUnit }) {
   const panel = root.querySelector('#wx-panel');
   const subEl = root.querySelector('.wx-sub');
   const unitBox = root.querySelector('.wx-unit');
-  const more = createMore({ host: panel, after: panel, limit: PHONE_FIRST, testid: 'wx-more' });
+  const more = createMore({ host: panel, after: panel, limit: PHONE_FIRST, wide: WIDE_FIRST, testid: 'wx-more' });
 
   input.addEventListener('input', () => { st.q = input.value; apply(); });
   input.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && input.value) { input.value = ''; st.q = ''; apply(); } });

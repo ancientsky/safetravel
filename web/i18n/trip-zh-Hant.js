@@ -21,6 +21,7 @@ export default {
   stamp_unknown: '未知',
 
   nav_label: '頁面導覽',
+  views_label: '門診、天氣、近期變動、全部目的地（一次顯示一項）',
   nav_map: '地圖',
   nav_changes: '近期變動',
   nav_all: '全部目的地',

@@ -15,6 +15,7 @@ import { createWeather, loadWeather } from './trip-weather.js';
 import { createWxMap } from './trip-wxmap.js';
 import { createClinics } from './trip-clinics.js';
 import { initPhoneNav } from './trip-nav.js';
+import { initViews } from './trip-views.js';
 import { autoReload } from './autoreload.js';
 import { bindTextSize } from './textsize.js';
 
@@ -42,6 +43,7 @@ const search = createSearch({
   input: $('#q'), listEl: $('#q-list'), statusEl: $('#q-status'), onOpen: (iso) => openCard(iso),
 });
 const clinics = createClinics({ root: $('#clinics') });
+const views = initViews();
 const weather = createWeather({
   root: $('#weather'),
   onOpen: (iso) => openCard(iso),
@@ -212,7 +214,7 @@ function openCard(iso, { focus = true, scroll = true, fromUrl = false } = {}) {
   app.open = d.iso;
   renderCard(cardEl, d, {
     model: app.model, onClose: closeCard, onPrint: () => printPart('card'), localWeather: weather.localSection,
-    onClinics: () => { clinics.start(); clinics.focus(); },
+    onClinics: () => { views.show('clinics'); clinics.start(); clinics.focus(); },
   });
   cardEl.hidden = false;
   app.map?.select(d.iso);
