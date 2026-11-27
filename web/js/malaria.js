@@ -5,6 +5,7 @@
 import { storageGet, storageSet, clean, urlLang, syncUrlLang, safeUrl } from './util.js';
 import { bindTextSize } from './textsize.js';
 import { createMalariaMap } from './malaria-map.js';
+import { PRICES, VISIT, CHECKED, range, estimate } from './malaria-prices.js';
 import zh from '../i18n/malaria-zh-Hant.js';
 import en from '../i18n/malaria-en.js';
 import {
@@ -369,10 +370,17 @@ function drugCard(drug, win) {
   // text + inputmode decimal (not type=number): phones still get a number keyboard, kiosks the on-screen number pad
   const price = h('input', { type: 'text', class: 'f-input ml-num', id: `pr-${drug.id}`, inputmode: 'decimal', autocomplete: 'off', pattern: '[0-9]*[.]?[0-9]*', maxlength: '7', value: st.price, 'data-testid': `price-${drug.id}` });
   const cost = h('p', { class: 'ml-cost', 'data-testid': `cost-${drug.id}` });
+  const fmt = (n) => n.toLocaleString(isEn() ? 'en' : 'zh-TW');
+  const per = range(PRICES[drug.id]); // published self-pay prices (malaria-prices.js): the estimate when no price is typed
+  const est = buy != null ? estimate(drug.id, buy) : null;
+  if (per) price.placeholder = `${fmt(per[0])}–${fmt(per[1])}`;
   const showCost = () => {
     const v = parseFloat(price.value);
     st.price = price.value;
-    cost.textContent = buy != null && v > 0 ? t('cost', { n: Math.round(v * buy).toLocaleString(isEn() ? 'en' : 'zh-TW') }) : '';
+    const exact = buy != null && v > 0;
+    cost.classList.toggle('ml-cost-est', !exact && !!est);
+    cost.textContent = exact ? t('cost', { n: fmt(Math.round(v * buy)) })
+      : est ? t('cost_est', { lo: fmt(est[0]), hi: fmt(est[1]), a: fmt(per[0]), b: fmt(per[1]) }) : '';
   };
   price.addEventListener('input', showCost);
   showCost();
@@ -392,8 +400,24 @@ function drugCard(drug, win) {
     timeline(win, sch, drug),
     buy != null ? h('div', { class: 'ml-price' },
       h('div', { class: 'f-field' }, h('label', { for: price.id, text: t('price') }), price), cost) : null,
+    buy != null && per ? priceSources(drug.id) : null,
     calendarBlock(drug, sch, dose, win)].filter(Boolean));
   return card;
+}
+
+/** Where the estimate's prices come from: each hospital's published price, its list, and the visit fees on top. */
+function priceSources(id) {
+  const list = PRICES[id] || [];
+  const span = (r) => (r ? (r[0] === r[1] ? `${r[0]}` : `${r[0]}–${r[1]}`) : '—');
+  return h('details', { class: 'ml-src', 'data-testid': `price-src-${id}` },
+    h('summary', { text: t('price_src', { n: list.length, d: CHECKED }) }),
+    h('ul', {}, list.map((x) => h('li', {},
+      t('price_src_item', { name: isEn() ? x.en : x.zh, date: x.date, price: x.price }), ' ',
+      h('a', { href: x.url, target: '_blank', rel: 'noopener noreferrer', text: t('price_list') })))),
+    h('p', { class: 'ml-note', text: t('visit_fees', {
+      hosp: [...new Set([...VISIT.reg, ...VISIT.exam].map((x) => (isEn() ? x.en : x.zh)))].join(isEn() ? ', ' : '、'),
+      reg: span(range(VISIT.reg)), exam: span(range(VISIT.exam)),
+    }) }));
 }
 
 function groupNotes(win, legs) {

@@ -104,6 +104,11 @@
 .ml-tl-l .k-post::before { background: var(--accent); opacity: .7; }
 .ml-price { display: flex; flex-wrap: wrap; align-items: end; gap: 6px 14px; }
 .ml-cost { font-weight: 800; }
+.ml-cost.ml-cost-est { font-weight: 600; }
+.ml-src { margin-top: 6px; font-size: .92em; }
+.ml-src summary { cursor: pointer; }
+.ml-src ul { margin: 6px 0 4px 1.2em; }
+.ml-src li { margin: 2px 0; }
 .ml-calb { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 6px; border-top: 1px dashed var(--border); }
 .ml-time { width: 8em; }
 .ml-calb .ml-note { flex-basis: 100%; }

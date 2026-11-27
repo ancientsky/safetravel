@@ -122,9 +122,16 @@ text. Both carry the notice that they are not a Taiwan CDC service and that a do
   goes (or may go) to CDC's risk areas. The risk window runs from the first such arrival to the last departure.
   Weekly doses fall on the first dose's weekday and always include 4 doses after leaving.
 - **Output**: per drug: can be considered / needs the doctor's attention / not suitable (with CDC's reasons), first
-  and last dose, number of doses, tablets to buy (fractions rounded up), optional price → cost, a timeline, a
+  and last dose, number of doses, tablets to buy (fractions rounded up), optional price → cost (with no price typed:
+  an estimated range, see **Prices** below), a timeline, a
   repeating reminder for Google Calendar (event template with an RRULE) and an `.ics` file (floating local time, an
   alarm on each dose, plus a 90-day "malaria watch" after return). Nothing typed is stored or sent.
+- **Prices** (`web/js/malaria-prices.js`): self-pay prices per tablet from hospitals' published travel-clinic price
+  lists (hospital, list date, price, link) and the registration / consultation fees on the same lists. With no price
+  typed in, each drug card shows "estimated cost lo–hi" = tablets to buy × the lowest / highest listed price, labelled
+  unofficial, with the sources in a fold-out. Compiled on the date in `CHECKED` from search-indexed copies of the lists
+  (the build sandbox cannot open the hospitals' sites): check each figure against its list when updating; the range
+  follows the list, nothing else changes.
 - `WHO_NOTES` (in `malaria-calc.js`): the CDC malaria page's own notes (註 c and the footnote of its WHO map) for
   countries whose travel prescription may lag behind — Malaysia, Saudi Arabia, Bhutan, Belize, Azerbaijan, Timor-Leste,
   Suriname. Shown beside the country; the class still follows the prescription text, the doctor decides.

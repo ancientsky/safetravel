@@ -73,9 +73,19 @@ async function main() {
     assert((await text(page, 'last-dox')).startsWith('2027-01-17'), `dox last ${await text(page, 'last-dox')}`);
     await page.selectOption('[data-testid="lead-atq"]', '1');
     assert((await text(page, 'doses-atq')).startsWith('19'), 'lead 1 day → 19 doses');
+    // no price typed: an estimate range from the hospitals' published prices (malaria-prices.js), with its sources
+    const est = await text(page, 'cost-dox');
+    assert(/估計藥費約 74–205 元/.test(est) && est.includes('非官方'), `dox estimate ${est}`);
+    assert(/估計藥費約 [\d,]+–[\d,]+ 元/.test(await text(page, 'cost-atq')), 'no Malarone estimate');
+    const ph = await page.getAttribute('[data-testid="price-dox"]', 'placeholder');
+    assert(ph === '1.8–5', `placeholder ${ph}`);
+    await page.click('[data-testid="price-src-dox"] summary');
+    const src = await text(page, 'price-src-dox');
+    const links = await page.$$eval('[data-testid="price-src-dox"] a', (as) => as.map((x) => x.href));
+    assert(src.includes('每顆 3 元') && src.includes('掛號費') && links.length === 5 && links.every((u) => u.startsWith('https://')), `sources ${src.slice(0, 80)} / ${links.length}`);
     await page.fill('[data-testid="price-dox"]', '12');
     const cost = await text(page, 'cost-dox');
-    assert(cost.includes('492'), `cost ${cost}`);
+    assert(cost.includes('492') && !cost.includes('估計'), `cost ${cost}`);
     assert(await page.inputValue('[data-testid="weight"]') === '70', 'weight changed while typing a price');
     await page.close();
     return `${n.atq} / ${n.dox} / ${n.mef}; ${cost}`;
