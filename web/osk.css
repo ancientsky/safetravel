@@ -107,6 +107,10 @@ html[data-theme="light"] .osk {
 .osk-mode { flex: 1.3 1 0; color: var(--osk-accent); }
 .osk-enter { flex: 1.5 1 0; color: var(--osk-accent); border-color: var(--osk-accent); }
 .osk-bksp { font-size: calc(var(--osk-fs) * 0.9); }
+/* number pad (age, weight, price): a narrow 3-column block, centred */
+.osk.osk-is-num { left: 50%; right: auto; width: min(420px, 100vw); transform: translateX(-50%); }
+.osk-num .osk-row .osk-key { max-width: none; font-size: calc(var(--osk-fs) * 1.1); }
+.osk-num .osk-bottom .osk-key { font-size: calc(var(--osk-fs) * 0.6); }
 
 @media (prefers-reduced-motion: no-preference) {
   .osk button { transition: background-color .08s, color .08s; }

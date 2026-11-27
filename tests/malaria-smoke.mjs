@@ -176,6 +176,42 @@ async function main() {
     assert(over <= 0, `overflow ${over}px`);
   });
 
+  await check('kiosk (?osk=1): age, weight and price get the on-screen number pad', async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 1700 }, hasTouch: true });
+    const page = await ctx.newPage();
+    page.on('pageerror', (e) => consoleErrors.push(e.message));
+    await page.goto(`${PAGE_URL}${PAGE_URL.includes('?') ? '&' : '?'}osk=1`, { waitUntil: 'load' });
+    await page.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
+    await trip(page, 'KE', '2026-12-10', '2026-12-20', 'yes');
+    const tap = (sel) => page.click(`[data-testid="osk"] [data-k="${sel}"]`);
+    await page.click('[data-testid="age"]');
+    await page.waitForSelector('[data-testid="osk"]:not([hidden]) .osk-num');
+    const keys = await page.$$eval('[data-testid="osk"] [data-k]', (b) => b.map((x) => x.dataset.k).join(''));
+    assert(keys === '789456123.0bkspclearenter', `pad keys ${keys}`);
+    for (const k of ['3', '5', '.', '.', '5']) await tap(k);   // a second "." is ignored
+    assert(await page.inputValue('[data-testid="age"]') === '35.5', await page.inputValue('[data-testid="age"]'));
+    await tap('bksp'); await tap('bksp');
+    assert(await page.inputValue('[data-testid="age"]') === '35', 'backspace');
+    await page.click('[data-testid="weight"]');
+    for (const k of ['7', '0']) await tap(k);
+    await tap('enter');
+    assert(await page.isHidden('[data-testid="osk"]'), 'Done closes the pad');
+    const res = await page.textContent('[data-testid="result"]');
+    assert(/Malarone|瑪拉隆/.test(res), 'result for 35 y / 70 kg');
+    const price = await page.$('[data-testid^="price-"]');
+    await price.click();
+    await page.waitForSelector('[data-testid="osk"]:not([hidden]) .osk-num');
+    for (const k of ['1', '2', '0']) await tap(k);
+    const pv = await price.inputValue();
+    // a text field (not the letter keyboard): the search box elsewhere still gets the full keyboard
+    await page.fill('[data-testid="age"]', '４２ab');
+    const sanitised = await page.inputValue('[data-testid="age"]');
+    await ctx.close();
+    assert(pv === '120', `price ${pv}`);
+    assert(sanitised === '42', `sanitised ${sanitised}`);
+    return 'age 35, weight 70, price 120';
+  });
+
   await check('risk map: CDC and WHO layers, legend counts, source credit, click adds the country to the itinerary', async () => {
     const page = await open(context);
     await page.waitForSelector('.mm-cts path[data-iso="KE"]', { timeout: 15000 });

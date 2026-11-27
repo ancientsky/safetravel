@@ -1,10 +1,11 @@
-// On-screen keyboard for touch kiosks that have no system keyboard (index.html, trip.html).
+// On-screen keyboard for touch kiosks that have no system keyboard (every page that has text fields).
 // Opt-in: ?osk=1 turns it on for the browser session (sessionStorage, so it survives moving between pages and
 // auto-reloads), ?osk=0 turns it off. Without it this module does nothing and loads nothing else.
 //
 // Modes: 注音 (大千 layout; tone key or space ends a syllable, then pick a character; after a character the bar offers
 // associated words, destination names first) and ABC (letters + digits). A row of common destinations replaces the
-// search box's content in one tap. Keys type into the focused text / search field and fire the same `input` events
+// search box's content in one tap. Fields marked inputmode="decimal" or "numeric" (age, weight, price on
+// malaria.html) get a number pad instead: digits, one decimal point, delete, clear, done. Keys type into the focused text / search field and fire the same `input` events
 // and Enter keydown as a hardware keyboard, so the page's own search code needs no change.
 // Zhuyin dictionary: vendor/zhuyin.json (scripts/build-zhuyin.py, McBopomofo data, MIT), fetched on first use.
 //
@@ -34,6 +35,7 @@ const ZH_ROWS = [
   ['ㄇ', 'ㄋ', 'ㄎ', 'ㄑ', 'ㄕ', 'ㄘ', 'ㄨ', 'ㄜ', 'ㄠ', 'ㄤ'],
   ['ㄈ', 'ㄌ', 'ㄏ', 'ㄒ', 'ㄖ', 'ㄙ', 'ㄩ', 'ㄝ', 'ㄡ', 'ㄥ'],
 ];
+const NUM_ROWS = [['7', '8', '9'], ['4', '5', '6'], ['1', '2', '3'], ['.', '0', 'bksp']];
 const EN_ROWS = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
   ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
@@ -49,7 +51,7 @@ const WORDS = {
 };
 const TEXT = {
   zh: {
-    abc: 'ABC', zhuyin: '注音', space: '空白', tone1: '一聲', clear: '清除', enter: '確定', hide: '收起',
+    abc: 'ABC', zhuyin: '注音', space: '空白', tone1: '一聲', clear: '清除', enter: '確定', hide: '收起', done: '完成',
     words: '常用', loading: '載入字典中…', none: '沒有這個音，請修改注音', hint: '輸入注音，再按聲調或空白（一聲）',
     failed: '字典載入失敗', bksp: '刪除', label: '螢幕鍵盤',
     reset: '重設畫面', resetAgain: '再按一次：重設畫面', resetLabel: '重設畫面：回到開機時的頁面與設定',
@@ -58,7 +60,7 @@ const TEXT = {
     extFile: '展示機無法下載或列印',
   },
   en: {
-    abc: 'ABC', zhuyin: '注音', space: 'space', tone1: 'tone 1', clear: 'Clear', enter: 'Enter', hide: 'Hide',
+    abc: 'ABC', zhuyin: '注音', space: 'space', tone1: 'tone 1', clear: 'Clear', enter: 'Enter', hide: 'Hide', done: 'Done',
     words: 'Popular', loading: 'Loading dictionary…', none: 'No such syllable', hint: 'Type Zhuyin, then a tone key or space',
     failed: 'Dictionary failed to load', bksp: 'Delete', label: 'On-screen keyboard',
     reset: 'Reset', resetAgain: 'Tap again to reset', resetLabel: 'Reset the screen to its start page and settings',
@@ -395,7 +397,17 @@ function init() {
   }
 
   // ---------- key handling ----------
+  // number pad for fields that ask for a number (inputmode decimal / numeric, remembered before show() sets it to none)
+  const numPad = () => /^(decimal|numeric)$/.test(target?.dataset.oskNum || '');
+  function pressNum(k) {
+    if (k === 'bksp') { backspace(); return; }
+    if (k === 'clear') { replaceAll(''); return; }
+    if (k === 'hide' || k === 'enter') { target?.dispatchEvent(new Event('change', { bubbles: true })); hide(true); return; }
+    if (k === '.' && (target.value.includes('.') || target.dataset.oskNum === 'numeric')) return;
+    if (/^[0-9.]$/.test(k)) insert(k);
+  }
   function press(k) {
+    if (numPad()) { pressNum(k); return; }
     switch (k) {
       case 'mode':
         mode = mode === 'zh' ? 'en' : 'zh';
@@ -434,6 +446,14 @@ function init() {
   function render(reading = '') {
     const L = lang();
     root.setAttribute('aria-label', tx('label'));
+    root.classList.toggle('osk-is-num', numPad());
+    if (numPad()) {
+      const rows = NUM_ROWS.map((row) => `<div class="osk-row">${row.map((k) => (k === 'bksp'
+        ? key('bksp', '⌫', 'osk-fn osk-bksp') : key(k, k))).join('')}</div>`).join('');
+      root.innerHTML = `<div class="osk-keys osk-num">${rows}<div class="osk-row osk-bottom">
+        ${key('clear', tx('clear'), 'osk-fn')}${key('enter', `${tx('done')} ▾`, 'osk-fn osk-enter')}</div></div>`;
+      return;
+    }
     const rows = (mode === 'zh' ? ZH_ROWS : EN_ROWS).map((row) => `<div class="osk-row">${row.map((k) => {
       if (k === 'shift') return key('shift', '⇧', `osk-fn${shift ? ' on' : ''}`);
       const label = mode === 'en' && shift ? k.toUpperCase() : k;
@@ -491,8 +511,11 @@ function init() {
 
   // ---------- show / hide ----------
   function show(el) {
+    const was = target;
     target = el;
+    if (el.dataset.oskNum == null) el.dataset.oskNum = (el.getAttribute('inputmode') || '').toLowerCase() || 'text';
     if (el.inputMode !== 'none') el.inputMode = 'none'; // no system keyboard on top of ours
+    if (!root.hidden && was !== el && /^(decimal|numeric)$/.test(was?.dataset.oskNum || '') !== numPad()) render(); // letters ↔ number pad
     if (root.hidden) {
       if (hiddenAt && Date.now() - hiddenAt > NEW_VISITOR_MS) mode = 'en';
       resetSyl(); cands = []; note = '';

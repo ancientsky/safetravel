@@ -366,7 +366,8 @@ function drugCard(drug, win) {
   leadSel.addEventListener('change', () => { st.lead = Number(leadSel.value); renderResult(); });
   const sch = schedule(drug, win, st.lead);
   const buy = dose.tablets != null ? tabletsToBuy(dose.tablets, sch.doses) : null;
-  const price = h('input', { type: 'number', class: 'f-input ml-num', id: `pr-${drug.id}`, min: '0', step: '1', inputmode: 'decimal', value: st.price, 'data-testid': `price-${drug.id}` });
+  // text + inputmode decimal (not type=number): phones still get a number keyboard, kiosks the on-screen number pad
+  const price = h('input', { type: 'text', class: 'f-input ml-num', id: `pr-${drug.id}`, inputmode: 'decimal', autocomplete: 'off', pattern: '[0-9]*[.]?[0-9]*', maxlength: '7', value: st.price, 'data-testid': `price-${drug.id}` });
   const cost = h('p', { class: 'ml-cost', 'data-testid': `cost-${drug.id}` });
   const showCost = () => {
     const v = parseFloat(price.value);
@@ -500,6 +501,14 @@ $('.ml-add').addEventListener('click', () => {
   renderResult();
 });
 // 'input' only: a 'change' on blur would rebuild the result cards under the pointer as you click into them
+// number fields are type="text" (so the kiosk number pad can type "12."): keep only digits and one decimal point,
+// full-width digits from a Chinese input method become ASCII
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (!el.matches?.('input.ml-num')) return;
+  const clean = el.value.normalize('NFKC').replace(/[^0-9.]/g, '').replace(/^([^.]*\.)(.*)$/, (m, a, b) => a + b.replace(/\./g, ''));
+  if (clean !== el.value) el.value = clean;
+}, true);
 $('#who').addEventListener('input', renderResult);
 
 async function main() {

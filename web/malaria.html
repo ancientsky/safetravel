@@ -91,8 +91,8 @@
       <p class="sec-sub" data-i18n="who_sub"></p>
       <div class="ml-who filters">
         <div class="ml-row">
-          <div class="f-field"><label for="age" data-i18n="age">年齡（歲）</label><input id="age" class="f-input ml-num" type="number" inputmode="decimal" min="0" max="120" step="0.5" data-testid="age"></div>
-          <div class="f-field"><label for="weight" data-i18n="weight">體重（公斤）</label><input id="weight" class="f-input ml-num" type="number" inputmode="decimal" min="1" max="250" step="0.5" data-testid="weight"></div>
+          <div class="f-field"><label for="age" data-i18n="age">年齡（歲）</label><input id="age" class="f-input ml-num" type="text" inputmode="decimal" autocomplete="off" pattern="[0-9]*[.]?[0-9]*" maxlength="5" data-testid="age"></div>
+          <div class="f-field"><label for="weight" data-i18n="weight">體重（公斤）</label><input id="weight" class="f-input ml-num" type="text" inputmode="decimal" autocomplete="off" pattern="[0-9]*[.]?[0-9]*" maxlength="5" data-testid="weight"></div>
           <div class="f-field"><label for="pregnant" data-i18n="pregnant">懷孕</label>
             <select id="pregnant" class="f-input" data-testid="pregnant">
               <option value="no" data-i18n="preg_no">否</option>
