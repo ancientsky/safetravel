@@ -1730,6 +1730,33 @@ async function run(browser) {
     return `${m.markers} markers, no overflow`;
   });
 
+  await check('level tiles filter the map like the legend; digest counts sit in the footer', async () => {
+    const pt = await context.newPage();
+    await pt.setViewportSize({ width: 1600, height: 1000 }); // the tiles are hidden on screens under 900 px high
+    await pt.goto(`${BASE_URL}?lang=en`, { waitUntil: 'load' });
+    await pt.waitForSelector('#stat-tiles [data-tile-level="2"]', { timeout: 15000 });
+    const labels = await pt.$$eval('#stat-tiles .tile-label', (els) => els.map((e) => e.textContent.trim()));
+    await pt.click('#stat-tiles [data-tile-level="2"]');
+    const a = await pt.evaluate(() => ({ f: [...window.__safetravel.state.filter], lg: [...document.querySelectorAll('#legend [data-level][aria-pressed="true"]')].map((x) => x.dataset.level) }));
+    await pt.click('#legend [data-level="3"]');
+    const b = await pt.$$eval('#stat-tiles [aria-pressed="true"]', (els) => els.map((x) => x.dataset.tileLevel).sort().join());
+    await pt.click('#stat-tiles [data-tile-level="all"]');
+    const c = await pt.evaluate(() => window.__safetravel.state.filter.size);
+    await pt.evaluate(() => window.__safetravel.setLayer('mofa'));
+    await pt.click('#stat-tiles [data-tile-level="1"]');
+    const d = await pt.evaluate(() => ({ layer: window.__safetravel.state.layer, f: [...window.__safetravel.state.filter] }));
+    await pt.click('#stat-tiles [data-tile-level="all"]');
+    await pt.waitForFunction(() => document.querySelector('[data-digest-counts]') && !document.querySelector('[data-digest-counts]').hidden, null, { timeout: 15000 });
+    const foot = await pt.textContent('[data-digest-counts]');
+    await pt.close();
+    assert(!labels.some((l) => /digest|translated/i.test(l)), `tiles: ${labels.join(' | ')}`);
+    assert(a.f.join() === '2' && a.lg.join() === '2', `L2 tile → ${JSON.stringify(a)}`);
+    assert(b === '2,3' && c === 0, `legend L3 → tiles ${b}; all → ${c}`);
+    assert(d.layer === 'cdc' && d.f.join() === '1', `tile on the Safety layer → ${JSON.stringify(d)}`);
+    assert(/Epidemic digests [\d,]+/.test(foot), `footer: ${foot}`);
+    return `${labels.length} tiles; ${foot}`;
+  });
+
   await check('legend is the level filter, collapses and is remembered; routes are inbound-only by default with a both-ways switch', async () => {
     const r0 = await page.evaluate(() => ({
       chips: !!document.querySelector('#level-chips'), rows: document.querySelectorAll('#legend .lg-filter').length,

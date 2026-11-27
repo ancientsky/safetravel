@@ -24,6 +24,8 @@ export default {
   tile_epidemics: '疫情摘要',
   tile_ai: 'AI 翻譯',
   tile_updated: '最後更新',
+  tile_filter: '{level}：點一下在地圖上突顯這些國家（再點一次取消；與圖例相同）',
+  tile_filter_all: '顯示全部等級',
   fresh_live: '資料即時',
   fresh_ok: '資料 {ago}更新',
   fresh_stale: '資料可能過期（{ago}）',

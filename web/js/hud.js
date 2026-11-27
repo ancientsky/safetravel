@@ -61,25 +61,47 @@ export function renderTiles(node, { animate = false } = {}) {
   const meta = state.data.meta;
   const counts = { ...derivedCounts(), ...(meta?.counts || {}) };
   if (state.data.epidemics && counts.epidemic_items == null) counts.epidemic_items = state.data.epidemics.items.length;
+  // The level tiles are also the Health-layer level filter, like the legend (same state.filter): tap one to
+  // highlight that level, "Countries w/ alerts" shows them all again. The digest counts are not for travellers or
+  // quarantine staff: they sit in the footer source line instead (renderDigestCounts).
   const tiles = [
-    { key: 'tile_countries', v: counts.countries_with_alerts, cls: 'tile-accent' },
+    { key: 'tile_countries', v: counts.countries_with_alerts, cls: 'tile-accent', lvl: 'all' },
     { key: 'tile_l3', v: counts.level3, cls: 'tile-l3', lvl: 3 },
     { key: 'tile_l2', v: counts.level2, cls: 'tile-l2', lvl: 2 },
     { key: 'tile_l1', v: counts.level1, cls: 'tile-l1', lvl: 1 },
-    { key: 'tile_epidemics', v: counts.epidemic_items, cls: '' },
-    { key: 'tile_ai', v: counts.ai_translated, cls: 'tile-ai' },
   ];
-  node.innerHTML = tiles.map((x) => `
-    <li class="tile ${x.cls}">
-      <span class="tile-label">${x.lvl ? `<i class="dot lvl-${x.lvl}" aria-hidden="true"></i>` : ''}${esc(t(x.key))}</span>
-      <b class="tile-val mono" data-v="${x.v == null ? '' : finiteNum(x.v)}">${x.v == null ? '—' : fmtNum(anim ? 0 : finiteNum(x.v))}</b>
-    </li>`).join('') + `
+  const cdc = !mofaMode();
+  const f = state.filter;
+  node.innerHTML = tiles.map((x) => {
+    const all = x.lvl === 'all';
+    const on = cdc && (all ? false : f.has(x.lvl));
+    const dim = cdc && f.size > 0 && (all || !f.has(x.lvl));
+    const title = t(all ? 'tile_filter_all' : 'tile_filter', { level: t(x.key) });
+    return `
+    <li class="tile ${x.cls}${on ? ' is-on' : ''}${dim ? ' is-dim' : ''}">
+      <button type="button" class="tile-btn" data-tile-level="${x.lvl}"${all ? '' : ` aria-pressed="${on}"`} title="${esc(title)}" data-testid="tile-${x.lvl}">
+        <span class="tile-label">${typeof x.lvl === 'number' ? `<i class="dot lvl-${x.lvl}" aria-hidden="true"></i>` : ''}${esc(t(x.key))}</span>
+        <b class="tile-val mono" data-v="${x.v == null ? '' : finiteNum(x.v)}">${x.v == null ? '—' : fmtNum(anim ? 0 : finiteNum(x.v))}</b>
+      </button>
+    </li>`;
+  }).join('') + `
     <li class="tile tile-updated">
       <span class="tile-label">${esc(t('tile_updated'))}</span>
       <b class="tile-val mono small">${meta?.generated_at ? esc(fmtDateTime(meta.generated_at)) : '—'}</b>
     </li>`;
   if (anim) countUp(node);
   else node.querySelectorAll('.tile-val[data-v]').forEach((b) => { if (b.dataset.v !== '') b.textContent = fmtNum(+b.dataset.v); });
+  renderDigestCounts(counts);
+}
+
+/** Footer source line: "Epidemic digests 1,804 · AI translated 1,804" (small print; hidden until known). */
+function renderDigestCounts(counts) {
+  const slot = document.querySelector('[data-digest-counts]');
+  if (!slot) return;
+  const parts = [['tile_epidemics', counts.epidemic_items], ['tile_ai', counts.ai_translated]]
+    .filter(([, v]) => v != null && Number.isFinite(+v)).map(([k, v]) => `${t(k)} ${fmtNum(+v)}`);
+  slot.textContent = parts.join(' · ');
+  slot.hidden = !parts.length;
 }
 
 function countUp(node) {

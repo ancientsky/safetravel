@@ -26,6 +26,8 @@ export default {
   tile_epidemics: 'Epidemic digests',
   tile_ai: 'AI translated',
   tile_updated: 'Last updated',
+  tile_filter: '{level}: tap to highlight these countries on the map (tap again to clear; same as the legend)',
+  tile_filter_all: 'Show every level again',
   fresh_live: 'Data live',
   fresh_ok: 'Updated {ago}',
   fresh_stale: 'Data may be stale ({ago})',

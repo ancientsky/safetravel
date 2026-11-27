@@ -335,6 +335,7 @@ async function main() {
   const onFilter = () => {
     map.applyFilter();
     renderLegend(legendNode);
+    renderTiles($('#stat-tiles'));
   };
   // The legend is also the level filter (one place instead of tiles + chips + legend): tap a level to show only it.
   legendNode.addEventListener('click', (e) => {
@@ -369,6 +370,7 @@ async function main() {
     document.documentElement.dataset.layer = state.layer;
     renderLayerSwitch(layerNode, setLayer);
     renderLegend($('#legend'));
+    renderTiles($('#stat-tiles'));
     if (state.data.world) map.applyLayer();
     search?.refresh();
     ask?.refresh();
@@ -386,6 +388,24 @@ async function main() {
   }
   renderLayerSwitch(layerNode, setLayer);
   window.__safetravel.setLayer = setLayer;
+  // Level tiles (Health counts): the same filter as the legend; on the Safety layer they switch to Health first.
+  $('#stat-tiles').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tile-level]');
+    if (!b) return;
+    const v = b.dataset.tileLevel;
+    const wasMofa = mofaMode();
+    if (wasMofa) setLayer('cdc');
+    const set = state.filter;
+    if (v === 'all') set.clear();
+    else {
+      const l = +v;
+      if (wasMofa) { set.clear(); set.add(l); } // coming from the other layer: show exactly the level tapped
+      else if (set.has(l)) set.delete(l); else set.add(l);
+      if (set.size === 3) set.clear();
+    }
+    onFilter();
+    $(`#stat-tiles [data-tile-level="${v}"]`)?.focus();
+  });
 
   // Weather overlay (CWA world-city forecast): OFF by default. Its module and weather.json are only fetched the
   // first time it is switched on (or after the first map render when it starts on).
